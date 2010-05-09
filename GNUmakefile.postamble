@@ -1,0 +1,63 @@
+#
+# GNUmakefile.postamble for DBusKit
+#
+
+# Things to do before compiling
+# before-all::
+
+# Things to do after compiling
+#after-all::
+
+# Things to do before installing
+# before-install::
+
+# Things to do after installing
+# after-install::
+
+# Things to do before uninstalling
+# before-uninstall::
+
+# Things to do after uninstalling
+# after-uninstall::
+
+# Things to do before cleaning
+# before-clean::
+
+# Things to do after cleaning
+after-clean::
+	@-$(RM) -rf DBusKit.bundle
+	@-$(RM) -rf DBusKit.framework
+	@-$(RM) -rf derived_src
+	@-$(RM) config.make
+	@-$(RM) Headers/config.h
+
+# Things to do before distcleaning
+# before-distclean::
+
+# Things to do after distcleaning
+after-distclean::
+	@-$(RM) configure aclocal.m4 config.log config.status
+	@-$(RM) -rf autom4te.cache
+
+# Things to do before checking
+# before-check::
+
+# Things to do after checking
+# after-check::
+
+
+# Rule to generate configuration data:
+
+configure: aclocal.m4 configure.ac
+	autoconf
+
+aclocal.m4: configure.ac
+	aclocal
+
+config.make: config.make.in configure
+	./configure
+
+Headers/config.h: Headers/config.h.in configure
+	./configure
+
+
