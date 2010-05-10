@@ -23,6 +23,7 @@
 #import "DBusKit/DKPort.h"
 #import "DKEndpoint.h"
 
+#include <dbus/dbus.h>
 
 static Class DKPortAbstractClass;
 static Class DKPortConcreteClass;
@@ -54,4 +55,59 @@ static Class DKPortConcreteClass;
   }
 }
 
+- (id) initWithRemote: (NSString*)aRemote
+{
+  // We can just modify the isa pointer because the abstract and concrete
+  // classes share the same ivar layout.
+  if (DKPortAbstractClass == isa)
+  {
+    isa = DKPortConcreteClass;
+    // Call again with the proper implementation:
+    return [self initWithRemote: aRemote];
+  }
+
+  if (nil == (self = [super init]))
+  {
+    return nil;
+  }
+  ASSIGNCOPY(remote, aRemote);
+  return self;
+}
+
+- (id) init
+{
+  return [self initWithRemote: nil];
+}
+
+- (void) dealloc
+{
+  [endpoint release];
+  [remote release];
+  [super dealloc];
+}
+@end
+
+@implementation DKSessionBusPort
+- (id)initWithRemote: (NSString*)aRemote
+{
+  if (nil == (self = [super initWithRemote: aRemote]))
+  {
+    return nil;
+  }
+  endpoint = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION];
+  return self;
+}
+@end
+
+
+@implementation DKSystemBusPort
+- (id)initWithRemote: (NSString*)aRemote
+{
+  if (nil == (self = [super initWithRemote: aRemote]))
+  {
+    return nil;
+  }
+  endpoint = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SYSTEM];
+  return self;
+}
 @end

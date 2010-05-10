@@ -29,14 +29,13 @@ after-clean::
 	@-$(RM) -rf DBusKit.framework
 	@-$(RM) -rf derived_src
 	@-$(RM) config.make
-	@-$(RM) Headers/config.h
 
 # Things to do before distcleaning
 # before-distclean::
 
 # Things to do after distcleaning
 after-distclean::
-	@-$(RM) configure aclocal.m4 config.log config.status
+	@-$(RM)  config.log config.status config.make
 	@-$(RM) -rf autom4te.cache
 
 # Things to do before checking
@@ -48,16 +47,5 @@ after-distclean::
 
 # Rule to generate configuration data:
 
-configure: aclocal.m4 configure.ac
-	autoconf
-
-aclocal.m4: configure.ac
-	aclocal
-
-config.make: config.make.in configure
+config.make: config.make.in
 	./configure
-
-Headers/config.h: Headers/config.h.in configure
-	./configure
-
-
