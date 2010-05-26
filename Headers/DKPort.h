@@ -44,6 +44,11 @@
    */
   NSString *remote;
 }
+
+/**
+ * Return a DKPort instance connected to the specified D-Bus peer.
+ */
+- (id) initWithRemote: (NSString*)remote;
 @end
 
 @interface DKSessionBusPort: DKPort

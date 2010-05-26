@@ -172,20 +172,15 @@ static NSRecursiveLock *activeConnectionLock;
     return nil;
   }
 
-  /*
-   * Reference the connection on the dbus level so that it sticks around until
-   * -cleanup is called.
-   */
-  dbus_connection_ref(conn);
-  connection = conn;
   [activeConnectionLock lock];
   NS_DURING
   {
 
     /* Check wether we can reuse an old connection. */
-    oldConnection = NSMapGet(activeConnections, (void*)connection);
+    oldConnection = NSMapGet(activeConnections, (void*)conn);
     if (nil != oldConnection)
     {
+      NSLog(@"Will reuse old connection");
       // Retain the old connection to make it stick around:
       [oldConnection retain];
     }
@@ -198,15 +193,21 @@ static NSRecursiveLock *activeConnectionLock;
   NS_ENDHANDLER
   if (nil != oldConnection)
   {
-    [activeConnectionLock unlock];
     [self release];
-    self = oldConnection;
-    return self;
+    [activeConnectionLock unlock];
+    return oldConnection;
   }
 
   NS_DURING
   {
     // We keep the lock until we're done initializing.
+
+    /*
+     * Reference the connection on the dbus level so that it sticks around until
+     * -cleanup is called.
+     */
+    dbus_connection_ref(conn);
+    connection = conn;
     ctx = [[DKRunLoopContext alloc] initWithConnection: connection];
 
     // Install our runLoop hooks:
@@ -458,6 +459,15 @@ static NSRecursiveLock *activeConnectionLock;
     }
 }
 
+/*
+ * FIXME: This can go away whether we are sure that DKWatchRemove is always
+ * called with the context object as an argument.
+ */
+- (DKRunLoopContext*)context
+{
+  return ctx;
+}
+
 - (void)dealloc
 {
   [super dealloc];
@@ -496,6 +506,15 @@ static NSRecursiveLock *activeConnectionLock;
 - (NSString*)runLoopMode
 {
   return NSDefaultRunLoopMode;
+}
+
+/*
+ * FIXME: This can go away whether we are sure that DKWatchRemove is always
+ * called with the context object as an argument.
+ */
+- (DKRunLoopContext*)context
+{
+  return self;
 }
 
 - (void)dealloc
@@ -683,10 +702,11 @@ DKWatchAdd(DBusWatch *watch, void *data)
 static void
 DKWatchRemove(DBusWatch *watch, void *data)
 {
-  CTX(data);
   NSCAssert(watch, @"Missing watch data during D-Bus event handling.");
   NSLog(@"Removed watch");
-  [ctx removeWatch: watch];
+  // FIXME: data should contain our context object, but libdbus seems to pass
+  // the DKWatcher object here: Investigate why that is and fix it properly.
+  [[(DKWatcher*)data context] removeWatch: watch];
 }
 
 static void
