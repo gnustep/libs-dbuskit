@@ -245,8 +245,8 @@ static Class DKPortConcreteClass;
 - (id)initWithRemote: (NSString*)aRemote
 {
   DKEndpoint *ep = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION];
-  if (nil == (self = [super initWithRemote: aRemote
-                                atEndpoint: ep]))
+  if (nil == (self = [self initWithRemote: aRemote
+                               atEndpoint: ep]))
   {
     [ep release];
     return nil;
@@ -261,8 +261,8 @@ static Class DKPortConcreteClass;
 - (id)initWithRemote: (NSString*)aRemote
 {
   DKEndpoint *ep = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SYSTEM];
-  if (nil == (self = [super initWithRemote: aRemote
-                                atEndpoint: ep]))
+  if (nil == (self = [self initWithRemote: aRemote
+                               atEndpoint: ep]))
   {
     [ep release];
     return nil;
