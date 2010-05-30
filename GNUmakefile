@@ -15,7 +15,8 @@ DBusKit_SUBPROJECTS = Source
 DBusKit_HEADER_FILES_DIR = Headers
 DBusKit_HEADER_FILES = \
 		  DBusKit.h \
-		  DKPort.h
+		  DKPort.h \
+                  DKProxy.h
 
 #
 # Makefiles

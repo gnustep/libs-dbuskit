@@ -23,7 +23,10 @@
    */
 
 #import "DKEndpoint.h"
+#import <Foundation/NSCoder.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
+#import <Foundation/NSKeyedArchiver.h>
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSRunLoop.h>
@@ -101,7 +104,7 @@ static NSRecursiveLock *activeConnectionLock;
   NSMapTable *watchers;
 }
 
-- (id)initWithConnection: (DBusConnection*)connection;
+- (id)_initWithConnection: (DBusConnection*)connection;
 - (NSRunLoop*)runLoop;
 - (NSString*)runLoopMode;
 @end
@@ -154,7 +157,7 @@ static NSRecursiveLock *activeConnectionLock;
       @"Could not allocate map table and lock for D-Bus connection management");
 }
 
-- (id) initWithConnection: (DBusConnection*)conn
+- (id) _initWithConnection: (DBusConnection*)conn
 {
   DKEndpoint *oldConnection = nil;
   DKRunLoopContext *ctx = nil;
@@ -208,7 +211,7 @@ static NSRecursiveLock *activeConnectionLock;
      */
     dbus_connection_ref(conn);
     connection = conn;
-    ctx = [[DKRunLoopContext alloc] initWithConnection: connection];
+    ctx = [[DKRunLoopContext alloc] _initWithConnection: connection];
 
     // Install our runLoop hooks:
     if ((initSuccess = (nil != ctx)))
@@ -297,10 +300,11 @@ static NSRecursiveLock *activeConnectionLock;
   {
     return nil;
   }
-  self = [self initWithConnection: conn];
-  // -initWithConnection did increase the refcount, we release ownership of the
+  self = [self _initWithConnection: conn];
+  // -_initWithConnection did increase the refcount, we release ownership of the
   // connection:
   dbus_connection_unref(conn);
+  info = [[NSDictionary alloc] initWithObjectsAndKeys: endpoint, @"address", nil];
   return self;
 }
 
@@ -311,13 +315,85 @@ static NSRecursiveLock *activeConnectionLock;
   {
     return nil;
   }
-  self = [self initWithConnection: conn];
-  // -initWithConnection did increase the refcount, we release ownership of the
+  self = [self _initWithConnection: conn];
+  // -_initWithConnection did increase the refcount, we release ownership of the
   // connection:
   dbus_connection_unref(conn);
+
+  info = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: type],
+    @"wellKnownBus", nil];
   return self;
 }
 
+- (id) initWithCoder: (NSCoder*)coder
+{
+  if ([super respondsToSelector: @selector(initWithCoder:)])
+  {
+    self = [(id<NSCoding>)super initWithCoder: coder];
+  }
+  else
+  {
+    self = [super init];
+  }
+  if ([coder allowsKeyedCoding])
+  {
+    info = [coder decodeObjectForKey: @"DKEndpointInfo"];
+  }
+  else
+  {
+    /*
+     * Decoding for a sequential coder (i.e. NSPortCoder) is rather convoluted
+     * because we cannot use any Obj-C type, which would be wrapped into proxies
+     * by NSPortCoder. Hence we specify a C-ish format to transfer information
+     * about the endpoint.
+     */
+    int endpoint_type = 0;
+    char* address = NULL;
+    int bus_type = 0;
+    [coder decodeValueOfObjCType: @encode(int) at: &endpoint_type];
+    if (endpoint_type == 0)
+    {
+      [coder decodeValueOfObjCType: @encode(int) at: &bus_type];
+    }
+    else
+    {
+      [coder decodeValueOfObjCType: @encode(char*) at: &address];
+    }
+
+    if (address)
+    {
+      info = [[NSDictionary alloc] initWithObjectsAndKeys: [NSString stringWithUTF8String: address],
+        @"address", nil];
+    }
+    else
+    {
+      info = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: bus_type],
+        @"wellKnownBus", nil];
+    }
+  }
+  return self;
+}
+
+/**
+ * Replace the endpoint just decoded (which only contains the info dictionary)
+ * with one that actually works.
+ */
+- (id) awakeAfterUsingCoder: (NSCoder*)coder
+{
+   id data = nil;
+   id newEndpoint = nil;
+   if (nil != (data = [info objectForKey: @"wellKnownBus"]))
+   {
+     newEndpoint = [[DKEndpoint alloc] initWithWellKnownBus: [(NSNumber*)data intValue]];
+   }
+   else
+   {
+     data = [info objectForKey: @"address"];
+     newEndpoint = [[DKEndpoint alloc] initWithConnectionTo: (NSString*)data];
+   }
+   [self release];
+   return newEndpoint;
+}
 
 - (void) cleanup
 {
@@ -346,9 +422,66 @@ static NSRecursiveLock *activeConnectionLock;
 
 }
 
+/**
+ * Override the default implementation, which would return a proxy.
+ */
+- (id)replacementObjectForPortCoder: (NSPortCoder*)coder
+{
+  return self;
+}
+
+/**
+ * Encodes the information about the endpoint. Unfortunately, we have no chance
+ * of getting this right if somebody used the private intializer
+ * -_initWithConnection:.
+ */
+- (void) encodeWithCoder: (NSCoder*)coder
+{
+  if (nil == info)
+  {
+    [NSException raise: NSInvalidArchiveOperationException
+                format: @"This DKEndpoint has been create with a private initializer and cannot be encoded."];
+  }
+
+  if ([super respondsToSelector: @selector(encodeWithCoder:)])
+  {
+    [(id<NSCoding>)super encodeWithCoder: coder];
+  }
+
+  if ([coder allowsKeyedCoding])
+  {
+    [coder encodeObject: info
+                 forKey: @"DKEndpointInfo"];
+  }
+  else
+  {
+    int endpoint_type = 0;
+    NSString *address = nil;
+    const char *addrString;
+    int bus_type;
+    if (nil != (address = [info objectForKey: @"address"]))
+    {
+      endpoint_type = 1;
+    }
+    [coder encodeValueOfObjCType: @encode(int) at: &endpoint_type];
+
+    if (address)
+    {
+      addrString = [address UTF8String];
+      [coder encodeValueOfObjCType: @encode(char*) at: &addrString];
+    }
+    else
+    {
+      bus_type = [(NSNumber*)[info objectForKey: @"wellKnownBus"] intValue];
+      [coder encodeValueOfObjCType: @encode(int) at: &bus_type];
+    }
+  }
+}
+
 - (void)dealloc
 {
   [self cleanup];
+  [info release];
   [super dealloc];
 }
 @end
@@ -476,7 +609,7 @@ static NSRecursiveLock *activeConnectionLock;
 
 @implementation DKRunLoopContext
 
-- (id) initWithConnection: (DBusConnection*)conn
+- (id) _initWithConnection: (DBusConnection*)conn
 {
   if (nil == (self = [super init]))
   {

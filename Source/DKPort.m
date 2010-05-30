@@ -21,12 +21,16 @@
    */
 
 #import "DBusKit/DKPort.h"
+#import "DBusKit/DKProxy.h"
 #import "DKEndpoint.h"
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSConnection.h>
 #import <Foundation/NSDate.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSPort.h>
+#import <Foundation/NSPortCoder.h>
+#import <Foundation/NSPortMessage.h>
 #import <Foundation/NSRunLoop.h>
 
 #include <dbus/dbus.h>
@@ -52,8 +56,33 @@ enum {
  PROXY_AT_PATH_REPLY = 255
 };
 
+/*
+ * We need to access the private -[NSPortCoder _components] method.
+ */
+@interface NSPortCoder (UnhideComponents)
+- (NSArray*)_components;
+@end
+
+/*
+ * Cached classes
+ */
 static Class DKPortAbstractClass;
 static Class DKPortConcreteClass;
+static Class portCoderClass;
+
+
+@interface DKPort (DKPortPrivate)
+/**
+ * Performs checks to ensure that the corresponding D-Bus service and object
+ * path exist and sends a message to the delegate NSConnection object containing
+ * an encoded DKProxy.
+ */
+- (void) _returnProxyForPath: (NSString*)path
+         utilizingComponents: (NSArray*)components
+                    fromPort: (NSPort*)receivePort;
+
+@end
+
 
 @implementation DKPort
 + (void)initialize
@@ -67,6 +96,7 @@ static Class DKPortConcreteClass;
   {
     DKPortAbstractClass = abstractClass;
     DKPortConcreteClass = [DKSessionBusPort class];
+    portCoderClass = [NSPortCoder class];
   }
 }
 
@@ -140,7 +170,10 @@ static Class DKPortConcreteClass;
        * 2. Schedule generation of reply for NSConnection to consume
        */
       NSLog(@"Got rootproxy request for remote %@", remote);
-      break;
+      [self _returnProxyForPath: @"/"
+            utilizingComponents: components
+                       fromPort: recievePort];
+      return YES;
     case METHODTYPE_REQUEST:
       /* TODO:
        *  1. Check whether the remote side exists
@@ -237,6 +270,59 @@ static Class DKPortConcreteClass;
   [endpoint release];
   [remote release];
   [super dealloc];
+}
+
+
+/**
+ * Performs checks to ensure that the corresponding D-Bus service and object
+ * path exist and sends a message to the delegate NSConnection object containing
+ * an encoded DKProxy.
+ */
+- (void) _returnProxyForPath: (NSString*)path
+         utilizingComponents: (NSArray*)components
+                    fromPort: (NSPort*)receivePort
+{
+  // TODO: Actually do the checking!
+
+  /* Decode the sequence number, we need it to send the correct reply. */
+  int sequence = -1;
+  NSPortCoder *seqCoder = [(NSPortCoder*)[portCoderClass alloc] initWithReceivePort: receivePort
+                                                                           sendPort: self
+                                                                         components: components];
+
+   [seqCoder decodeValueOfObjCType: @encode(int) at: &sequence];
+   NSLog(@"Sequence number for proxy request: %d", sequence);
+   [seqCoder release];
+
+   /* Create and encode the proxy. */
+
+   NSPortCoder *proxyCoder = [(NSPortCoder*)[portCoderClass alloc] initWithReceivePort: receivePort
+                                                                              sendPort: self
+                                                                            components: nil];
+
+   DKProxy *proxy = [[DKProxy alloc] initWithEndpoint: endpoint
+                                           andService: remote
+                                              andPath: path];
+
+   [proxyCoder encodeValueOfObjCType: @encode(int) at: &sequence];
+   [proxyCoder encodeObject: proxy];
+
+   /* Wrap it in an NSPortMessage */
+
+   NSPortMessage *pm = [[NSPortMessage alloc] initWithSendPort: self
+                                                   receivePort: receivePort
+                                                    components: [proxyCoder _components]];
+
+  [pm setMsgid: ROOTPROXY_REPLY];
+  /* Let the connection handle it */
+
+  [[receivePort delegate] handlePortMessage: pm];
+
+  /* Cleanup */
+
+  [pm release];
+  [proxyCoder release];
+  [proxy release];
 }
 
 @end

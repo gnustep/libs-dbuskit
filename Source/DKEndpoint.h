@@ -23,20 +23,26 @@
 #import <Foundation/NSObject.h>
 #include <dbus/dbus.h>
 
+@class NSString, NSDictionary;
+@protocol NSCoding;
+
 /**
  * DKEndpoint is used internally to manage the low level details of a connection
  * to a D-Bus peer. This can be a well known bus as well as some special peer.
  */
-@interface DKEndpoint: NSObject
+@interface DKEndpoint: NSObject <NSCoding>
 {
   DBusConnection *connection;
+  NSDictionary *info;
 }
+
 /**
  * Use this initializer to use a pre-existing DBusConnection. Please note that
  * this will increase the reference count of the connection. It will still need
- * to be unreferenced by calling code.
+ * to be unreferenced by calling code. Please note that encoding and decoding an
+ * DKEndpoint encoded this way is impossible.
  */
-- (id) initWithConnection: (DBusConnection*)conn;
+- (id) _initWithConnection: (DBusConnection*)conn;
 
 - (id) initWithConnectionTo: (NSString*)endpoint;
 

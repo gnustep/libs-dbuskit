@@ -14,7 +14,8 @@ SUBPROJECT_NAME = libDBusKit
 #
 libDBusKit_OBJC_FILES = \
 	DKEndpoint.m \
-	DKPort.m
+	DKPort.m \
+        DKProxy.m
 
 #
 # C files
