@@ -114,9 +114,6 @@
   [endpoint release];
   [service release];
   [path release];
-  if (0)
-  {
-    [super dealloc];
-  }
+  [super dealloc];
 }
 @end
