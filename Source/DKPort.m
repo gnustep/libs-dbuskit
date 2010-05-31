@@ -63,21 +63,13 @@ enum {
 - (NSArray*)_components;
 @end
 
-/*
- * Cached classes
- */
-static Class DKPortAbstractClass;
-static Class DKPortConcreteClass;
-static Class portCoderClass;
-
-
 @interface DKPort (DKPortPrivate)
 /**
  * Performs checks to ensure that the corresponding D-Bus service and object
  * path exist and sends a message to the delegate NSConnection object containing
  * an encoded DKProxy.
  */
-- (void) _returnProxyForPath: (NSString*)path
+- (BOOL) _returnProxyForPath: (NSString*)path
          utilizingComponents: (NSArray*)components
                     fromPort: (NSPort*)receivePort;
 
@@ -85,52 +77,32 @@ static Class portCoderClass;
 
 
 @implementation DKPort
-+ (void)initialize
-{
-  /*
-   * Preload the class pointers to avoid expensive class message sends on every
-   * +port call.
-   */
-  Class abstractClass = [DKPort class];
-  if (self == abstractClass)
-  {
-    DKPortAbstractClass = abstractClass;
-    DKPortConcreteClass = [DKSessionBusPort class];
-    portCoderClass = [NSPortCoder class];
-  }
-}
 
 + (NSPort*)port
 {
-  if (self == DKPortAbstractClass)
-  {
-    return [[[DKPortConcreteClass alloc] init] autorelease];
-  }
-  else
-  {
-    return [[[self alloc] init] autorelease];
-  }
+  return [[[self alloc] init] autorelease];
 }
 
 - (id) initWithRemote: (NSString*)aRemote
            atEndpoint: (DKEndpoint*)anEndpoint
 {
-  // We can just modify the isa pointer because the abstract and concrete
-  // classes share the same ivar layout.
-  if (DKPortAbstractClass == isa)
-  {
-    isa = DKPortConcreteClass;
-    // Call again with the proper implementation:
-    return [self initWithRemote: aRemote];
-  }
-
-  // Proper implementation: Only reached if this is a concrete class.
   if (nil == (self = [super init]))
   {
     return nil;
   }
+
+  if (nil == anEndpoint)
+  {
+    // Default to an endpoint to the session bus if none is given.
+    anEndpoint = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION];
+    ASSIGN(endpoint, anEndpoint);
+    [anEndpoint release];
+  }
+  else
+  {
+    ASSIGN(endpoint, anEndpoint);
+  }
   ASSIGNCOPY(remote, aRemote);
-  ASSIGN(endpoint, anEndpoint);
   return self;
 }
 
@@ -170,10 +142,9 @@ static Class portCoderClass;
        * 2. Schedule generation of reply for NSConnection to consume
        */
       NSLog(@"Got rootproxy request for remote %@", remote);
-      [self _returnProxyForPath: @"/"
-            utilizingComponents: components
-                       fromPort: recievePort];
-      return YES;
+      return [self _returnProxyForPath: @"/"
+                   utilizingComponents: components
+                              fromPort: recievePort];
     case METHODTYPE_REQUEST:
       /* TODO:
        *  1. Check whether the remote side exists
@@ -278,7 +249,7 @@ static Class portCoderClass;
  * path exist and sends a message to the delegate NSConnection object containing
  * an encoded DKProxy.
  */
-- (void) _returnProxyForPath: (NSString*)path
+- (BOOL) _returnProxyForPath: (NSString*)path
          utilizingComponents: (NSArray*)components
                     fromPort: (NSPort*)receivePort
 {
@@ -286,9 +257,9 @@ static Class portCoderClass;
 
   /* Decode the sequence number, we need it to send the correct reply. */
   int sequence = -1;
-  NSPortCoder *seqCoder = [(NSPortCoder*)[portCoderClass alloc] initWithReceivePort: receivePort
-                                                                           sendPort: self
-                                                                         components: components];
+  NSPortCoder *seqCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
+                                                          sendPort: self
+                                                        components: components];
 
    [seqCoder decodeValueOfObjCType: @encode(int) at: &sequence];
    NSLog(@"Sequence number for proxy request: %d", sequence);
@@ -296,9 +267,9 @@ static Class portCoderClass;
 
    /* Create and encode the proxy. */
 
-   NSPortCoder *proxyCoder = [(NSPortCoder*)[portCoderClass alloc] initWithReceivePort: receivePort
-                                                                              sendPort: self
-                                                                            components: nil];
+   NSPortCoder *proxyCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
+                                                             sendPort: self
+                                                           components: nil];
 
    DKProxy *proxy = [[DKProxy alloc] initWithEndpoint: endpoint
                                            andService: remote
@@ -314,6 +285,7 @@ static Class portCoderClass;
                                                     components: [proxyCoder _components]];
 
   [pm setMsgid: ROOTPROXY_REPLY];
+
   /* Let the connection handle it */
 
   [[receivePort delegate] handlePortMessage: pm];
@@ -323,6 +295,7 @@ static Class portCoderClass;
   [pm release];
   [proxyCoder release];
   [proxy release];
+  return YES;
 }
 
 @end
