@@ -24,6 +24,8 @@
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDebug.h>
+#import <Foundation/NSException.h>
+#import <Foundation/NSEnumerator.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -175,6 +177,13 @@ DKUnboxedObjCTypeForDBusType(int type)
 {
   return DBusType;
 }
+
+- (NSString*) DBusTypeSignature
+{
+  return [NSString stringWithCharacters: (unichar*)&DBusType length: 1];
+
+}
+
 - (char*) unboxedObjCTypeChar
 {
   return DKUnboxedObjCTypeForDBusType(DBusType);
@@ -267,6 +276,47 @@ DKUnboxedObjCTypeForDBusType(int type)
   return @encode(id);
 }
 
+- (NSString*) DBusTypeSignature
+{
+  NSMutableString *sig = [NSString string];
+  NSString *ret = nil;
+  // [[children fold] stringByAppendingString: @""]
+  NSEnumerator *enumerator = [children objectEnumerator];
+  DKArgument *subArg = nil;
+  while (nil != (subArg = [enumerator nextObject]))
+  {
+    [sig appendString: [subArg DBusTypeSignature]];
+  }
+
+  switch (DBusType)
+  {
+    case DBUS_TYPE_VARIANT:
+      [sig insertString: [NSString stringWithUTF8String: DBUS_TYPE_VARIANT_AS_STRING]
+                atIndex: 0];
+      break;
+    case DBUS_TYPE_ARRAY:
+      [sig insertString: [NSString stringWithUTF8String: DBUS_TYPE_ARRAY_AS_STRING]
+                atIndex: 0];
+      break;
+    case DBUS_TYPE_STRUCT:
+      [sig insertString: [NSString stringWithUTF8String: DBUS_STRUCT_BEGIN_CHAR_AS_STRING]
+                                                atIndex: 0];
+      [sig appendString: [NSString stringWithUTF8String: DBUS_STRUCT_END_CHAR_AS_STRING]];
+      break;
+    case DBUS_TYPE_DICT_ENTRY:
+      [sig insertString: [NSString stringWithUTF8String: DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING]
+                                                atIndex: 0];
+      [sig appendString: [NSString stringWithUTF8String: DBUS_DICT_ENTRY_END_CHAR_AS_STRING]];
+      break;
+    default:
+      NSAssert(NO, @"Invalid D-Bus type when generating container type signature");
+      break;
+  }
+  ret = [NSString stringWithString: sig];
+  [sig release];
+  return ret;
+}
+
 - (BOOL) isContainerType
 {
   return YES;
@@ -277,7 +327,7 @@ DKUnboxedObjCTypeForDBusType(int type)
   return children;
 }
 
-- (void)dealloc
+- (void) dealloc
 {
   [children release];
   [super dealloc];

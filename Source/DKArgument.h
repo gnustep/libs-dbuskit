@@ -57,6 +57,12 @@ extern NSString *DKArgumentDirectionOut;
  * Objective-C type.
  */
 - (char*) unboxedObjCTypeChar;
+
+/**
+ * Return the D-Bus type signature equivalent to the argument.
+ */
+- (NSString*) DBusTypeSignature;
+
 @end
 
 /**
