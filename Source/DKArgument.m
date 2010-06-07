@@ -120,7 +120,7 @@ DKUnboxedObjCTypeForDBusType(int type)
  *  DKArgument encapsulates D-Bus argument information
  */
 @implementation DKArgument
-- (id) initWithIterator: (DBusSignatureIter*)_iterator
+- (id) initWithIterator: (DBusSignatureIter*)iterator
                    name: (NSString*)_name
                  parent: (id)_parent
 {
@@ -129,16 +129,14 @@ DKUnboxedObjCTypeForDBusType(int type)
     return nil;
   }
 
-  memcpy(&iterator, _iterator, sizeof(DBusSignatureIter));
-
-  DBusType = dbus_signature_iter_get_current_type(&iterator);
+  DBusType = dbus_signature_iter_get_current_type(iterator);
 
   if ((dbus_type_is_container(DBusType))
     && (![self isKindOfClass: [DKContainerTypeArgument class]]))
   {
     NSDebugMLog(@"Incorrectly initalized a non-container argument with a container type, reinitializing as container type.");
     [self release];
-    return [[DKContainerTypeArgument alloc] initWithIterator: _iterator
+    return [[DKContainerTypeArgument alloc] initWithIterator: iterator
                                                         name: _name
                                                       parent: _parent];
   }
@@ -173,6 +171,10 @@ DKUnboxedObjCTypeForDBusType(int type)
   objCEquivalent = class;
 }
 
+- (int) DBusType
+{
+  return DBusType;
+}
 - (char*) unboxedObjCTypeChar
 {
   return DKUnboxedObjCTypeForDBusType(DBusType);
@@ -180,6 +182,11 @@ DKUnboxedObjCTypeForDBusType(int type)
 - (BOOL) isContainerType
 {
   return NO;
+}
+
+- (id) parent
+{
+  return parent;
 }
 
 - (void)dealloc
@@ -192,20 +199,69 @@ DKUnboxedObjCTypeForDBusType(int type)
 
 @implementation DKContainerTypeArgument
 
-- (id)initWithDBusSignature: (const char*)DBusTypeString
-                       name: (NSString*)_name
-                     parent: (id)_parent
+- (id)initWithIterator: (DBusSignatureIter*)iterator
+                  name: (NSString*)_name
+                parent: (id)_parent
 {
-  if (nil == (self = [super initWithDBusSignature: DBusTypeString
-                                             name: _name
-                                           parent: _parent]))
+  DBusSignatureIter subIterator;
+  if (nil == (self = [super initWithIterator: iterator
+                                        name: _name
+                                      parent: _parent]))
   {
     return nil;
   }
   children = [[NSMutableArray alloc] init];
-  //TODO: Create recurive iterator to collect subtypes of the argument.
+
+  /*
+   * Create an iterator for the immediate subarguments of this argument and loop
+   * over it until we have all the constituent types.
+   */
+  dbus_signature_iter_recurse(iterator, &subIterator);
+  do
+  {
+    Class childClass = Nil;
+    DKArgument *subArgument = nil;
+    int subType = dbus_signature_iter_get_current_type(&subIterator);
+
+    if (dbus_type_is_container(subType))
+    {
+       childClass = [DKContainerTypeArgument class];
+    }
+    else
+    {
+      childClass = [DKArgument class];
+    }
+
+    subArgument = [[childClass alloc] initWithIterator: &subIterator
+                                                  name: _name
+                                                parent: self];
+    if (subArgument)
+    {
+      [children addObject: subArgument];
+      [subArgument release];
+    }
+  } while (dbus_signature_iter_next(&subIterator));
+
+  /* Be smart: If we are ourselves of DBUS_TYPE_DICT_ENTRY, then a
+   * DBUS_TYPE_ARRAY argument above us is actually a dictionary, so we set the
+   * type accordingly.
+   */
+  if (DBUS_TYPE_DICT_ENTRY == DBusType)
+  {
+    if ([parent isKindOfClass: [DKArgument class]])
+    {
+      if (DBUS_TYPE_ARRAY == [(id)parent DBusType])
+      {
+        [(id)parent setObjCEquivalent: [NSDictionary class]];
+      }
+    }
+  }
   return self;
 }
+
+/*
+ * All container types are boxed.
+ */
 - (char*) unboxedObjCTypeChar
 {
   return @encode(id);
@@ -214,6 +270,11 @@ DKUnboxedObjCTypeForDBusType(int type)
 - (BOOL) isContainerType
 {
   return YES;
+}
+
+- (NSArray*) children
+{
+  return children;
 }
 
 - (void)dealloc

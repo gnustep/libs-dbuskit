@@ -24,7 +24,6 @@
 
 #import<Foundation/NSObject.h>
 
-#include <dbus/dbus.h>
 
 @class NSString, NSMutableArray;
 
@@ -37,20 +36,27 @@ extern NSString *DKArgumentDirectionOut;
  */
 @interface DKArgument: NSObject
 {
-  DBusSignatureIter iterator;
   int DBusType;
   NSString *name;
   Class objCEquivalent;
   id parent;
 }
 
-- (id)initWithDBusSignature: (const char*)characters
-                       name: (NSString*)name
-                     parent: (id)parent;
+- (id) initWithDBusSignature: (const char*)characters
+                        name: (NSString*)name
+                      parent: (id)parent;
 
-- (BOOL)isContainerType;
+/**
+ * Return whether the argument is a complex one that is made up by further
+ * types.
+ */
+- (BOOL) isContainerType;
 
-- (char*)unboxedObjCTypeChar;
+/**
+ * Return the type char to be used if the argument is not boxed to an
+ * Objective-C type.
+ */
+- (char*) unboxedObjCTypeChar;
 @end
 
 /**
@@ -61,4 +67,9 @@ extern NSString *DKArgumentDirectionOut;
 {
   NSMutableArray *children;
 }
+
+/**
+ * Return all sub-arguments that make up this argument.
+ */
+- (NSArray*) children;
 @end;
