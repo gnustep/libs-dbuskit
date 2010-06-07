@@ -13,6 +13,7 @@ SUBPROJECT_NAME = libDBusKit
 # Class files
 #
 libDBusKit_OBJC_FILES = \
+        DKArgument.m \
 	DKEndpoint.m \
 	DKPort.m \
         DKProxy.m

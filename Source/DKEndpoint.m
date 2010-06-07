@@ -430,6 +430,11 @@ static NSRecursiveLock *activeConnectionLock;
   return self;
 }
 
+- (Class)classForPortCoder
+{
+  return [self class];
+}
+
 /**
  * Encodes the information about the endpoint. Unfortunately, we have no chance
  * of getting this right if somebody used the private intializer
@@ -455,6 +460,18 @@ static NSRecursiveLock *activeConnectionLock;
   }
   else
   {
+    /*
+     * Encoding for a sequential coder (i.e. NSPortCoder) is rather convoluted
+     * because we cannot use any Obj-C type, which would be wrapped into proxies
+     * by NSPortCoder. Hence we specify a C-ish format to transfer information
+     * about the endpoint.
+     * The following conventions apply:
+     * endpoint_type = 0 - endpoint connected to a well-known bus. The following
+     *                     data element will be the integer designating the bus.
+     * endpoint_type = 1 - endpoint connected to an arbitrary address. The
+     *                     following data element will containt the C string
+     *                     describing the address.
+     */
     int endpoint_type = 0;
     NSString *address = nil;
     const char *addrString;
