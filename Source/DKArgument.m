@@ -155,6 +155,7 @@ DKUnboxedObjCTypeForDBusType(int type)
   if (!dbus_signature_validate_single(DBusTypeString, NULL))
   {
     NSWarnMLog(@"Not a single D-Bus type signature ('%s'), ignoring argument", DBusTypeString);
+    [self release];
     return nil;
   }
 
@@ -199,7 +200,6 @@ DKUnboxedObjCTypeForDBusType(int type)
                                              name: _name
                                            parent: _parent]))
   {
-    [self release];
     return nil;
   }
   children = [[NSMutableArray alloc] init];
