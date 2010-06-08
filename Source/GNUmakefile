@@ -18,10 +18,10 @@ libDBusKit_OBJC_FILES = \
 	DKPort.m \
         DKProxy.m
 
-#
-# C files
-#
-libDBusKit_C_FILES =
+ifeq ($(test), yes)
+libDBusKit_OBJC_FILES += \
+	TestDKArgument.m
+endif
 
 -include ../GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/subproject.make

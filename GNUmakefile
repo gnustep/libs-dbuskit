@@ -28,10 +28,7 @@ ifeq ($(test), yes)
 # Bundle
 BUNDLE_NAME = DBusKit
 include $(GNUSTEP_MAKEFILES)/bundle.make
-
-all:: ${BUNDLE_NAME}
-	ukrun ${BUNDLE_NAME}.bundle
-
+DBusKit_LDFLAGS += -lUnitKit 
 else
 # Framework
 FRAMEWORK_NAME = DBusKit

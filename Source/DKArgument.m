@@ -173,6 +173,11 @@ DKUnboxedObjCTypeForDBusType(int type)
   objCEquivalent = class;
 }
 
+- (Class) objCEquivalent
+{
+  return objCEquivalent;
+}
+
 - (int) DBusType
 {
   return DBusType;
@@ -188,6 +193,7 @@ DKUnboxedObjCTypeForDBusType(int type)
 {
   return DKUnboxedObjCTypeForDBusType(DBusType);
 }
+
 - (BOOL) isContainerType
 {
   return NO;
@@ -220,6 +226,16 @@ DKUnboxedObjCTypeForDBusType(int type)
     return nil;
   }
   children = [[NSMutableArray alloc] init];
+
+  /*
+   * Shortcut needed for variant types. libdbus classifies them as containers,
+   * but it is clearly wrong about that: They have no children and dbus will
+   * fail and crash if it tries to loop over their non-existent sub-arguments.
+   */
+  if (DBUS_TYPE_VARIANT == DBusType)
+  {
+    return self;
+  }
 
   /*
    * Create an iterator for the immediate subarguments of this argument and loop
@@ -278,7 +294,7 @@ DKUnboxedObjCTypeForDBusType(int type)
 
 - (NSString*) DBusTypeSignature
 {
-  NSMutableString *sig = [NSString string];
+  NSMutableString *sig = [[NSMutableString alloc] init];
   NSString *ret = nil;
   // [[children fold] stringByAppendingString: @""]
   NSEnumerator *enumerator = [children objectEnumerator];
