@@ -255,11 +255,16 @@ enum {
 {
   // TODO: Actually do the checking!
 
-  /* Decode the sequence number, we need it to send the correct reply. */
   int sequence = -1;
-  NSPortCoder *seqCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
-                                                          sendPort: self
-                                                        components: components];
+  NSPortCoder *seqCoder = nil;
+  NSPortCoder *proxyCoder = nil;
+  DKProxy *proxy = nil;
+  NSPortMessage *pm = nil;
+
+  /* Decode the sequence number, we need it to send the correct reply. */
+  seqCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
+                                             sendPort: self
+                                           components: components];
 
    [seqCoder decodeValueOfObjCType: @encode(int) at: &sequence];
    NSLog(@"Sequence number for proxy request: %d", sequence);
@@ -267,22 +272,22 @@ enum {
 
    /* Create and encode the proxy. */
 
-   NSPortCoder *proxyCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
-                                                             sendPort: self
-                                                           components: nil];
+   proxyCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
+                                                sendPort: self
+                                              components: nil];
 
-   DKProxy *proxy = [[DKProxy alloc] initWithEndpoint: endpoint
-                                           andService: remote
-                                              andPath: path];
+   proxy = [[DKProxy alloc] initWithEndpoint: endpoint
+                                  andService: remote
+                                     andPath: path];
 
    [proxyCoder encodeValueOfObjCType: @encode(int) at: &sequence];
    [proxyCoder encodeObject: proxy];
 
    /* Wrap it in an NSPortMessage */
 
-   NSPortMessage *pm = [[NSPortMessage alloc] initWithSendPort: self
-                                                   receivePort: receivePort
-                                                    components: [proxyCoder _components]];
+   pm = [[NSPortMessage alloc] initWithSendPort: self
+                                    receivePort: receivePort
+                                     components: [proxyCoder _components]];
 
   [pm setMsgid: ROOTPROXY_REPLY];
 

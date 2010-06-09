@@ -18,9 +18,17 @@ libDBusKit_OBJC_FILES = \
 	DKPort.m \
         DKProxy.m
 
+
+libDBusKit_OBJCFLAGS += $(WARN_FLAGS)
+
+# Treat warnings as errors unless someone chooses to ignore them.
+ifneq ($(nonstrict), yes)
+libDBusKit_OBJCFLAGS += -Werror
+endif
+
 ifeq ($(test), yes)
 libDBusKit_OBJC_FILES += \
-	TestDKArgument.m
+	Tests/TestDKArgument.m
 endif
 
 -include ../GNUmakefile.preamble

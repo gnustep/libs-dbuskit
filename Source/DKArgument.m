@@ -152,6 +152,7 @@ DKUnboxedObjCTypeForDBusType(int type)
                        name: (NSString*)_name
                      parent: (id)_parent
 {
+  DBusSignatureIter myIter;
   if (!dbus_signature_validate_single(DBusTypeString, NULL))
   {
     NSWarnMLog(@"Not a single D-Bus type signature ('%s'), ignoring argument", DBusTypeString);
@@ -159,7 +160,6 @@ DKUnboxedObjCTypeForDBusType(int type)
     return nil;
   }
 
-  DBusSignatureIter myIter;
   dbus_signature_iter_init(&myIter, DBusTypeString);
   return [self initWithIterator: &myIter
                            name: _name

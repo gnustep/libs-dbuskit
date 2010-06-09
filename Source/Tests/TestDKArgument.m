@@ -28,8 +28,8 @@
 
 #import <UnitKit/UnitKit.h>
 
-#import "DBusKit/DKProxy.h"
-#import "DKArgument.h"
+#import "../../Headers/DKProxy.h"
+#import "../DKArgument.h"
 
 @interface TestDKArgument: NSObject <UKTest>
 @end
