@@ -1,0 +1,8 @@
+# If we are compiling tests, we need to provide a link to the public headers.
+ifeq ($(test), yes)
+before-all::
+	ln -s ../Headers DBusKit
+after-all::
+	rm -rf DBusKit
+endif
+
