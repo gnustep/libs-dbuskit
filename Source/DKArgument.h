@@ -73,6 +73,11 @@ extern NSString *DKArgumentDirectionOut;
  */
 - (NSString*) DBusTypeSignature;
 
+/**
+ * Returns a boxed representation of the value in buffer according to the type
+ * of the DKArgument.
+ */
+- (id) boxedValueForValueAt: (void*)buffer;
 @end
 
 /**

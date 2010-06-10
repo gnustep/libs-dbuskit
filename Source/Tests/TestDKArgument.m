@@ -31,6 +31,7 @@
 #import "../../Headers/DKProxy.h"
 #import "../DKArgument.h"
 
+#include <stdint.h>
 @interface TestDKArgument: NSObject <UKTest>
 @end
 
@@ -195,6 +196,7 @@ static NSDictionary *basicSigsAndClasses;
                                                          name: nil
                                                        parent: nil];
   UKObjectsEqual([arg objCEquivalent], [NSDictionary class]);
+  [arg release];
 }
 
 - (void)testNestedTypeRoundTrip
@@ -205,4 +207,133 @@ static NSDictionary *basicSigsAndClasses;
   UKObjectsEqual([arg DBusTypeSignature], @"(ua{s(iu)}bv)");
   [arg release];
 }
+
+
+- (void)testSimpleBoxingDBusString
+{
+  char *foo = "Foo";
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "s"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual(@"Foo", boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusByte
+{
+  unsigned char foo = 255;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "y"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithUnsignedChar: 255], boxedFoo);
+  [arg release];
+
+}
+
+- (void)testSimpleBoxingDBusBool
+{
+  BOOL foo = YES;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "b"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithBool: YES], boxedFoo);
+  [arg release];
+
+}
+
+- (void)testSimpleBoxingDBusInt16
+{
+  int16_t foo = INT16_MAX;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "n"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithInt: INT16_MAX], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusUInt16
+{
+  uint16_t foo = UINT16_MAX;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "q"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithUnsignedInt: UINT16_MAX], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusInt32
+{
+  int32_t foo = INT32_MAX;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "i"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithInt: INT32_MAX], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusUInt32
+{
+  uint32_t foo = UINT32_MAX;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "u"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithUnsignedInt: UINT32_MAX], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusInt64
+{
+  int64_t foo = INT64_MAX;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "x"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithLong: INT64_MAX], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusUInt64
+{
+  uint64_t foo = UINT64_MAX;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "t"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithUnsignedLong: UINT64_MAX], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusDouble
+{
+  double foo = 1.54E+30;
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "d"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual([NSNumber numberWithDouble: 1.54E+30], boxedFoo);
+  [arg release];
+}
+
+- (void)testSimpleBoxingDBusSignature
+{
+  char *foo = "(ss)";
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "g"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKObjectsEqual(@"(ss)", [boxedFoo DBusTypeSignature]);
+  [arg release];
+}
+
+/*
+ * TODO: Write the complex test whether returning proxies from object paths
+ * works.
+ */
 @end

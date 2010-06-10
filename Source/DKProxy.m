@@ -109,6 +109,16 @@
     service, path);
 }
 
+- (DKEndpoint*)_endpoint
+{
+  return endpoint;
+}
+
+- (NSString*)_service
+{
+  return service;
+}
+
 - (void) dealloc
 {
   [endpoint release];
