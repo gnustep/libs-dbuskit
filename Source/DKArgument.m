@@ -117,6 +117,46 @@ DKUnboxedObjCTypeForDBusType(int type)
   }
   return '\0';
 }
+static size_t
+DKUnboxedObjCTypeSizeForDBusType(int type)
+{
+  switch (type)
+  {
+    case DBUS_TYPE_BYTE:
+      return sizeof(char);
+    case DBUS_TYPE_BOOLEAN:
+      return sizeof(BOOL);
+    case DBUS_TYPE_INT16:
+      return sizeof(int16_t);
+    case DBUS_TYPE_UINT16:
+      return sizeof(uint16_t);
+    case DBUS_TYPE_INT32:
+      return sizeof(int32_t);
+    case DBUS_TYPE_UINT32:
+      return sizeof(uint32_t);
+    case DBUS_TYPE_INT64:
+      return sizeof(int64_t);
+    case DBUS_TYPE_UINT64:
+      return sizeof(uint64_t);
+    case DBUS_TYPE_DOUBLE:
+      return sizeof(double);
+    case DBUS_TYPE_STRING:
+      return sizeof(char*);
+    // We always box the following types:
+    case DBUS_TYPE_OBJECT_PATH:
+    case DBUS_TYPE_ARRAY:
+    case DBUS_TYPE_STRUCT:
+    case DBUS_TYPE_VARIANT:
+      return sizeof(id);
+    // And because we do, the following types will never appear in a signature:
+    case DBUS_TYPE_INVALID:
+    case DBUS_TYPE_SIGNATURE:
+    case DBUS_TYPE_DICT_ENTRY:
+    default:
+      return 0;
+  }
+  return 0;
+}
 
 /**
  *  DKArgument encapsulates D-Bus argument information
@@ -194,6 +234,10 @@ DKUnboxedObjCTypeForDBusType(int type)
   return DKUnboxedObjCTypeForDBusType(DBusType);
 }
 
+- (size_t)unboxedObjCTypeSize
+{
+  return DKUnboxedObjCTypeSizeForDBusType(DBusType);
+}
 - (BOOL) isContainerType
 {
   return NO;
@@ -290,6 +334,11 @@ DKUnboxedObjCTypeForDBusType(int type)
 - (char*) unboxedObjCTypeChar
 {
   return @encode(id);
+}
+
+- (size_t) unboxedObjCTypeSize
+{
+  return sizeof(id);
 }
 
 - (NSString*) DBusTypeSignature

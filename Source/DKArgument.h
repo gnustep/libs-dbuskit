@@ -59,6 +59,11 @@ extern NSString *DKArgumentDirectionOut;
 - (char*) unboxedObjCTypeChar;
 
 /**
+ * Return the size of the unboxed type.
+ */
+- (size_t) unboxedObjCTypeSize;
+
+/**
  * Return the class that will represent an argument of this type.
  */
 - (Class) objCEquivalent;

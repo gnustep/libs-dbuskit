@@ -15,6 +15,7 @@ SUBPROJECT_NAME = libDBusKit
 libDBusKit_OBJC_FILES = \
         DKArgument.m \
 	DKEndpoint.m \
+        DKMethod.m \
 	DKPort.m \
         DKProxy.m
 
@@ -28,7 +29,8 @@ endif
 
 ifeq ($(test), yes)
 libDBusKit_OBJC_FILES += \
-	Tests/TestDKArgument.m
+	Tests/TestDKArgument.m \
+        Tests/TestDKMethod.m
 endif
 
 -include ../GNUmakefile.preamble
