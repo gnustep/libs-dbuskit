@@ -23,7 +23,7 @@
 
 #import <Foundation/NSProxy.h>
 
-@class DKEndpoint, NSString;
+@class DKEndpoint, NSString, NSMapTable;
 @protocol NSCoding;
 
 @interface DKProxy: NSProxy <NSCoding>
@@ -31,6 +31,7 @@
   DKEndpoint *endpoint;
   NSString *service;
   NSString *path;
+  NSMapTable *selectorToMethodMap;
 }
 
 + (id) proxyWithEndpoint: (DKEndpoint*)anEndpoint

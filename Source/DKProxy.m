@@ -22,11 +22,16 @@
    */
 
 #import "DKEndpoint.h"
+#import "DKMethod.h"
 #import "DBusKit/DKProxy.h"
+
 #import <Foundation/NSCoder.h>
 #import <Foundation/NSInvocation.h>
+#import <Foundation/NSMapTable.h>
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSString.h>
+
+
 
 @implementation DKProxy
 
@@ -101,17 +106,70 @@
 {
   return [DKProxy class];
 }
+/**
+ * This method strips the metadata mangled into the selector string and
+ * returns it at shallBox and interface.
+ */
+
+- (SEL)_unmangledSelector: (SEL)selector
+            boxingRequest: (BOOL*)shallBox
+                interface: (NSString**)interface
+{
+  NSMutableString *selectorString = [NSStringFromSelector(selector) mutableCopy];
+  SEL unmangledSelector = 0;
+
+  // defaults:
+  *shallBox = YES;
+  *interface = nil;
+
+  /*
+   * First, strip potential information about not boxing the arguments.
+   */
+  if ([selectorString hasPrefix: @"_DKNoBox_"])
+  {
+    [selectorString deleteCharactersInRange: NSMakeRange(0,9)];
+    if (shallBox != NULL)
+    {
+      *shallBox = NO;
+    }
+  }
+
+  /*
+   * Check whether the selector includes interface information.
+   */
+  if (![selectorString hasPrefix: @"_DKIf_"])
+  {
+    unmangledSelector = NSSelectorFromString(selectorString);
+    return unmangledSelector;
+  }
+
+  // TODO: Unmangle interfaces
+
+  return unmangledSelector;
+}
 
 - (NSMethodSignature*)methodSignatureForSelector: (SEL)aSelector
 {
-  //TODO: Implement
+  /*
+   * For simple cases we can simply look up the selector in the table and return
+   * the signature from the associated method.
+   */
+  DKMethod *method = NSMapGet(selectorToMethodMap, aSelector);
+  //NSString *selectorName = nil;
+  if (nil != method)
+  {
+    return [method methodSignature];
+  }
+
   return nil;
 }
 
 - (void)forwardInvocation: (NSInvocation*)inv
 {
+  id dummyReturn = nil;
   // TODO: Implement
   NSLog(@"Trying to forward invocation for %@", NSStringFromSelector([inv selector]));
+  [inv setReturnValue: &dummyReturn];
 }
 
 - (BOOL)isKindOfClass: (Class)aClass
