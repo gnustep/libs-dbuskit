@@ -30,7 +30,8 @@ endif
 ifeq ($(test), yes)
 libDBusKit_OBJC_FILES += \
 	Tests/TestDKArgument.m \
-        Tests/TestDKMethod.m
+        Tests/TestDKMethod.m \
+        Tests/TestDKPort.m
 endif
 
 -include ../GNUmakefile.preamble

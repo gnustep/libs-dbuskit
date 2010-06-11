@@ -24,6 +24,8 @@
 #import "DKEndpoint.h"
 #import "DBusKit/DKProxy.h"
 #import <Foundation/NSCoder.h>
+#import <Foundation/NSInvocation.h>
+#import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSString.h>
 
 @implementation DKProxy
@@ -100,6 +102,26 @@
   return [DKProxy class];
 }
 
+- (NSMethodSignature*)methodSignatureForSelector: (SEL)aSelector
+{
+  //TODO: Implement
+  return nil;
+}
+
+- (void)forwardInvocation: (NSInvocation*)inv
+{
+  // TODO: Implement
+  NSLog(@"Trying to forward invocation for %@", NSStringFromSelector([inv selector]));
+}
+
+- (BOOL)isKindOfClass: (Class)aClass
+{
+  if (aClass == [DKProxy class])
+  {
+    return YES;
+  }
+  return NO;
+}
 /*
  * Dummy method to test the proxy
  */

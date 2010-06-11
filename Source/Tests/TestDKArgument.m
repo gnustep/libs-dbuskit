@@ -29,6 +29,7 @@
 #import <UnitKit/UnitKit.h>
 
 #import "../../Headers/DKProxy.h"
+#import "../../Headers/DKPort.h"
 #import "../DKArgument.h"
 
 #include <stdint.h>
@@ -332,8 +333,22 @@ static NSDictionary *basicSigsAndClasses;
   [arg release];
 }
 
-/*
- * TODO: Write the complex test whether returning proxies from object paths
- * works.
- */
+- (void)testSimpleBoxingDBusObjectPath
+{
+  char *foo = "/";
+  NSConnection *conn = nil;
+  id initialProxy = nil;
+  DKArgument *arg = nil;
+  id boxedFoo = nil;
+
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  initialProxy = [conn rootProxy];
+  arg = [[DKArgument alloc] initWithDBusSignature: "o"
+                                             name: nil
+                                           parent: initialProxy];
+  boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
+  UKTrue([boxedFoo isKindOfClass: [DKProxy class]]);
+}
 @end

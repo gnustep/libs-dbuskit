@@ -292,6 +292,11 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
       DKEndpoint *endpoint = nil;
       NSString *path = [[NSString alloc] initWithUTF8String: *(char**)buffer];
       DKProxy *newProxy = nil;
+
+      /*
+       *It hurts a bit to write the following. But I associate no philosophical
+       * claim with it:
+       */
       id ancestor = self;
 
       while (nil != (ancestor = [ancestor parent]) && (nil == newProxy))
@@ -417,6 +422,26 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (size_t) unboxedObjCTypeSize
 {
   return sizeof(id);
+}
+
+- (id) boxedValueForValueAt: (void*)buffer
+{
+  // It is a bad idea to try this on a container type.
+  [self shouldNotImplement: _cmd];
+  return nil;
+}
+
+- (id) boxedValueByUsingIterator: (DBusMessageIter*)iterator
+{
+  // This assumes that the iterator has just entered the container and our ivars
+  // are all correct.
+  if ((DBUS_TYPE_ARRAY == DBusType) && ([NSArray class] == objCEquivalent))
+  {
+    NSMutableArray *box = [NSMutableArray new];
+    [box release];
+  }
+  //TODO: Implement.
+  return nil;
 }
 
 - (NSString*) DBusTypeSignature
