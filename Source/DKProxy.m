@@ -141,6 +141,11 @@
   return service;
 }
 
+- (NSString*)_path
+{
+  return path;
+}
+
 - (void) dealloc
 {
   [endpoint release];

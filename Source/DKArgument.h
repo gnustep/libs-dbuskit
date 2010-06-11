@@ -74,6 +74,15 @@ extern NSString *DKArgumentDirectionOut;
 - (NSString*) DBusTypeSignature;
 
 /**
+ * Tries to unbox the value into the buffer and returns YES if successful. Since
+ * libdbus makes guarantees that all primitive types will fit into 8 bytes of
+ * memory, the buffer can be statically sized to 64bit width. For string
+ * arguments, the address of the unboxed string is stored in the buffer.
+ */
+- (BOOL) unboxValue: (id)value
+         intoBuffer: (long long*)buffer;
+
+/**
  * Returns a boxed representation of the value in buffer according to the type
  * of the DKArgument.
  */

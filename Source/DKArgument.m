@@ -163,6 +163,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
  * Expose DKProxy privates that we need to access.
  */
 @interface DKProxy (Private)
+- (NSString*)_path;
 - (NSString*)_service;
 - (DKEndpoint*)_endpoint;
 @end
@@ -257,6 +258,116 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   return parent;
 }
 
+- (DKProxy*)proxyParent
+{
+  id ancestor = [self parent];
+  do
+  {
+    if ([ancestor isKindOfClass: [DKProxy class]])
+    {
+      return ancestor;
+    }
+    else if (![ancestor respondsToSelector: @selector(parent)])
+    {
+      return nil;
+    }
+  } while (nil != (ancestor = [ancestor parent]));
+
+  return nil;
+}
+
+
+- (BOOL) unboxValue: (id)value
+         intoBuffer: (long long*)buffer
+{
+  switch (DBusType)
+  {
+    case DBUS_TYPE_BYTE:
+       if ([value respondsToSelector: @selector(unsignedCharValue)])
+       {
+	 *buffer = [value unsignedCharValue];
+         return YES;
+       }
+       break;
+    case DBUS_TYPE_BOOLEAN:
+       if ([value respondsToSelector: @selector(boolValue)])
+       {
+	 *buffer = [value boolValue];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_INT16:
+    case DBUS_TYPE_INT32:
+       if ([value respondsToSelector: @selector(intValue)])
+       {
+	 *buffer = [value intValue];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_UINT16:
+    case DBUS_TYPE_UINT32:
+       if ([value respondsToSelector: @selector(unsignedIntValue)])
+       {
+	 *buffer = [value unsignedIntValue];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_INT64:
+       if ([value respondsToSelector: @selector(longLongValue)])
+       {
+	 *buffer = [value longLongValue];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_UINT64:
+       if ([value respondsToSelector: @selector(unsignedLongLongValue)])
+       {
+	 *buffer = [value unsignedLongLongValue];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_DOUBLE:
+       if ([value respondsToSelector: @selector(doubleValue)])
+       {
+	 *buffer = [value doubleValue];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_STRING:
+       if ([value respondsToSelector: @selector(UTF8String)])
+       {
+	 *buffer = (uintptr_t)[value UTF8String];
+	 return YES;
+       }
+       break;
+    case DBUS_TYPE_OBJECT_PATH:
+    if ([value isKindOfClass: [DKProxy class]])
+    {
+      // We need to make sure that the paths are from the same proxy, because
+      // that is the widest scope in which they are valid.
+      DKProxy *myProxy = [self proxyParent];
+      BOOL hasSameScope = ([[value _service] isEqualToString: [myProxy _service]]
+        && [[value _endpoint] isEqual: [myProxy _endpoint]]);
+      if (hasSameScope)
+      {
+        *buffer = (uintptr_t)[[value _path] UTF8String];
+        return YES;
+      }
+    }
+    break;
+    case DBUS_TYPE_SIGNATURE:
+      if ([value respondsToSelector: @selector(DBusTypeSignature)])
+      {
+	*buffer = (uintptr_t)[[value DBusTypeSignature] UTF8String];
+	return YES;
+      }
+      break;
+    default:
+      break;
+  }
+  return NO;
+}
+
 - (id) boxedValueForValueAt: (void*)buffer
 {
   switch (DBusType)
@@ -274,9 +385,9 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     case DBUS_TYPE_UINT32:
       return [objCEquivalent numberWithUnsignedInt: *(uint32_t*)buffer];
     case DBUS_TYPE_INT64:
-      return [objCEquivalent numberWithLong: *(int64_t*)buffer];
+      return [objCEquivalent numberWithLongLong: *(int64_t*)buffer];
     case DBUS_TYPE_UINT64:
-      return [objCEquivalent numberWithUnsignedLong: *(uint64_t*)buffer];
+      return [objCEquivalent numberWithUnsignedLongLong: *(uint64_t*)buffer];
     case DBUS_TYPE_DOUBLE:
       return [objCEquivalent numberWithDouble: *(double*)buffer];
     case DBUS_TYPE_STRING:
@@ -288,37 +399,13 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
        * proxy where it was created and create a new proxy with the proper
        * settings.
        */
-      NSString *service = nil;
-      DKEndpoint *endpoint = nil;
+      DKProxy *ancestor = [self proxyParent];
+      NSString *service = [ancestor _service];
+      DKEndpoint *endpoint = [ancestor _endpoint];
       NSString *path = [[NSString alloc] initWithUTF8String: *(char**)buffer];
-      DKProxy *newProxy = nil;
-
-      /*
-       *It hurts a bit to write the following. But I associate no philosophical
-       * claim with it:
-       */
-      id ancestor = self;
-
-      while (nil != (ancestor = [ancestor parent]) && (nil == newProxy))
-      {
-         if ([ancestor isKindOfClass: [DKProxy class]])
-	 {
-           service = [(DKProxy*)ancestor _service];
-	   endpoint = [(DKProxy*)ancestor _endpoint];
-	   newProxy = [objCEquivalent proxyWithEndpoint: endpoint
-	                                     andService: service
-	                                        andPath: path];
-	 }
-
-	 /*
-	  * Set the ancestor to nil and break the loop if we can no longer
-	  * search for further parents.
-	  */
-	 if (![ancestor respondsToSelector: @selector(parent)])
-	 {
-	   ancestor = nil;
-	 }
-      }
+      DKProxy *newProxy = [objCEquivalent proxyWithEndpoint: endpoint
+	                                         andService: service
+	                                            andPath: path];
       [path release];
       return newProxy;
     }
