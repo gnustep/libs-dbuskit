@@ -42,14 +42,16 @@ DKMethod *_DKMethodIntrospect;
 {
   if ([DKMethod class] == self)
   {
-    DKArgument *xmlOutArg = [[DKArgument alloc] initWithDBusSignature: "s"
-                                                                 name: @"data"
-                                                               parent: _DKMethodIntrospect];
+    DKArgument *xmlOutArg = nil;
     _DKMethodIntrospect = [[DKMethod alloc] initWithMethodName: @"Introspect"
                                                      interface: @"org.freedesktop.DBus.Introspectable"
                                                         parent: nil];
+    xmlOutArg = [[DKArgument alloc] initWithDBusSignature: "s"
+                                                     name: @"data"
+                                                   parent: _DKMethodIntrospect];
     [_DKMethodIntrospect addArgument: xmlOutArg
                            direction: DKArgumentDirectionOut];
+    [xmlOutArg release];
   }
 }
 

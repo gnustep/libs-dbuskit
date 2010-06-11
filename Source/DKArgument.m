@@ -192,7 +192,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
                                                         name: _name
                                                       parent: _parent];
   }
-  ASSIGNCOPY(_name, name);
+  ASSIGNCOPY(name, _name);
   objCEquivalent = DKObjCClassForDBusType(DBusType);
   parent = _parent;
   return self;
@@ -231,6 +231,11 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (int) DBusType
 {
   return DBusType;
+}
+
+- (NSString*)name
+{
+  return name;
 }
 
 - (NSString*) DBusTypeSignature
@@ -367,12 +372,11 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     case DBUS_TYPE_OBJECT_PATH:
     if ([value isKindOfClass: [DKProxy class]])
     {
-      // We need to make sure that the paths are from the same proxy, because
-      // that is the widest scope in which they are valid.
-      DKProxy *myProxy = [self proxyParent];
-      BOOL hasSameScope = ([[value _service] isEqualToString: [myProxy _service]]
-        && [[value _endpoint] isEqual: [myProxy _endpoint]]);
-      if (hasSameScope)
+      /*
+       * We need to make sure that the paths are from the same proxy, because
+       * that is the widest scope in which they are valid.
+       */
+      if ([[self proxyParent] hasSameScopeAs: value])
       {
         *buffer = (uintptr_t)[[value _path] UTF8String];
         return YES;

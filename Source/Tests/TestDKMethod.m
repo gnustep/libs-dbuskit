@@ -21,6 +21,7 @@
 
    */
 #import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSNull.h>
 #import <UnitKit/UnitKit.h>
 
 #import "../DKMethod.h"
@@ -37,6 +38,19 @@
     [DKMethod class];
   }
 }
+
+- (void)testInitializerAssignments
+{
+  NSNull *dummyParent = [NSNull null];
+  DKMethod *method = [[DKMethod alloc] initWithMethodName: @"Fooify"
+                interface: @"org.gnustep.fake"
+                   parent: dummyParent];
+  UKObjectsEqual(@"Fooify",[method methodName]);
+  UKObjectsEqual(@"org.gnustep.fake", [method interface]);
+  UKObjectsEqual(dummyParent, [method parent]);
+  [method release];
+}
+
 - (void)testBuiltInIntrospectSignatureBoxed
 {
   NSMethodSignature *sig = [_DKMethodIntrospect methodSignature];

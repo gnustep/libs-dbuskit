@@ -41,4 +41,9 @@
 - (id) initWithEndpoint: (DKEndpoint*)anEndpoint
              andService: (NSString*)aService
                 andPath: (NSString*)aPath;
+
+/**
+ * Checks whether the to proxies are attached to the same D-Bus service.
+ */
+- (BOOL) hasSameScopeAs: (DKProxy*)aProxy;
 @end

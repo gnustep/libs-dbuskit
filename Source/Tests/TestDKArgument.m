@@ -86,6 +86,20 @@ static NSDictionary *basicSigsAndClasses;
                                            parent: nil]);
 }
 
+- (void) testInitializerAssignments
+{
+  DKArgument *fakeParent = [[DKArgument alloc] initWithDBusSignature: "s"
+                                                                name: nil
+                                                              parent: nil];
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "s"
+                                                         name: @"Foo"
+                                                       parent: fakeParent];
+  UKObjectsEqual(@"Foo",[arg name]);
+  UKObjectsEqual(fakeParent, [arg parent]);
+  [arg release];
+  [fakeParent release];
+}
+
 - (void) testSimpleRoundtrip
 {
   NSEnumerator *enumerator = [basicSigs objectEnumerator];

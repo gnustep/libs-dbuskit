@@ -204,6 +204,13 @@
   return path;
 }
 
+- (BOOL) hasSameScopeAs: (DKProxy*)aProxy
+{
+  BOOL sameService = [service isEqualToString: [aProxy _service]];
+  BOOL sameEndpoint = [endpoint isEqual: [aProxy _endpoint]];
+  return (sameService && sameEndpoint);
+}
+
 - (void) dealloc
 {
   [endpoint release];

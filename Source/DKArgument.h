@@ -25,7 +25,7 @@
 #import<Foundation/NSObject.h>
 
 
-@class NSString, NSMutableArray;
+@class NSString, NSMutableArray, DKProxy;
 
 extern NSString *DKArgumentDirectionIn;
 extern NSString *DKArgumentDirectionOut;
@@ -87,6 +87,21 @@ extern NSString *DKArgumentDirectionOut;
  * of the DKArgument.
  */
 - (id) boxedValueForValueAt: (void*)buffer;
+
+/**
+ * Returns the immediate parent from the proxy/method/argument/subargument tree.
+ */
+- (id) parent;
+
+/**
+ * Returns the proxy from which the receiver descends, if any.
+ */
+- (DKProxy*) proxyParent;
+
+/**
+ * Returns the name of the argument.
+ */
+- (NSString*)name;
 @end
 
 /**

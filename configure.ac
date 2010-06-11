@@ -22,6 +22,9 @@ AC_SUBST(DBUS_LIBS)
 
 #--------------------------------------------------------------------
 # Check for -Wdeclaration-after-statement (adopted from gnustep-base) 
+# TODO: Doing it this way looks really ugly because there is a bunch
+#       of other tests executed before the result of the test is
+#       printed.
 #--------------------------------------------------------------------
 AC_MSG_CHECKING(whether the compiler supports -Wdeclaration-after-statement)
 
