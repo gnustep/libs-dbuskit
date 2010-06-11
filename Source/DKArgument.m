@@ -303,6 +303,12 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
        }
        break;
     case DBUS_TYPE_INT16:
+       if ([value respondsToSelector: @selector(shortValue)])
+       {
+	 *buffer = [value shortValue];
+	 return YES;
+       }
+       break;
     case DBUS_TYPE_INT32:
        if ([value respondsToSelector: @selector(intValue)])
        {
@@ -311,6 +317,12 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
        }
        break;
     case DBUS_TYPE_UINT16:
+       if ([value respondsToSelector: @selector(unsignedShortValue)])
+       {
+	 *buffer = [value unsignedShortValue];
+	 return YES;
+       }
+       break;
     case DBUS_TYPE_UINT32:
        if ([value respondsToSelector: @selector(unsignedIntValue)])
        {
@@ -389,9 +401,9 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     case DBUS_TYPE_BOOLEAN:
       return [objCEquivalent numberWithBool: *(BOOL*)buffer];
     case DBUS_TYPE_INT16:
-      return [objCEquivalent numberWithInt: *(int16_t*)buffer];
+      return [objCEquivalent numberWithShort: *(int16_t*)buffer];
     case DBUS_TYPE_UINT16:
-      return [objCEquivalent numberWithUnsignedInt: *(uint16_t*)buffer];
+      return [objCEquivalent numberWithUnsignedShort: *(uint16_t*)buffer];
     case DBUS_TYPE_INT32:
       return [objCEquivalent numberWithInt: *(int32_t*)buffer];
     case DBUS_TYPE_UINT32:
