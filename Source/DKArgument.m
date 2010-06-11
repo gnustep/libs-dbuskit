@@ -258,6 +258,12 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   return parent;
 }
 
+/**
+ * This method returns the root ancestor in the method/arugment tree if it is a
+ * proxy. Otherwise it returns nil. This information is needed for boxing and
+ * unboxing values that depend on the object to which a method is associated
+ * (i.e. object paths).
+ */
 - (DKProxy*)proxyParent
 {
   id ancestor = [self parent];
@@ -329,7 +335,13 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     case DBUS_TYPE_DOUBLE:
        if ([value respondsToSelector: @selector(doubleValue)])
        {
-	 *buffer = [value doubleValue];
+	 union fpAndLLRep
+	 {
+           long long buf;
+	   double val;
+	 } rep;
+	 rep.val = [value doubleValue];
+	 *buffer = rep.buf;
 	 return YES;
        }
        break;

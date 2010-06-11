@@ -33,6 +33,8 @@
 #import "../DKArgument.h"
 
 #include <stdint.h>
+#include <math.h>
+
 @interface TestDKArgument: NSObject <UKTest>
 @end
 
@@ -210,16 +212,40 @@ static NSDictionary *basicSigsAndClasses;
 }
 
 
-- (void)testSimpleBoxingDBusString
+- (void)testSimpleBoxingRoundtripDBusString
 {
   char *foo = "Foo";
+  long long buffer = 0;
   DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "s"
                                                          name: nil
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual(@"Foo", boxedFoo);
+
+  if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
+  {
+    UKTrue(0 == strcmp(foo,(char*)buffer));
+  }
+  else
+  {
+    UKFail();
+  }
+
   [arg release];
 }
+
+#define TEST_UNBOX_INTTYPE(x) do { \
+  long long buffer = 0; \
+  if ([arg unboxValue: boxedFoo intoBuffer: &buffer]) \
+    { \
+      UKTrue(foo == (x)buffer); \
+    } \
+    else \
+    { \
+      UKFail(); \
+    } \
+  } while (0)
+
 
 - (void)testSimpleBoxingDBusByte
 {
@@ -229,6 +255,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithUnsignedChar: 255], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(unsigned char);
+
   [arg release];
 
 }
@@ -241,6 +270,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithBool: YES], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(BOOL);
+
   [arg release];
 
 }
@@ -253,6 +285,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithInt: INT16_MAX], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(int16_t);
+
   [arg release];
 }
 
@@ -264,6 +299,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithUnsignedInt: UINT16_MAX], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(uint16_t);
+
   [arg release];
 }
 
@@ -275,6 +313,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithInt: INT32_MAX], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(int32_t);
+
   [arg release];
 }
 
@@ -286,6 +327,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithUnsignedInt: UINT32_MAX], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(uint32_t);
+
   [arg release];
 }
 
@@ -297,6 +341,9 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithLong: INT64_MAX], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(int64_t);
+
   [arg release];
 }
 
@@ -308,34 +355,60 @@ static NSDictionary *basicSigsAndClasses;
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithUnsignedLong: UINT64_MAX], boxedFoo);
+
+  TEST_UNBOX_INTTYPE(uint64_t);
+
   [arg release];
 }
 
 - (void)testSimpleBoxingDBusDouble
 {
   double foo = 1.54E+30;
+  long long buffer = 0;
   DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "d"
                                                          name: nil
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual([NSNumber numberWithDouble: 1.54E+30], boxedFoo);
+
+  if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
+  {
+    UKTrue((fabs(foo - *(double*)&buffer) < 0.00001));
+  }
+  else
+  {
+    UKFail();
+  }
   [arg release];
 }
 
 - (void)testSimpleBoxingDBusSignature
 {
   char *foo = "(ss)";
+  long long buffer = 0;
+
   DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "g"
                                                          name: nil
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKObjectsEqual(@"(ss)", [boxedFoo DBusTypeSignature]);
+
+  if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
+  {
+    UKTrue(0 == strcmp(foo,(char*)buffer));
+  }
+  else
+  {
+    UKFail();
+  }
+
   [arg release];
 }
 
 - (void)testSimpleBoxingDBusObjectPath
 {
   char *foo = "/";
+  long long buffer = 0;
   NSConnection *conn = nil;
   id initialProxy = nil;
   DKArgument *arg = nil;
@@ -350,5 +423,16 @@ static NSDictionary *basicSigsAndClasses;
                                            parent: initialProxy];
   boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
   UKTrue([boxedFoo isKindOfClass: [DKProxy class]]);
+
+  if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
+  {
+    UKTrue(0 == strcmp(foo,(char*)buffer));
+  }
+  else
+  {
+    UKFail();
+  }
+
+ [arg release];
 }
 @end
