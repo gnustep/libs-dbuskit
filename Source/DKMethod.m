@@ -247,6 +247,12 @@ DKMethod *_DKMethodIntrospect;
 {
   return [[annotations valueForKey: @"org.freedesktop.DBus.Deprecated"] isEqualToString: @"true"];
 }
+
+- (BOOL) isOneway
+{
+  return [[annotations valueForKey: @"org.freedesktop.DBus.Method.NoReply"] isEqualToString: @"true"];
+}
+
 - (NSString*)methodDeclaration
 {
   NSMutableString *declaration = [NSMutableString stringWithString: @"- "];
@@ -258,7 +264,15 @@ DKMethod *_DKMethodIntrospect;
 
   if (0 == outCount)
   {
-    returnType = @"void";
+    if ([self isOneway])
+    {
+      returnType = @"oneway void";
+    }
+    else
+    {
+      returnType = @"void";
+    }
+
   }
   else if (outCount > 1)
   {

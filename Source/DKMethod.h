@@ -77,6 +77,16 @@
 - (NSString*) methodName;
 
 /**
+ * Returns whether a reply is expected for this message.
+ */
+- (BOOL) isOneway;
+
+/**
+ * Returns whether D-Bus metadata indicates that the method has been deprecated.
+ */
+- (BOOL) isDeprecated;
+
+/**
  * Returns an Objective-C method declaration for the D-Bus method.
  */
 - (NSString*)methodDeclaration;
