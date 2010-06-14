@@ -33,6 +33,13 @@
 
 
 
+/*
+ * Definitions of the strings used for selector mangling.
+ */
+#define SEL_MANGLE_NOBOX_STRING @"_DKNoBox_"
+#define SEL_MANGLE_IFSTART_STRING @"_DKIf_"
+#define SEL_MANGLE_IFEND_STRING @"_DKIfEnd_"
+
 @implementation DKProxy
 
 + (id)proxyWithEndpoint: (DKEndpoint*)anEndpoint
@@ -102,10 +109,39 @@
   return self;
 }
 
+/**
+ * Overrides NSProxy.
+ */
 - (Class)classForPortCoder
 {
   return [DKProxy class];
 }
+
+
+
+/**
+ * Returns the DKMethod that handles the selector.
+ */
+- (DKMethod*)DBusMethodForSelector: (SEL)selector
+{
+  if (0 == selector)
+  {
+    return nil;
+  }
+  return NSMapGet(selectorToMethodMap, selector);
+}
+
+
+/**
+ * Returns the interface corresponding to the mangled version in which all dots
+ * have been replaced with underscores.
+ */
+- (NSString*)DBusInterfaceForMangledString: (NSString*)string
+{
+  //TODO: Implement
+  return nil;
+}
+
 /**
  * This method strips the metadata mangled into the selector string and
  * returns it at shallBox and interface.
@@ -117,34 +153,114 @@
 {
   NSMutableString *selectorString = [NSStringFromSelector(selector) mutableCopy];
   SEL unmangledSelector = 0;
-
+  // Ranges for string manipulation;
+  NSRange noBoxRange = [selectorString rangeOfString: SEL_MANGLE_NOBOX_STRING];
+  // We cannot set the other ranges now, because they change when the mangled
+  // metadata is removed.
+  NSRange ifStartRange = NSMakeRange(NSNotFound, 0);
+  NSRange ifEndRange = NSMakeRange(NSNotFound, 0);
   // defaults:
   *shallBox = YES;
   *interface = nil;
+  if (0 == selector)
+  {
+    return 0;
+  }
 
   /*
    * First, strip potential information about not boxing the arguments.
    */
-  if ([selectorString hasPrefix: @"_DKNoBox_"])
+  if (NSNotFound != noBoxRange.location)
   {
-    [selectorString deleteCharactersInRange: NSMakeRange(0,9)];
+    /*
+     * We need to look ahead for _DKIf_ to perserve the underscore. So we skip
+     * ahead one character less then the length of this range to find the range
+     * where it could be.
+     */
+    NSRange lookAhead = NSMakeRange((noBoxRange.location + (noBoxRange.length - 1)),
+      [SEL_MANGLE_IFSTART_STRING length]);
+
+    /*
+     * And we also need to look behind for _DK_IfEnd_, so we skip the
+     * appropriate ammount of characters back.
+     */
+    NSUInteger ifEndLength = [SEL_MANGLE_IFEND_STRING length];
+    NSRange lookBehind;
+
+
+    // Make sure there are enough characters to look for.
+    if (noBoxRange.location >= ifEndLength)
+    {
+      lookBehind = NSMakeRange((noBoxRange.location - (ifEndLength - 1)),
+        ifEndLength);
+    }
+    else
+    {
+      lookBehind = NSMakeRange(NSNotFound, 0);
+    }
+
+    // Check whether the range fits within the selectorString.
+    if (NSMaxRange(lookAhead) <= [selectorString length])
+    {
+      // Check whether _DKIf_ exists after _DKNoBox
+      if ([SEL_MANGLE_IFSTART_STRING isEqualToString: [selectorString substringWithRange: lookAhead]])
+      {
+	// If so, reduce the length in order to perserve the underscore.
+        noBoxRange.length--;
+      }
+    }
+
+    // Check wheter it is senible to look behind
+    if (NSNotFound != lookBehind.location)
+    {
+      // Check whether DKNoBox_ is preceeded by _DKEndIf_
+      if ([SEL_MANGLE_IFEND_STRING isEqualToString: [selectorString substringWithRange: lookBehind]])
+      {
+	// If so, move the index one character to the right to perserve the underscore.
+        noBoxRange.location++;
+	// Also reduce the length.
+	noBoxRange.length--;
+      }
+    }
+
+    // Do not try to dereference NULL
     if (shallBox != NULL)
     {
       *shallBox = NO;
     }
+
+    // Remove the _DK_NoBox_ but leave underscores that might be needed
+    [selectorString deleteCharactersInRange: noBoxRange];
   }
 
-  /*
-   * Check whether the selector includes interface information.
-   */
-  if (![selectorString hasPrefix: @"_DKIf_"])
+
+  ifStartRange = [selectorString rangeOfString: SEL_MANGLE_IFSTART_STRING];
+  ifEndRange = [selectorString rangeOfString: SEL_MANGLE_IFEND_STRING];
+  // Sanity check for presence and order of both the starting and the ending
+  // string.
+  if ((NSNotFound != ifStartRange.location)
+    && (NSNotFound != ifEndRange.location)
+    && (NSMaxRange(ifStartRange) < ifEndRange.location))
   {
-    unmangledSelector = NSSelectorFromString(selectorString);
-    return unmangledSelector;
+    // Do not dereference NULL
+    if (interface != NULL)
+    {
+      // Calculate the range of the interface string between the two:
+      NSUInteger ifIndex = NSMaxRange(ifStartRange);
+      NSUInteger ifLength = (ifEndRange.location - ifIndex);
+      NSRange ifRange = NSMakeRange(ifIndex, ifLength);
+
+      // Extract and unmangle the information
+      NSString *mangledIf = [selectorString substringWithRange: ifRange];
+      *interface = [self DBusInterfaceForMangledString: mangledIf];
+    }
+
+    // Throw away the whole _DKIf_*_DKEndIf_ portion.
+    [selectorString deleteCharactersInRange: NSUnionRange(ifStartRange, ifEndRange)];
   }
 
-  // TODO: Unmangle interfaces
-
+  unmangledSelector = NSSelectorFromString(selectorString);
+  [selectorString release];
   return unmangledSelector;
 }
 

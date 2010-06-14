@@ -31,7 +31,8 @@ ifeq ($(test), yes)
 libDBusKit_OBJC_FILES += \
 	Tests/TestDKArgument.m \
         Tests/TestDKMethod.m \
-        Tests/TestDKPort.m
+        Tests/TestDKPort.m \
+	Tests/TestDKProxy.m
 endif
 
 -include ../GNUmakefile.preamble
