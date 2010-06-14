@@ -77,6 +77,11 @@
 - (NSString*) methodName;
 
 /**
+ * Returns an Objective-C method declaration for the D-Bus method.
+ */
+- (NSString*)methodDeclaration;
+
+/**
  * Returns the proxy/object vendor that the method belongs to.
  */
 - (id) parent;

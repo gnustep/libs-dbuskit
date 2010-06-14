@@ -243,6 +243,66 @@ DKMethod *_DKMethodIntrospect;
   return [annotations valueForKey: key];
 }
 
+- (BOOL) isDeprecated
+{
+  return [[annotations valueForKey: @"org.freedesktop.DBus.Deprecated"] isEqualToString: @"true"];
+}
+- (NSString*)methodDeclaration
+{
+  NSMutableString *declaration = [NSMutableString stringWithString: @"- "];
+  NSString *returnType = nil;
+  NSUInteger outCount = [outArgs count];
+  NSEnumerator *argEnum = nil;
+  DKArgument *arg = nil;
+  NSUInteger count = 0;
+
+  if (0 == outCount)
+  {
+    returnType = @"void";
+  }
+  else if (outCount > 1)
+  {
+    returnType = @"NSArray*";
+  }
+  else
+  {
+    returnType = [NSString stringWithFormat: @"%@*",
+      NSStringFromClass([(DKArgument*)[outArgs objectAtIndex: 0] objCEquivalent])];
+  }
+
+  [declaration appendFormat: @"(%@) %@", returnType, methodName];
+
+  argEnum = [inArgs objectEnumerator];
+  while (nil != (arg = [argEnum nextObject]))
+  {
+    NSString *argType = @"id";
+    NSString *name = [arg name];
+    Class theClass = [arg objCEquivalent];
+    if (theClass != Nil)
+    {
+      argType = [NSStringFromClass(theClass) stringByAppendingString: @"*"];
+    }
+
+    if (nil == name)
+    {
+      name = [[NSString alloc] initWithFormat: @"argument%ld", count];
+    }
+    [declaration appendFormat:@": (%@)%@ ", argType, name];
+    [name release];
+    count++;
+  }
+  if ([self isDeprecated])
+  {
+    [declaration appendString: @"__attribute__((deprecated));"];
+  }
+  else
+  {
+    [declaration replaceCharactersInRange: NSMakeRange(([declaration length]), 0)
+                               withString: @";"];
+  }
+  return declaration;
+}
+
 
 - (void)dealloc
 {

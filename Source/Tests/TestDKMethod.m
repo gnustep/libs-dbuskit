@@ -83,4 +83,9 @@
     UKFail();
   }
 }
+
+- (void)testEmitMethodDeclaration
+{
+  UKObjectsEqual(@"- (NSString*) Introspect;", [_DKMethodIntrospect methodDeclaration]);
+}
 @end
