@@ -213,36 +213,6 @@ DKMethod *_DKMethodIntrospect;
   return interface;
 }
 
-- (id) parent
-{
-  return parent;
-}
-- (void) setAnnotationValue: (id)value
-                     forKey: (NSString*)key
-{
-  if ((nil == value) || (nil == key))
-  {
-    NSDebugMLog(@"Ignored invalid annotation key value pair");
-  }
-  if (nil == annotations)
-  {
-    NSDebugMLog(@"Lazily initializing annotation dictionary");
-    annotations = [NSMutableDictionary new];
-  }
-
-  [annotations setValue: value
-                 forKey: key];
-  NSDebugMLog(@"Added value %@ for key %@", value, key);
-}
-
-/**
- * Returns the value of the specified annotation key.
- */
-- (id) annotationValueForKey: (NSString*)key
-{
-  return [annotations valueForKey: key];
-}
-
 - (BOOL) isDeprecated
 {
   return [[annotations valueForKey: @"org.freedesktop.DBus.Deprecated"] isEqualToString: @"true"];

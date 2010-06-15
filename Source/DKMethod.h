@@ -84,26 +84,10 @@
 - (NSString*)methodDeclaration;
 
 /**
- * Returns the proxy/object vendor that the method belongs to.
- */
-- (id) parent;
-
-/**
  * Adds an argument specification to the method.
  */
 - (void) addArgument: (DKArgument*)arg
            direction: (NSString*)direction;
-
-/**
- * Records metadata for the method.
- */
-- (void) setAnnotationValue: (id)value
-                     forKey: (NSString*)key;
-
-/**
- * Returns the value of the specified annotation key.
- */
-- (id) annotationValueForKey: (NSString*)key;
 
 @end
 
