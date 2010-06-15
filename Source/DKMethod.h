@@ -22,16 +22,13 @@
    <title>DKMethod class reference</title>
    */
 
-#import <Foundation/NSObject.h>
-@class NSString, NSMutableArray, NSMutableDictionary, NSMethodSignature, DKArgument;
-@interface DKMethod: NSObject
+#import "DKIntrospectionNode.h"
+@class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
+@interface DKMethod: DKIntrospectionNode
 {
-  NSString *methodName;
   NSString *interface;
   NSMutableArray *inArgs;
   NSMutableArray *outArgs;
-  NSMutableDictionary *annotations;
-  id parent;
 }
 
 /**
@@ -70,11 +67,6 @@
  */
 - (NSString*) interface;
 
-
-/**
- * Returns the method name.
- */
-- (NSString*) methodName;
 
 /**
  * Returns whether a reply is expected for this message.

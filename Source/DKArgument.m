@@ -176,7 +176,8 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
                    name: (NSString*)_name
                  parent: (id)_parent
 {
-  if (nil == (self = [super init]))
+  if (nil == (self = [super initWithName: _name
+                                  parent: _parent]))
   {
     return nil;
   }
@@ -192,9 +193,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
                                                         name: _name
                                                       parent: _parent];
   }
-  ASSIGNCOPY(name, _name);
   objCEquivalent = DKObjCClassForDBusType(DBusType);
-  parent = _parent;
   return self;
 }
 
@@ -233,11 +232,6 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   return DBusType;
 }
 
-- (NSString*)name
-{
-  return name;
-}
-
 - (NSString*) DBusTypeSignature
 {
   return [NSString stringWithCharacters: (unichar*)&DBusType length: 1];
@@ -256,11 +250,6 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (BOOL) isContainerType
 {
   return NO;
-}
-
-- (id) parent
-{
-  return parent;
 }
 
 /**
@@ -445,12 +434,6 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
       return nil;
   }
   return nil;
-}
-- (void)dealloc
-{
-  parent = nil;
-  [name release];
-  [super dealloc];
 }
 @end
 

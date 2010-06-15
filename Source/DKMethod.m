@@ -59,15 +59,19 @@ DKMethod *_DKMethodIntrospect;
                 interface: (NSString*)anInterface
                    parent: (id)aParent
 {
-  if (nil == (self = [super init]))
+  if (nil == (self = [super initWithName: aName
+                                  parent: aParent]))
   {
     return nil;
   }
-  ASSIGNCOPY(methodName,aName);
+  if (0 == [name length])
+  {
+    [self release];
+    return nil;
+  }
   ASSIGNCOPY(interface,anInterface);
   inArgs = [NSMutableArray new];
   outArgs = [NSMutableArray new];
-  parent = aParent;
   return self;
 }
 
@@ -147,7 +151,7 @@ DKMethod *_DKMethodIntrospect;
     offset,
     typeString];
   [typeString release];
-  NSDebugMLog(@"Generated type signature '%@' for method '%@'.", fullString, methodName);
+  NSDebugMLog(@"Generated type signature '%@' for method '%@'.", fullString, name);
   ret = [NSMethodSignature signatureWithObjCTypes: [fullString UTF8String]];
   [fullString release];
   return ret;
@@ -207,10 +211,6 @@ DKMethod *_DKMethodIntrospect;
 - (NSString*) interface
 {
   return interface;
-}
-- (NSString*) methodName
-{
-  return methodName;
 }
 
 - (id) parent
@@ -284,25 +284,25 @@ DKMethod *_DKMethodIntrospect;
       NSStringFromClass([(DKArgument*)[outArgs objectAtIndex: 0] objCEquivalent])];
   }
 
-  [declaration appendFormat: @"(%@) %@", returnType, methodName];
+  [declaration appendFormat: @"(%@) %@", returnType, name];
 
   argEnum = [inArgs objectEnumerator];
   while (nil != (arg = [argEnum nextObject]))
   {
     NSString *argType = @"id";
-    NSString *name = [arg name];
+    NSString *argName = [arg name];
     Class theClass = [arg objCEquivalent];
     if (theClass != Nil)
     {
       argType = [NSStringFromClass(theClass) stringByAppendingString: @"*"];
     }
 
-    if (nil == name)
+    if (nil == argName)
     {
-      name = [[NSString alloc] initWithFormat: @"argument%ld", count];
+      argName = [[NSString alloc] initWithFormat: @"argument%ld", count];
     }
-    [declaration appendFormat:@": (%@)%@ ", argType, name];
-    [name release];
+    [declaration appendFormat:@": (%@)%@ ", argType, argName];
+    [argName release];
     count++;
   }
   if ([self isDeprecated])
@@ -320,12 +320,9 @@ DKMethod *_DKMethodIntrospect;
 
 - (void)dealloc
 {
-  parent = nil;
-  [methodName release];
   [interface release];
   [inArgs release];
   [outArgs release];
-  [annotations release];
   [super dealloc];
 }
 @end

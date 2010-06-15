@@ -45,7 +45,7 @@
   DKMethod *method = [[DKMethod alloc] initWithMethodName: @"Fooify"
                 interface: @"org.gnustep.fake"
                    parent: dummyParent];
-  UKObjectsEqual(@"Fooify",[method methodName]);
+  UKObjectsEqual(@"Fooify",[method name]);
   UKObjectsEqual(@"org.gnustep.fake", [method interface]);
   UKObjectsEqual(dummyParent, [method parent]);
   [method release];

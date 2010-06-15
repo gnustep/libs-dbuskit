@@ -22,8 +22,7 @@
    <title>DKArgument class reference</title>
    */
 
-#import<Foundation/NSObject.h>
-
+#import "DKIntrospectionNode.h"
 
 @class NSString, NSMutableArray, DKProxy;
 
@@ -34,12 +33,10 @@ extern NSString *DKArgumentDirectionOut;
 /**
  *  DKArgument encapsulates D-Bus argument information
  */
-@interface DKArgument: NSObject
+@interface DKArgument: DKIntrospectionNode
 {
   int DBusType;
-  NSString *name;
   Class objCEquivalent;
-  id parent;
 }
 
 - (id) initWithDBusSignature: (const char*)characters
@@ -89,19 +86,10 @@ extern NSString *DKArgumentDirectionOut;
 - (id) boxedValueForValueAt: (void*)buffer;
 
 /**
- * Returns the immediate parent from the proxy/method/argument/subargument tree.
- */
-- (id) parent;
-
-/**
  * Returns the proxy from which the receiver descends, if any.
  */
 - (DKProxy*) proxyParent;
 
-/**
- * Returns the name of the argument.
- */
-- (NSString*)name;
 @end
 
 /**
