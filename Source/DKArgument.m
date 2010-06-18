@@ -26,6 +26,8 @@
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSEnumerator.h>
+#import <Foundation/NSInvocation.h>
+#import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -435,6 +437,165 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   }
   return nil;
 }
+
+
+- (void) unmarshallFromIterator: (DBusMessageIter*)iter
+                 intoInvocation: (NSInvocation*)inv
+		        atIndex: (NSInteger)index
+			 boxing: (BOOL)doBox
+{
+  // All basic types are guaranteed to fit into 64bit.
+  uint64_t buffer = 0;
+
+  // Type checking:
+  const char *invType;
+  const char *expectedType;
+
+  // Check that the method contains the expected type.
+  NSAssert((dbus_message_iter_get_arg_type(iter) == DBusType),
+    @"Type mismatch between D-Bus message and introspection data.");
+
+  if (doBox)
+  {
+    expectedType = @encode(id);
+  }
+  else
+  {
+    expectedType = [self unboxedObjCTypeChar];
+  }
+
+  if (index == -1)
+  {
+    invType = [[inv methodSignature] methodReturnType];
+  }
+  else
+  {
+    invType = [[inv methodSignature] getArgumentTypeAtIndex: index];
+  }
+
+  // Check whether the invocation has a matching call frame:
+  NSAssert((0 == strcmp(invType, expectedType)),
+    @"Type mismatch between introspection data and invocation.");
+
+  dbus_message_iter_get_basic(iter, (void*)&buffer);
+
+  if (doBox)
+  {
+    id value = [self boxedValueForValueAt: (void*)&buffer];
+    if (index == -1)
+    {
+      [inv setReturnValue: &value];
+    }
+    else
+    {
+      [inv setArgument: &value
+               atIndex: index];
+    }
+  }
+  else
+  {
+    if (index == -1)
+    {
+      [inv setReturnValue: (void*)&buffer];
+    }
+    else
+    {
+      [inv setArgument: (void*)&buffer
+               atIndex: index];
+    }
+  }
+}
+
+-(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
+{
+  // All basic types are guaranteed to fit into 64bit.
+  uint64_t buffer = 0;
+
+  // Check that the method contains the expected type.
+  NSAssert((dbus_message_iter_get_arg_type(iter) == DBusType),
+    @"Type mismatch between D-Bus message and introspection data.");
+
+  dbus_message_iter_get_basic(iter, (void*)&buffer);
+
+  return [self boxedValueForValueAt: (void*)&buffer];
+}
+
+- (void) marshallArgumentAtIndex: (NSInteger)index
+                  fromInvocation: (NSInvocation*)inv
+                    intoIterator: (DBusMessageIter*)iter
+                          boxing: (BOOL)doBox
+{
+  uint64_t buffer = 0;
+  const char* invType;
+  const char* expectedType;
+
+  if (doBox)
+  {
+    expectedType = @encode(id);
+  }
+  else
+  {
+    expectedType = [self unboxedObjCTypeChar];
+  }
+
+  if (-1 == index)
+  {
+    invType = [[inv methodSignature] methodReturnType];
+  }
+  else
+  {
+    invType = [[inv methodSignature] getArgumentTypeAtIndex: index];
+  }
+
+  NSAssert((0 == strcmp(expectedType, invType)),
+    @"Type mismatch between introspection data and invocation.");
+
+  if (doBox)
+  {
+    id value = nil;
+
+    if (-1 == index)
+    {
+      [inv getReturnValue: &value];
+    }
+    else
+    {
+      [inv getArgument: &value
+               atIndex: index];
+    }
+
+    NSAssert1([self unboxValue: value intoBuffer: (long long int*)(void*)&buffer],
+      @"Could not unbox object '%@' into D-Bus format",
+      value);
+  }
+  else
+  {
+    if (-1 == index)
+    {
+      [inv getReturnValue: (void*)&buffer];
+    }
+    else
+    {
+      [inv getArgument: (void*)&buffer
+               atIndex: index];
+    }
+  }
+
+  NSAssert(dbus_message_iter_append_basic(iter, DBusType, (void*)&buffer),
+    @"Out of memory when marshalling D-Bus data.");
+}
+
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter
+{
+  long long int buffer = 0;
+  NSAssert1([self unboxValue: object intoBuffer: &buffer],
+    @"Could not unbox object '%@' into D-Bus format",
+    object);
+  NSAssert(dbus_message_iter_append_basic(iter, DBusType, (void*)&buffer),
+    @"Out of memory when marshalling D-Bus data.");
+}
+
 @end
 
 @implementation DKContainerTypeArgument
@@ -591,6 +752,39 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (NSArray*) children
 {
   return children;
+}
+
+
+- (void) unmarshallFromIterator: (DBusMessageIter*)iter
+                 intoInvocation: (NSInvocation*)inv
+		        atIndex: (NSInteger)index
+			 boxing: (BOOL)doBox
+{
+  [self notImplemented: _cmd];
+  //FIXME: Implement
+}
+
+-(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
+{
+  [self notImplemented: _cmd];
+  //FIXME: Implement
+  return nil;
+}
+
+- (void) marshallArgumentAtIndex: (NSInteger)index
+                  fromInvocation: (NSInvocation*)inv
+                    intoIterator: (DBusMessageIter*)iter
+                          boxing: (BOOL)doBox
+{
+  [self notImplemented: _cmd];
+  //FIXME: Implement
+}
+
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter
+{
+  [self notImplemented: _cmd];
+  //FIXME: Implement
 }
 
 - (void) dealloc

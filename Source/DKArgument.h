@@ -24,7 +24,9 @@
 
 #import "DKIntrospectionNode.h"
 
-@class NSString, NSMutableArray, DKProxy;
+#include <dbus/dbus.h>
+
+@class NSString, NSInvocation, NSMutableArray, DKProxy;
 
 extern NSString *DKArgumentDirectionIn;
 extern NSString *DKArgumentDirectionOut;
@@ -84,6 +86,40 @@ extern NSString *DKArgumentDirectionOut;
  * of the DKArgument.
  */
 - (id) boxedValueForValueAt: (void*)buffer;
+
+/**
+ * Used unmarshalling D-Bus messages into NSInvocations. The index argument can
+ * indicate the return value if set to -1. This method does not advance the
+ * iterator.
+ */
+- (void) unmarshallFromIterator: (DBusMessageIter*)iter
+                 intoInvocation: (NSInvocation*)inv
+		        atIndex: (NSInteger)index
+			 boxing: (BOOL)doBox;
+
+
+/**
+ * Returns the boxed equivalent of the value at the iterator. This method does
+ * not advance the iterator.
+ */
+-(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter;
+
+/**
+ * Marshall a value from an NSInvocation into an D-Bus message iterator set up
+ * for writing. index indicates the index of the argument to be marshalled into
+ * the D-Bus format (-1 indicates the return value).
+ */
+- (void) marshallArgumentAtIndex: (NSInteger)index
+                  fromInvocation: (NSInvocation*)inv
+                    intoIterator: (DBusMessageIter*)iter
+                          boxing: (BOOL)doBox;
+
+/**
+ * Unboxes the object into D-Bus format and appends it to a D-Bus message by
+ * means of the specified iterator.
+ */
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter;
 
 /**
  * Returns the proxy from which the receiver descends, if any.

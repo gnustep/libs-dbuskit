@@ -15,6 +15,7 @@ SUBPROJECT_NAME = libDBusKit
 libDBusKit_OBJC_FILES = \
         DKArgument.m \
 	DKEndpoint.m \
+	DKInterface.m \
         DKIntrospectionNode.m \
         DKMethod.m \
 	DKPort.m \

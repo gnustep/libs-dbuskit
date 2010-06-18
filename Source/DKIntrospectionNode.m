@@ -23,10 +23,12 @@
 
 #import "DKIntrospectionNode.h"
 
+#import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSNull.h>
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLParser.h>
 
 @implementation DKIntrospectionNode
 
@@ -85,4 +87,44 @@
   [annotations release];
   [super dealloc];
 }
+
+/* Parser delegate methods */
+
+- (void) parserDidStartDocument: (NSXMLParser*)aParser
+{
+  NSDebugMLog(@"Started parsing XML");
+}
+
+- (void) parserDidEndDocument: (NSXMLParser*)aParser
+{
+  NSDebugMLog(@"Stopped parsing XML");
+}
+
+- (void) parser: (NSXMLParser*)aParser
+didStartElement: (NSString*)aNode
+   namespaceURI: (NSString*)aNamespaceURI
+  qualifiedName: (NSString*)aQualifierName
+     attributes: (NSDictionary*)someAttributes
+{
+  NSDebugMLog(@"Started node: %@ (attributes: %@)", aNode, someAttributes);
+  xmlDepth++;
+}
+
+- (void) parser: (NSXMLParser*)aParser
+  didEndElement: (NSString*)aNode
+   namespaceURI: (NSString*)aNamespaceURI
+  qualifiedName: (NSString*)aQualifierName
+{
+  NSDebugMLog(@"Ended node: %@", aNode);
+  xmlDepth--;
+  if (0 == xmlDepth)
+  {
+    if ([parent respondsToSelector:
+        @selector(parser:didStartElement:namespaceURI:qualifiedName:attributes:)])
+    {
+      [aParser setDelegate: parent];
+    }
+  }
+}
+
 @end
