@@ -28,6 +28,7 @@
 #import <Foundation/NSEnumerator.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -168,6 +169,31 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (NSString*)_path;
 - (NSString*)_service;
 - (DKEndpoint*)_endpoint;
+@end
+
+
+/*
+ * Private Container argument subclasses:
+ */
+
+@interface DKStructTypeArgument: DKContainerTypeArgument
+@end
+
+@interface DKArrayTypeArgument: DKContainerTypeArgument
+- (BOOL) isDictionary;
+- (void) setIsDictionary: (BOOL)isDict;
+@end
+
+/* D-Bus marshalls dictionaries as arrays of key/value pairs. */
+@interface DKDictionaryTypeArgument: DKArrayTypeArgument
+@end
+
+@interface DKVariantTypeArgument: DKContainerTypeArgument
+@end
+
+@interface DKDictEntryTypeArgument: DKContainerTypeArgument
+- (DKArgument*) keyArgument;
+- (DKArgument*) valueArgument;
 @end
 
 /**
@@ -598,6 +624,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 
 @end
 
+
 @implementation DKContainerTypeArgument
 
 - (id)initWithIterator: (DBusSignatureIter*)iterator
@@ -611,16 +638,41 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   {
     return nil;
   }
+
+  if (!dbus_type_is_container(DBusType))
+  {
+    NSWarnMLog(@"Incorrectly initialized container type D-Bus argument ('%@' is not a container type).",
+      [NSString stringWithCharacters: (unichar*)&DBusType length: 1]);
+      [self release];
+      return nil;
+  }
+
   children = [[NSMutableArray alloc] init];
 
-  /*
-   * Shortcut needed for variant types. libdbus classifies them as containers,
-   * but it is clearly wrong about that: They have no children and dbus will
-   * fail and crash if it tries to loop over their non-existent sub-arguments.
-   */
-  if (DBUS_TYPE_VARIANT == DBusType)
+  switch (DBusType)
   {
-    return self;
+    case DBUS_TYPE_VARIANT:
+     /*
+      * A shortcut is needed for variant types. libdbus classifies them as
+      * containers, but it is clearly wrong about that: They have no children
+      * and dbus will fail and crash if it tries to loop over their non-existent
+      * sub-arguments. Hence we return after setting the subclass.
+      */
+      isa = [DKVariantTypeArgument class];
+      return self;
+    case DBUS_TYPE_ARRAY:
+      isa = [DKArrayTypeArgument class];
+      break;
+    case DBUS_TYPE_STRUCT:
+      isa = [DKStructTypeArgument class];
+      break;
+    case DBUS_TYPE_DICT_ENTRY:
+      isa = [DKDictEntryTypeArgument class];
+      break;
+    default:
+      NSWarnMLog(@"Cannot handle unkown container type.");
+      [self release];
+      return nil;
   }
 
   /*
@@ -659,11 +711,11 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
    */
   if (DBUS_TYPE_DICT_ENTRY == DBusType)
   {
-    if ([parent isKindOfClass: [DKArgument class]])
+    if ([parent isKindOfClass: [DKArrayTypeArgument class]])
     {
       if (DBUS_TYPE_ARRAY == [(id)parent DBusType])
       {
-        [(id)parent setObjCEquivalent: [NSDictionary class]];
+	[(id)parent setIsDictionary: YES];
       }
     }
   }
@@ -687,19 +739,6 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 {
   // It is a bad idea to try this on a container type.
   [self shouldNotImplement: _cmd];
-  return nil;
-}
-
-- (id) boxedValueByUsingIterator: (DBusMessageIter*)iterator
-{
-  // This assumes that the iterator has just entered the container and our ivars
-  // are all correct.
-  if ((DBUS_TYPE_ARRAY == DBusType) && ([NSArray class] == objCEquivalent))
-  {
-    NSMutableArray *box = [NSMutableArray new];
-    [box release];
-  }
-  //TODO: Implement.
   return nil;
 }
 
@@ -754,20 +793,35 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   return children;
 }
 
-
+/*
+ * Since we always box container types, we can simply set the argument/return
+ * values to the object produced by unmarshalling.
+ */
 - (void) unmarshallFromIterator: (DBusMessageIter*)iter
                  intoInvocation: (NSInvocation*)inv
 		        atIndex: (NSInteger)index
 			 boxing: (BOOL)doBox
 {
-  [self notImplemented: _cmd];
-  //FIXME: Implement
+  id value = [self unmarshalledObjectFromIterator: iter];
+
+  if (-1 == index)
+  {
+    NSAssert((@encode(id) == [[inv methodSignature] methodReturnType]),
+      @"Type mismatch between introspection data and invocation.");
+    [inv setReturnValue: &value];
+  }
+  else
+  {
+    NSAssert((@encode(id) == [[inv methodSignature] getArgumentTypeAtIndex: index]),
+      @"Type mismatch between introspection data and invocation.");
+    [inv setArgument: &value
+             atIndex: index];
+  }
 }
 
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
-  [self notImplemented: _cmd];
-  //FIXME: Implement
+  [self subclassResponsibility: _cmd];
   return nil;
 }
 
@@ -776,15 +830,29 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
                     intoIterator: (DBusMessageIter*)iter
                           boxing: (BOOL)doBox
 {
-  [self notImplemented: _cmd];
-  //FIXME: Implement
+  id value = nil;
+
+  if (-1 == index)
+  {
+    NSAssert((@encode(id) == [[inv methodSignature] methodReturnType]),
+      @"Type mismatch between introspection data and invocation.");
+    [inv getReturnValue: &value];
+  }
+  else
+  {
+    NSAssert((@encode(id) == [[inv methodSignature] getArgumentTypeAtIndex: index]),
+      @"Type mismatch between introspection data and invocation.");
+    [inv getArgument: &value
+             atIndex: index];
+  }
+  [self marshallObject: value
+          intoIterator: iter];
 }
 
 - (void) marshallObject: (id)object
            intoIterator: (DBusMessageIter*)iter
 {
-  [self notImplemented: _cmd];
-  //FIXME: Implement
+  [self subclassResponsibility: _cmd];
 }
 
 - (void) dealloc
@@ -793,3 +861,155 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   [super dealloc];
 }
 @end;
+
+@implementation DKArrayTypeArgument
+- (id)initWithIterator: (DBusSignatureIter*)iterator
+                  name: (NSString*)_name
+                parent: (id)_parent
+{
+  NSUInteger childCount = 0;
+  if (nil == (self = [super initWithIterator: iterator
+                                        name: _name
+                                      parent: _parent]))
+  {
+    return nil;
+  }
+
+  childCount = [children count];
+
+  // Arrays can only have a single type:
+  if (childCount != 1)
+  {
+    NSWarnMLog(@"Invalid number of children (%lu) for D-Bus array argument",
+      childCount);
+    [self release];
+    return nil;
+  }
+
+  return self;
+}
+- (BOOL) isDictionary
+{
+  return [self isKindOfClass: [DKDictionaryTypeArgument class]];
+}
+
+- (void) setIsDictionary: (BOOL)isDict
+{
+  if (isDict)
+  {
+    isa = [DKDictionaryTypeArgument class];
+    [self setObjCEquivalent: [NSDictionary class]];
+  }
+  else
+  {
+    // Not sure why somebody would want to do that
+    isa = [DKArrayTypeArgument class];
+    [self setObjCEquivalent: [NSArray class]];
+  }
+}
+
+- (DKArgument*)elementTypeArgument
+{
+  return [children objectAtIndex: 0];
+}
+
+
+- (void) assertSaneIterator: (DBusMessageIter*)iter
+{
+  int childType = DBUS_TYPE_INVALID;
+  // Make sure we are deserializing an array:
+  NSAssert((DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(iter)),
+    @"Non array type when unmarshalling array from message.");
+  childType = dbus_message_iter_get_element_type(iter);
+
+  // Make sure we have the expected element type.
+  NSAssert((childType == [[self elementTypeArgument] DBusType]),
+    @"Type mismatch between D-Bus message and introspection data.");
+}
+
+-(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
+{
+  DKArgument *theChild = [self elementTypeArgument];
+  DBusMessageIter subIter;
+  NSMutableArray *returnArray = [NSMutableArray array];
+  NSNull *theNull = [NSNull null];
+
+  [self assertSaneIterator: iter];
+
+  dbus_message_iter_recurse(iter, &subIter);
+  do
+  {
+    id obj = [theChild unmarshalledObjectFromIterator: &subIter];
+    if (nil == obj)
+    {
+      obj = theNull;
+    }
+    [returnArray addObject: obj];
+  } while (dbus_message_iter_next(&subIter));
+
+  return returnArray;
+}
+
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter
+{
+  DBusMessageIter subIter;
+  DKArgument *theChild = [self elementTypeArgument];
+  NSEnumerator *elementEnum = nil;
+  id element = nil;
+
+  NSAssert1([object respondsToSelector: @selector(objectEnumerator)],
+    @"Cannot enumerate contents of %@ when creating D-Bus array.",
+    object);
+
+  NSAssert(dbus_message_iter_open_container(iter,
+    DBUS_TYPE_ARRAY,
+    [[theChild DBusTypeSignature] UTF8String],
+    &subIter),
+    @"Out of memory when creating D-Bus iterator for container.");
+
+  elementEnum = [object objectEnumerator];
+  NS_DURING
+  {
+    while (nil != (element = [elementEnum nextObject]))
+    {
+      [theChild marshallObject: element
+                  intoIterator: &subIter];
+
+    }
+  }
+  NS_HANDLER
+  {
+    // We are already screwed and don't care whether
+    // dbus_message_iter_close_container() returns OOM.
+    dbus_message_iter_close_container(iter, &subIter);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  NSAssert(dbus_message_iter_close_container(iter, &subIter),
+    @"Out of memory when closing D-Bus container.");
+}
+@end
+
+@implementation DKDictionaryTypeArgument
+@end
+
+@implementation DKStructTypeArgument
+@end
+
+@implementation DKVariantTypeArgument
+@end
+
+@implementation DKDictEntryTypeArgument
+
+- (DKArgument*)keyArgument
+{
+  return [children objectAtIndex: 0];
+}
+
+- (DKArgument*)valueArgument
+{
+  return [children objectAtIndex: 1];
+}
+@end
