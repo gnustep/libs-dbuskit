@@ -24,6 +24,7 @@
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDebug.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSEnumerator.h>
 #import <Foundation/NSInvocation.h>
@@ -191,7 +192,8 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @interface DKVariantTypeArgument: DKContainerTypeArgument
 @end
 
-@interface DKDictEntryTypeArgument: DKContainerTypeArgument
+/* It seems sensible to regard dict entries as struct types. */
+@interface DKDictEntryTypeArgument: DKStructTypeArgument
 - (DKArgument*) keyArgument;
 - (DKArgument*) valueArgument;
 @end
@@ -888,6 +890,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 
   return self;
 }
+
 - (BOOL) isDictionary
 {
   return [self isKindOfClass: [DKDictionaryTypeArgument class]];
@@ -931,7 +934,8 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 {
   DKArgument *theChild = [self elementTypeArgument];
   DBusMessageIter subIter;
-  NSMutableArray *returnArray = [NSMutableArray array];
+  NSMutableArray *theArray = [NSMutableArray new];
+  NSArray *returnArray = nil;
   NSNull *theNull = [NSNull null];
 
   [self assertSaneIterator: iter];
@@ -944,9 +948,11 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     {
       obj = theNull;
     }
-    [returnArray addObject: obj];
+    [theArray addObject: obj];
   } while (dbus_message_iter_next(&subIter));
 
+  returnArray = [NSArray arrayWithArray: theArray];
+  [theArray release];
   return returnArray;
 }
 
@@ -993,6 +999,114 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @end
 
 @implementation DKDictionaryTypeArgument
+/*
+ * NOTE: Most of the time, this initializer will not be used, because we only
+ * know ex-post whether something is a dictionary (by virtue of having elements
+ * of DBUS_TYPE_DICT_ENTRY).
+ */
+- (id)initWithIterator: (DBusSignatureIter*)iterator
+                  name: (NSString*)_name
+                parent: (id)_parent
+{
+  if (nil == (self = [super initWithIterator: iterator
+                                        name: _name
+                                      parent: _parent]))
+  {
+    return nil;
+  }
+
+  if (![[self elementTypeArgument] isKindOfClass: [DKDictEntryTypeArgument class]])
+  {
+    NSWarnMLog(@"Invalid dictionary type argument (does not contan a dict entry).");
+    [self release];
+    return nil;
+  }
+  return self;
+}
+
+
+- (void) assertSaneIterator: (DBusMessageIter*)iter
+{
+  [super assertSaneIterator: iter];
+  NSAssert((DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_element_type(iter)),
+    @"Non dict-entry type in iterator when unmarshalling a dictionary.");
+}
+
+-(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
+{
+  DKDictEntryTypeArgument *theChild = (DKDictEntryTypeArgument*)[self elementTypeArgument];
+  DKArgument *valueArgument = nil;
+  DKArgument *keyArgument = nil;
+  DBusMessageIter subIter;
+  NSMutableDictionary *theDictionary = [NSMutableDictionary new];
+  NSDictionary *returnDictionary = nil;
+  NSNull *theNull = [NSNull null];
+
+  [self assertSaneIterator: iter];
+  valueArgument = [theChild valueArgument];
+  keyArgument = [theChild keyArgument];
+
+  // We loop over the dict entries:
+  dbus_message_iter_recurse(iter, &subIter);
+  do
+  {
+    id value = nil;
+    id key = nil;
+    DBusMessageIter entryIter;
+    NSUInteger index = 0;
+
+    /*
+     * There is no additional benefit from going through DKDictEntryTypeArgument
+     * for unmarshalling. We just iterate over the contents of an entry
+     * ourselves:
+     */
+    dbus_message_iter_recurse(&subIter, &entryIter);
+    do
+    {
+      // The entry contains the key first:
+      if (index == 0)
+      {
+        key = [keyArgument unmarshalledObjectFromIterator: &entryIter];
+      }
+      else if (index == 1)
+      {
+        value = [valueArgument unmarshalledObjectFromIterator: &entryIter];
+      }
+      index++;
+    } while (dbus_message_iter_next(&entryIter) && (index < 2));
+
+    if (key == nil)
+    {
+      key = theNull;
+    }
+    if (value == nil)
+    {
+      value = theNull;
+    }
+
+    if (nil == [theDictionary objectForKey: key])
+    {
+      /*
+       * From the D-Bus specification:
+       * "A message is considered corrupt if the same key occurs twice in the
+       * same array of DICT_ENTRY. However, for performance reasons
+       * implementations are not required to reject dicts with duplicate keys."
+       * We choose to just ignore duplicate keys:
+       */
+      [theDictionary setObject: value
+                        forKey: key];
+    }
+    else
+    {
+      NSWarnMLog(@"Ignoring duplicate key (%@) in D-Bus dictionary.", key);
+    }
+
+  } while (dbus_message_iter_next(&subIter));
+
+  returnDictionary = [NSDictionary dictionaryWithDictionary: theDictionary];
+  [theDictionary release];
+  return returnDictionary;
+}
 @end
 
 @implementation DKStructTypeArgument
@@ -1002,6 +1116,37 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @end
 
 @implementation DKDictEntryTypeArgument
+- (id)initWithIterator: (DBusSignatureIter*)iterator
+                  name: (NSString*)_name
+                parent: (id)_parent
+{
+  NSUInteger childCount = 0;
+  if (nil == (self = [super initWithIterator: iterator
+                                        name: _name
+                                      parent: _parent]))
+  {
+    return nil;
+  }
+
+  childCount = [children count];
+
+  // Dictionaries have exactly two types:
+  if (childCount != 2)
+  {
+    NSWarnMLog(@"Invalid number of children (%lu) for D-Bus dict entry argument. Ignoring argument.",
+      childCount);
+    [self release];
+    return nil;
+  }
+  else if (![[children objectAtIndex: 0] isContainerType])
+  {
+    NSWarnMLog(@"Invalid (complex) type as dict entry key. Ignoring argument.");
+    [self release];
+    return nil;
+  }
+
+  return self;
+}
 
 - (DKArgument*)keyArgument
 {
