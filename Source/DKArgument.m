@@ -196,6 +196,12 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @interface DKDictEntryTypeArgument: DKStructTypeArgument
 - (DKArgument*) keyArgument;
 - (DKArgument*) valueArgument;
+- (void) unmarshallFromIterator: (DBusMessageIter*)iter
+                          value: (id*)value
+                            key: (id*)key;
+- (void) marshallObject: (id)object
+                 forKey: (id)key
+           intoIterator: (DBusMessageIter*)iter;
 @end
 
 /**
@@ -1035,16 +1041,12 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
   DKDictEntryTypeArgument *theChild = (DKDictEntryTypeArgument*)[self elementTypeArgument];
-  DKArgument *valueArgument = nil;
-  DKArgument *keyArgument = nil;
   DBusMessageIter subIter;
   NSMutableDictionary *theDictionary = [NSMutableDictionary new];
   NSDictionary *returnDictionary = nil;
   NSNull *theNull = [NSNull null];
 
   [self assertSaneIterator: iter];
-  valueArgument = [theChild valueArgument];
-  keyArgument = [theChild keyArgument];
 
   // We loop over the dict entries:
   dbus_message_iter_recurse(iter, &subIter);
@@ -1052,29 +1054,10 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   {
     id value = nil;
     id key = nil;
-    DBusMessageIter entryIter;
-    NSUInteger index = 0;
 
-    /*
-     * There is no additional benefit from going through DKDictEntryTypeArgument
-     * for unmarshalling. We just iterate over the contents of an entry
-     * ourselves:
-     */
-    dbus_message_iter_recurse(&subIter, &entryIter);
-    do
-    {
-      // The entry contains the key first:
-      if (index == 0)
-      {
-        key = [keyArgument unmarshalledObjectFromIterator: &entryIter];
-      }
-      else if (index == 1)
-      {
-        value = [valueArgument unmarshalledObjectFromIterator: &entryIter];
-      }
-      index++;
-    } while (dbus_message_iter_next(&entryIter) && (index < 2));
-
+    [theChild unmarshallFromIterator: &subIter
+                               value: &value
+                                 key: &key];
     if (key == nil)
     {
       key = theNull;
@@ -1106,6 +1089,51 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   returnDictionary = [NSDictionary dictionaryWithDictionary: theDictionary];
   [theDictionary release];
   return returnDictionary;
+}
+
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter
+{
+  NSArray *keys = nil;
+  NSEnumerator *keyEnum = nil;
+  DKDictEntryTypeArgument *pairArgument = (DKDictEntryTypeArgument*)[self elementTypeArgument];
+  id element = nil;
+
+  DBusMessageIter subIter;
+
+  NSAssert1(([object respondsToSelector: @selector(allKeys)]
+    && [object respondsToSelector: @selector(objectForKey:)]),
+    @"Cannot marshall non key/value dictionary '%@' to D-Bus iterator.",
+    object);
+
+  NSAssert(dbus_message_iter_open_container(iter,
+    DBUS_TYPE_ARRAY,
+    [[pairArgument DBusTypeSignature] UTF8String],
+    &subIter),
+    @"Out of memory when creating D-Bus iterator for container.");
+  keys = [object allKeys];
+  keyEnum = [keys objectEnumerator];
+
+  NS_DURING
+  {
+    while (nil != (element = [keyEnum nextObject]))
+    {
+      [pairArgument marshallObject: [object objectForKey: element]
+                            forKey: element
+		      intoIterator: &subIter];
+    }
+  }
+  NS_HANDLER
+  {
+    // Something already went wrong and we don't care for a potential OOM error
+    // from dbus_message_iter_close_container();
+    dbus_message_iter_close_container(iter, &subIter);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  NSAssert(dbus_message_iter_close_container(iter, &subIter),
+    @"Out of memory when closing D-Bus container.");
 }
 @end
 
@@ -1156,5 +1184,56 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (DKArgument*)valueArgument
 {
   return [children objectAtIndex: 1];
+}
+
+- (void) unmarshallFromIterator: (DBusMessageIter*)iter
+                          value: (id*)value
+                            key: (id*)key
+{
+  DBusMessageIter subIter;
+  NSAssert((DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(iter)),
+    @"Type mismatch between introspection data and D-Bus message.");
+
+  dbus_message_iter_recurse(iter, &subIter);
+
+  *key = [[self keyArgument]  unmarshalledObjectFromIterator: &subIter];
+
+  if (dbus_message_iter_next(&subIter))
+  {
+    *value = [[self valueArgument] unmarshalledObjectFromIterator: &subIter];
+  }
+  else
+  {
+    *value = nil;
+  }
+  return;
+}
+- (void) marshallObject: (id)object
+                 forKey: (id)key
+           intoIterator: (DBusMessageIter*)iter
+{
+  DBusMessageIter subIter;
+  NSAssert(dbus_message_iter_open_container(iter,
+    DBUS_TYPE_DICT_ENTRY,
+    NULL, // contained_signature set to NULL as per libdbus documentation
+    &subIter),
+    @"Out of memory when opening D-Bus container.");
+  NS_DURING
+  {
+    [[self keyArgument] marshallObject: key
+                          intoIterator: &subIter];
+    [[self valueArgument] marshallObject: object
+                            intoIterator: &subIter];
+  }
+  NS_HANDLER
+  {
+    // Again, we don't care for OOM here because we already failed.
+    dbus_message_iter_close_container(iter, &subIter);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  NSAssert(dbus_message_iter_close_container(iter, &subIter),
+    @"Out of memory when closing D-Bus container.");
 }
 @end
