@@ -1215,6 +1215,31 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @end
 
 @implementation DKVariantTypeArgument
+- (id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
+{
+  char *theSig = NULL;
+  DBusMessageIter subIter;
+  DKArgument *theArgument = nil;
+  id theValue = nil;
+  NSAssert((DBUS_TYPE_VARIANT == dbus_message_iter_get_arg_type(iter)),
+    @"Type mismatch between introspection data and D-Bus message.");
+
+  dbus_message_iter_recurse(iter,&subIter);
+  theSig = dbus_message_iter_get_signature(&subIter);
+  theArgument = [[DKArgument alloc] initWithDBusSignature: theSig
+                                                     name: nil
+                                                   parent: self];
+  theValue = [theArgument unmarshalledObjectFromIterator: &subIter];
+  [theArgument release];
+  dbus_free(theSig);
+  return theValue;
+}
+
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter
+{
+  //FIXME: Implement
+}
 @end
 
 @implementation DKDictEntryTypeArgument
