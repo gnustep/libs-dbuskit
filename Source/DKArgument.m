@@ -1138,6 +1138,80 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @end
 
 @implementation DKStructTypeArgument
+-(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
+{
+  NSMutableArray *theArray = [NSMutableArray new];
+  NSArray *returnArray = nil;
+  NSNull *theNull = [NSNull null];
+  NSUInteger index = 0;
+  NSUInteger count = [children count];
+  DBusMessageIter subIter;
+  NSAssert((DBUS_TYPE_STRUCT == dbus_message_iter_get_arg_type(iter)),
+    @"Type mismatch between introspection data and D-Bus message.");
+
+  dbus_message_iter_recurse(iter,&subIter);
+  do
+  {
+    id obj = [[children objectAtIndex: index] unmarshalledObjectFromIterator: &subIter];
+    if (nil == obj)
+    {
+      obj = theNull;
+    }
+    [theArray addObject: obj];
+  } while (dbus_message_iter_next(&subIter) && (index < count));
+
+  returnArray = [NSArray arrayWithArray: theArray];
+  [theArray release];
+  return returnArray;
+}
+
+- (void) marshallObject: (id)object
+           intoIterator: (DBusMessageIter*)iter
+{
+  DBusMessageIter subIter;
+  NSEnumerator *structEnum = nil;
+  NSUInteger childCount = [children count];
+  NSAssert1(([object respondsToSelector: @selector(count)]
+    && [object respondsToSelector: @selector(objectEnumerator)]),
+    @"Object '%@' cannot be marshalled as D-Bus struct.",
+    object);
+  NSAssert3(([object count] == childCount),
+    @"Could not marshall object '%@' as D-Bus struct: Expected %lu members, got %lu.",
+    object,
+    [object count],
+    childCount);
+
+  structEnum = [object objectEnumerator];
+
+  NSAssert(dbus_message_iter_open_container(iter,
+    DBUS_TYPE_STRUCT,
+    NULL, // contained_signature set to NULL as per libdbus documentation
+    &subIter),
+    @"Out of memory when opening D-Bus container.");
+
+  NS_DURING
+  {
+    NSUInteger index = 0;
+    id member = nil;
+    while ((nil != (member = [structEnum nextObject]))
+      && (index < childCount))
+    {
+      [[children objectAtIndex: index] marshallObject: member
+                                         intoIterator: &subIter];
+    index++;
+    }
+  }
+  NS_HANDLER
+  {
+    dbus_message_iter_close_container(iter, &subIter);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  NSAssert(dbus_message_iter_close_container(iter, &subIter),
+    @"Out of memory when closing D-Bus container.");
+
+}
 @end
 
 @implementation DKVariantTypeArgument
