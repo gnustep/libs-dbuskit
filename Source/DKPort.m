@@ -122,7 +122,7 @@ enum {
  * This is the main method used to dispatch stuff from the DO system to D-Bus.
  */
 - (BOOL)sendBeforeDate: (NSDate *)limitDate
-                 msgid: (NSUInteger)msgid
+                 msgid: (NSInteger)msgid
             components: (NSMutableArray *)components
 	          from: (NSPort *)recievePort
               reserved: (NSUInteger)reserverdHeaderSpace
@@ -215,7 +215,7 @@ enum {
 	         extra: (void*)extra
                forMode: (NSString*)mode
 {
-  NSLog(@"RunLoop events: Ignoring event of type %ld", type);
+  NSLog(@"RunLoop events: Ignoring event of type %llu", (unsigned long long)type);
 }
 
 /**

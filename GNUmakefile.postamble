@@ -29,13 +29,14 @@ after-clean::
 	@-$(RM) -rf DBusKit.framework
 	@-$(RM) -rf derived_src
 	@-$(RM) config.make
+	@-$(RM) Source/config.h
 
 # Things to do before distcleaning
 # before-distclean::
 
 # Things to do after distcleaning
 after-distclean::
-	@-$(RM)  config.log config.status config.make
+	@-$(RM)  config.log config.status config.make Source/config.h
 	@-$(RM) -rf autom4te.cache
 
 # Things to do before checking
@@ -47,5 +48,5 @@ after-distclean::
 
 # Rule to generate configuration data:
 
-config.make: config.make.in
+config.make: config.make.in Source/config.h.in
 	./configure

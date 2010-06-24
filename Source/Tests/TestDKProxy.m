@@ -22,7 +22,9 @@
    */
 #import <Foundation/NSObject.h>
 #import <UnitKit/UnitKit.h>
-#import <objc/runtime.h>
+#define INCLUDE_RUNTIME_H
+#include "../config.h"
+#undef INCLUDE_RUNTIME_H
 
 #import "../../Headers/DKProxy.h"
 #import "../DKEndpoint.h"

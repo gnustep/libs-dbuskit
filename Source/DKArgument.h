@@ -41,6 +41,14 @@ extern NSString *DKArgumentDirectionOut;
   Class objCEquivalent;
 }
 
+/**
+ * Registers the selector to be used for unboxing objects to specific
+ * D-Bus types. The method named by the selector may not take any arguments and
+ * its return value can not exceed 8 bytes.
+ */
++ (void)registerUnboxingSelector: (SEL)selector
+                     forDBusType: (int)type;
+
 - (id) initWithDBusSignature: (const char*)characters
                         name: (NSString*)name
                       parent: (id)parent;
@@ -66,6 +74,11 @@ extern NSString *DKArgumentDirectionOut;
  * Return the class that will represent an argument of this type.
  */
 - (Class) objCEquivalent;
+
+/**
+ * Returns the D-Bus type of the argument.
+ */
+- (int) DBusType;
 
 /**
  * Return the D-Bus type signature equivalent to the argument.

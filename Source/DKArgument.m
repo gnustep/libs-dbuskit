@@ -27,14 +27,19 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSEnumerator.h>
+#import <Foundation/NSHashTable.h>
 #import <Foundation/NSInvocation.h>
+#import <Foundation/NSLock.h>
+#import <Foundation/NSMapTable.h>
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
+
 #import "DBusKit/DKProxy.h"
 #import "DKEndpoint.h"
+#import "DKOutgoingProxy.h"
 #import "DKArgument.h"
 
 #include <dbus/dbus.h>
@@ -82,13 +87,62 @@ DKObjCClassForDBusType(int type)
   return Nil;
 }
 
+/*
+ * Conversion from Objective-C types to D-Bus types. NOTE: This is not meant to
+ * be complete. It is just used to give some hints for the boxing of D-Bus
+ * variant types. (NSValue responds to -objCType, so we can use the information
+ * to construct a correctly typed DKArgument at least some of the time.)
+ */
+static int
+DKDBusTypeForObjCType(const char* code)
+{
+  switch (*code)
+  {
+    case _C_BOOL:
+      return DBUS_TYPE_BOOLEAN;
+    case _C_CHR:
+    case _C_SHT:
+      return DBUS_TYPE_INT16;
+    case _C_INT:
+      return DBUS_TYPE_INT32;
+    case _C_LNG_LNG:
+      return DBUS_TYPE_INT64;
+    case _C_UCHR:
+      return DBUS_TYPE_BYTE;
+    case _C_USHT:
+      return DBUS_TYPE_UINT16;
+    case _C_UINT:
+      return DBUS_TYPE_UINT32;
+    case _C_ULNG_LNG:
+      return DBUS_TYPE_UINT64;
+    case _C_FLT:
+    case _C_DBL:
+      return DBUS_TYPE_DOUBLE;
+    case _C_CHARPTR:
+      return DBUS_TYPE_STRING;
+    case _C_ID:
+      return DBUS_TYPE_OBJECT_PATH;
+    case _C_ARY_B:
+      return DBUS_TYPE_ARRAY;
+    case _C_STRUCT_B:
+      return DBUS_TYPE_STRUCT;
+    default:
+      return DBUS_TYPE_INVALID;
+  }
+  return DBUS_TYPE_INVALID;
+}
+
+/*
+ * Map D-Bus types to corresponding Objective-C types. Assumes that complex
+ * types are always boxed.
+ */
 static char*
 DKUnboxedObjCTypeForDBusType(int type)
 {
   switch (type)
   {
     case DBUS_TYPE_BYTE:
-      return @encode(char);
+      return @encode(unsigned char);
     case DBUS_TYPE_BOOLEAN:
       return @encode(BOOL);
     case DBUS_TYPE_INT16:
@@ -170,6 +224,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (NSString*)_path;
 - (NSString*)_service;
 - (DKEndpoint*)_endpoint;
+- (BOOL)_isLocal;
 @end
 
 
@@ -190,6 +245,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 @end
 
 @interface DKVariantTypeArgument: DKContainerTypeArgument
+- (DKArgument*) DKArgumentWithObject: (id)object;
 @end
 
 /* It seems sensible to regard dict entries as struct types. */
@@ -204,10 +260,206 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
            intoIterator: (DBusMessageIter*)iter;
 @end
 
+
+/*
+ * Tables and paraphernalia for managing unboxing of objects: We want some
+ * degree of flexibility on how to unbox objects of arbitrary types. To that
+ * end, we define two tables:
+ *
+ * (1) selectorTypeMap, which maps selectors used to unbox objects to D-Bus
+ *     types so that we can construct appropriate DKArguments if we encounter
+ *     objects responding to the selector.
+ *
+ * (2) typeSelectorMap, which maps D-Bus types to hash-tables containing all
+ *     selectors that can be used to obtain an unboxed value of a specified
+ *     type.
+ *
+ * NOTE: Unfortunately, we cannot unbox container types this way.
+ */
+static NSMapTable *selectorTypeMap;
+static NSMapTable *typeSelectorMap;
+static NSLock *selectorTypeMapLock;
+
+
+typedef struct
+{
+  SEL selector;
+  int type;
+} DKSelectorTypePair;
+
+
+#define DK_INSTALL_TYPE_SELECTOR_PAIR(type,theSel) \
+ do \
+  {\
+    SEL selector = theSel;\
+    NSHashTable *selTable = NSCreateHashTable(NSIntHashCallBacks,\
+     1); \
+    NSMapInsert(selectorTypeMap,\
+      (void*)(uintptr_t)selector,\
+      (void*)(intptr_t)type);\
+    NSMapInsert(typeSelectorMap,\
+      (void*)(intptr_t)type,\
+      (void*)selTable);\
+    NSHashInsert(selTable,selector);\
+  } while (0)
+
+
+static void
+DKInstallDefaultSelectorTypeMapping()
+{
+  [selectorTypeMapLock lock];
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_INT64, @selector(longLongValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_UINT64, @selector(unsignedLongLongValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_INT32, @selector(intValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_UINT32, @selector(unsignedIntValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_INT16, @selector(shortValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_UINT16, @selector(unsignedShortValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_BYTE, @selector(unsignedCharValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_BOOLEAN, @selector(boolValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_DOUBLE, @selector(doubleValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_DOUBLE, @selector(floatValue));
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_STRING, @selector(UTF8String));
+  [selectorTypeMapLock unlock];
+}
+
+static void
+DKRegisterSelectorTypePair(DKSelectorTypePair *pair)
+{
+  NSHashTable *selTable = nil;
+  SEL selector = pair->selector;
+  int type = pair->type;
+  void* mapReturn = NULL;
+  if (0 == selector)
+  {
+    return;
+  }
+
+
+  [selectorTypeMapLock lock];
+  selTable = NSMapGet(typeSelectorMap, (void*)(intptr_t)type);
+
+  if (!selTable)
+  {
+    [selectorTypeMapLock unlock];
+    return;
+  }
+
+  mapReturn = NSMapInsertIfAbsent(selectorTypeMap,
+    (void*)(uintptr_t)selector,
+    (void*)(intptr_t)type);
+
+  // InsertIfAbsent returns NULL if the key had been absent, which is the only
+  // case where we also want to install the new type-selector mapping.
+  if (NULL == mapReturn)
+  {
+    NSHashInsertIfAbsent(selTable, (void*)(uintptr_t)selector);
+  }
+  [selectorTypeMapLock unlock];
+}
+
+
+static SEL
+DKSelectorForUnboxingObjectAsType(id object, int DBusType)
+{
+  SEL theSel = 0;
+  NSHashTable *table = nil;
+  NSHashEnumerator tableEnum;
+  [selectorTypeMapLock lock];
+  table = NSMapGet(typeSelectorMap, (void*)(intptr_t)DBusType);
+  tableEnum = NSEnumerateHashTable(table);
+  while (0 != (theSel = (SEL)NSNextHashEnumeratorItem(&tableEnum)))
+  {
+    if ([object respondsToSelector: theSel])
+    {
+      NSEndHashTableEnumeration(&tableEnum);
+      [selectorTypeMapLock unlock];
+      return theSel;
+    }
+  }
+  NSEndHashTableEnumeration(&tableEnum);
+  [selectorTypeMapLock unlock];
+  return 0;
+}
+
+static int
+DKDBusTypeForUnboxingObject(id object)
+{
+  int type = DBUS_TYPE_INVALID;
+  // Fast case: The object implements objCType, so we can simply gather the
+  // D-Bus type from the Obj-C type code.
+  if ([object respondsToSelector: @selector(objCType)])
+  {
+    type = DKDBusTypeForObjCType([object objCType]);
+  }
+
+  // Slow case: We need to find a selector in the table and get the matching
+  // type.
+  if (DBUS_TYPE_INVALID == type)
+  {
+    SEL aSel = 0;
+    NSMapEnumerator mapEnum;
+    [selectorTypeMapLock lock];
+    mapEnum = NSEnumerateMapTable(selectorTypeMap);
+    while (NSNextMapEnumeratorPair(&mapEnum,
+      (void**)&aSel,
+      (void**)&type))
+    {
+      if (aSel != 0)
+      {
+	if ([object respondsToSelector: aSel])
+	{
+	  // The object responds to the selector. We need to make sure that we
+	  // get a correctly sized return value by invoking the corresponding
+	  // method.
+	  NSMethodSignature *sig = [object methodSignatureForSelector: aSel];
+	  if ((type == DKDBusTypeForObjCType([sig methodReturnType])))
+	  {
+	    NSEndMapTableEnumeration(&mapEnum);
+	    [selectorTypeMapLock unlock];
+	    return type;
+	  }
+	}
+      }
+    }
+    NSEndMapTableEnumeration(&mapEnum);
+    [selectorTypeMapLock unlock];
+  }
+  return type;
+}
+
 /**
  *  DKArgument encapsulates D-Bus argument information
  */
 @implementation DKArgument
++ (void) initialize
+{
+  if ([DKArgument class] != self)
+  {
+    return;
+  }
+
+  selectorTypeMap = NSCreateMapTable(NSIntMapKeyCallBacks,
+    NSIntMapValueCallBacks,
+    17); // We have 17 D-Bus types.
+  typeSelectorMap = NSCreateMapTable(NSIntMapKeyCallBacks,
+    NSObjectMapValueCallBacks,
+    17); // We have 17 D-Bus types.
+
+
+  selectorTypeMapLock = [NSLock new];
+  DKInstallDefaultSelectorTypeMapping();
+
+
+}
+
++ (void)registerUnboxingSelector: (SEL)selector
+                     forDBusType: (int)type
+{
+
+  DKSelectorTypePair pair = {selector, type};
+  DKRegisterSelectorTypePair(&pair);
+}
+
 - (id) initWithIterator: (DBusSignatureIter*)iterator
                    name: (NSString*)_name
                  parent: (id)_parent
@@ -316,6 +568,7 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (BOOL) unboxValue: (id)value
          intoBuffer: (long long*)buffer
 {
+  SEL aSelector = 0;
   switch (DBusType)
   {
     case DBUS_TYPE_BYTE:
@@ -397,15 +650,36 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     case DBUS_TYPE_OBJECT_PATH:
     if ([value isKindOfClass: [DKProxy class]])
     {
+      DKProxy *rootProxy = [self proxyParent];
       /*
+       * Handle remote objects:
        * We need to make sure that the paths are from the same proxy, because
        * that is the widest scope in which they are valid.
        */
-      if ([[self proxyParent] hasSameScopeAs: value])
+      if ([rootProxy hasSameScopeAs: value])
       {
         *buffer = (uintptr_t)[[value _path] UTF8String];
         return YES;
       }
+    }
+    else
+    {
+      DKProxy *rootProxy = [self proxyParent];
+      /*
+       * Handle local objects:
+       * We need to find out if the proxy we derive from is an outgoing proxy.
+       * If so, we can export the object via D-Bus, so that the caller can
+       * interact with it.
+       */
+       if ([rootProxy _isLocal])
+       {
+	 DKOutgoingProxy *newProxy = [DKOutgoingProxy proxyWithParent: rootProxy
+	                                                       object: value];
+	 *buffer = (uintptr_t)[[newProxy _path] UTF8String];
+	 [newProxy release];
+	 return YES;
+       }
+
     }
     break;
     case DBUS_TYPE_SIGNATURE:
@@ -418,6 +692,29 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     default:
       break;
   }
+
+  /*
+   * None of the built in mappings worked. We still have a slight chance that a
+   * custom selector was installed to unbox the type. So we try again by looking
+   * up the selector.
+   */
+   aSelector = DKSelectorForUnboxingObjectAsType(value, DBusType);
+   if (0 != aSelector)
+   {
+     NSMethodSignature *sig = [value methodSignatureForSelector: aSelector];
+     // Only call it if we don't need arguments and the returnvalue fits into
+     // the buffer:
+     if ((2 == [sig numberOfArguments])
+       && ([sig methodReturnLength] <= sizeof(long long)))
+     {
+       IMP unboxFun = [value methodForSelector: aSelector];
+
+       // Cast to void* first so that we don't get any funny implicit casts
+       *buffer = (long long)(void*)unboxFun(value, aSelector);
+       return YES;
+     }
+   }
+
   return NO;
 }
 
@@ -662,9 +959,11 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
     case DBUS_TYPE_VARIANT:
      /*
       * A shortcut is needed for variant types. libdbus classifies them as
-      * containers, but it is clearly wrong about that: They have no children
-      * and dbus will fail and crash if it tries to loop over their non-existent
-      * sub-arguments. Hence we return after setting the subclass.
+      * containers, but it is clearly wrong about that at least with regard to
+      * the signatures:
+      * They have no children and dbus will fail and crash if it tries to loop
+      * over their non-existent sub-arguments. Hence we return after setting the
+      * subclass.
       */
       isa = [DKVariantTypeArgument class];
       return self;
@@ -814,13 +1113,13 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 
   if (-1 == index)
   {
-    NSAssert((@encode(id) == [[inv methodSignature] methodReturnType]),
+    NSAssert((0 == strcmp(@encode(id), [[inv methodSignature] methodReturnType])),
       @"Type mismatch between introspection data and invocation.");
     [inv setReturnValue: &value];
   }
   else
   {
-    NSAssert((@encode(id) == [[inv methodSignature] getArgumentTypeAtIndex: index]),
+    NSAssert((0 == strcmp(@encode(id), [[inv methodSignature] getArgumentTypeAtIndex: index])),
       @"Type mismatch between introspection data and invocation.");
     [inv setArgument: &value
              atIndex: index];
@@ -842,13 +1141,13 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 
   if (-1 == index)
   {
-    NSAssert((@encode(id) == [[inv methodSignature] methodReturnType]),
+    NSAssert((0 == strcmp(@encode(id), [[inv methodSignature] methodReturnType])),
       @"Type mismatch between introspection data and invocation.");
     [inv getReturnValue: &value];
   }
   else
   {
-    NSAssert((@encode(id) == [[inv methodSignature] getArgumentTypeAtIndex: index]),
+    NSAssert((0 == strcmp(@encode(id), [[inv methodSignature] getArgumentTypeAtIndex: index])),
       @"Type mismatch between introspection data and invocation.");
     [inv getArgument: &value
              atIndex: index];
@@ -1214,7 +1513,105 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 }
 @end
 
+
 @implementation DKVariantTypeArgument
+
+- (NSString*)validSubSignatureOrVariantForEnumerator: (NSEnumerator*)theEnum
+{
+  id element = [theEnum nextObject];
+  NSString *thisSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
+  NSString *nextSig = thisSig;
+
+  // For homogenous collection, we can the proper signature, for non-homogenous
+  // ones, we need to pass down the variant type.
+  BOOL isHomogenous = YES;
+  while ((nil != (element = [theEnum nextObject]))
+    && (YES == isHomogenous))
+  {
+    thisSig = nextSig;
+    nextSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
+    isHomogenous = [thisSig isEqualToString: nextSig];
+  }
+
+  if (isHomogenous)
+  {
+    return thisSig;
+  }
+  else
+  {
+    return @"v";
+  }
+
+}
+
+- (DKArgument*) DKArgumentWithObject: (id)object
+{
+  if (([object respondsToSelector: @selector(keyEnumerator)])
+    && ([object respondsToSelector: @selector(objectEnumerator)]))
+  {
+    NSEnumerator *keyEnum = [object keyEnumerator];
+    NSEnumerator *objEnum = [object objectEnumerator];
+    NSString *keySig = [self validSubSignatureOrVariantForEnumerator: keyEnum];
+    NSString *objSig = [self validSubSignatureOrVariantForEnumerator: objEnum];
+    NSString *theSig = [NSString stringWithFormat: @"a{%@%@}", keySig, objSig];
+    DKArgument *subArg = [[[DKArgument alloc] initWithDBusSignature: [theSig UTF8String]
+                                                               name: nil
+                                                             parent: self] autorelease];
+    if (nil == subArg)
+    {
+      // This might happen if the dictionary could not properly be represented as
+      // a D-Bus dictionary (i.e. it has keys of complex type. In this case, we
+      // fall back to representing it as an array of structs:
+      theSig = [NSString stringWithFormat: @"a(%@%@)", keySig, objSig];
+      subArg = [[[DKArgument alloc] initWithDBusSignature: [theSig UTF8String]
+                                                     name: nil
+                                                   parent: self] autorelease];
+    }
+    return subArg;
+  }
+  else if ([object respondsToSelector: @selector(objectEnumerator)])
+  {
+    NSEnumerator *theEnum = [object objectEnumerator];
+    NSString *subSig = [self validSubSignatureOrVariantForEnumerator: theEnum];
+    return [[[DKArgument alloc] initWithDBusSignature: [[@"a" stringByAppendingString: subSig] UTF8String]
+                                                 name: nil
+                                               parent: self] autorelease];
+  }
+  else if ([object isKindOfClass: [DKProxy class]])
+  {
+    DKProxy *rootProxy = [self proxyParent];
+    if ([rootProxy hasSameScopeAs: object])
+    {
+      return [[[DKArgument alloc] initWithDBusSignature: DBUS_TYPE_OBJECT_PATH_AS_STRING
+                                                   name: nil
+                                                 parent: self] autorelease];
+    }
+  }
+  else
+  {
+    // Simple types are quite straightforward, if we can find an appropriate
+    // deserialization selector.
+    int type = DKDBusTypeForUnboxingObject(object);
+    if ((DBUS_TYPE_INVALID != type) && (DBUS_TYPE_OBJECT_PATH != type))
+    {
+      return [[DKArgument alloc] initWithDBusSignature: (char*)&type
+                                                  name: nil
+                                                parent: self];
+    }
+    else if ([[self proxyParent] _isLocal])
+    {
+      // If this fails, and the proxy from which this argument derives is an
+      // outgoing proxy, we can export it as an object path.
+      return [[[DKArgument alloc] initWithDBusSignature: DBUS_TYPE_OBJECT_PATH_AS_STRING
+                                                   name: nil
+                                                 parent: self] autorelease];
+    }
+  }
+  // Too bad, we have apparantely no chance to generate an argument tree for
+  // this object.
+  return nil;
+}
+
 - (id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
   char *theSig = NULL;
@@ -1238,7 +1635,33 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 - (void) marshallObject: (id)object
            intoIterator: (DBusMessageIter*)iter
 {
-  //FIXME: Implement
+  DKArgument *subArg = [self DKArgumentWithObject: object];
+  DBusMessageIter subIter;
+
+  NSAssert1(subArg,
+    @"Could not marshall object %@ as D-Bus variant type",
+    subArg);
+
+  NSAssert(dbus_message_iter_open_container(iter,
+    DBUS_TYPE_ARRAY,
+    [[subArg DBusTypeSignature] UTF8String],
+    &subIter),
+    @"Out of memory when creating D-Bus iterator for container.");
+
+  NS_DURING
+  {
+    [subArg marshallObject: object
+              intoIterator: &subIter];
+  }
+  NS_HANDLER
+  {
+    dbus_message_iter_close_container(iter, &subIter);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  NSAssert(dbus_message_iter_close_container(iter, &subIter),
+    @"Out of memory when closing D-Bus container.");
 }
 @end
 

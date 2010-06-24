@@ -35,6 +35,32 @@
 #include <stdint.h>
 #include <math.h>
 
+
+
+@interface CustomUnboxableObject: NSObject
+{
+  int32_t foo;
+}
+- (int32_t)myInt32Value;
+@end
+
+@implementation CustomUnboxableObject
+- (id) init
+{
+  if (nil == (self = [super init]))
+  {
+    return nil;
+  }
+  foo = 42;
+  return self;
+}
+
+- (int32_t)myInt32Value
+{
+  return foo;
+}
+@end
+
 @interface TestDKArgument: NSObject <UKTest>
 @end
 
@@ -448,5 +474,20 @@ static NSDictionary *basicSigsAndClasses;
   }
 
  [arg release];
+}
+
+- (void)testCustomUnboxingSelector
+{
+
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "i"
+                                                         name: nil
+                                                       parent: nil];
+  id boxedFoo = [[CustomUnboxableObject alloc] init];
+  int32_t foo = [boxedFoo myInt32Value];
+  [DKArgument registerUnboxingSelector: @selector(myInt32Value)
+                           forDBusType: DBUS_TYPE_INT32];
+  TEST_UNBOX_INTTYPE(int32_t);
+  [boxedFoo release];
+  [arg release];
 }
 @end

@@ -327,14 +327,12 @@ static NSRecursiveLock *activeConnectionLock;
 
 - (id) initWithCoder: (NSCoder*)coder
 {
-  if ([super respondsToSelector: @selector(initWithCoder:)])
+  // NSObject does not adopt NSCoding
+  if (nil == (self = [super init]))
   {
-    self = [(id<NSCoding>)super initWithCoder: coder];
+    return nil;
   }
-  else
-  {
-    self = [super init];
-  }
+
   if ([coder allowsKeyedCoding])
   {
     info = [coder decodeObjectForKey: @"DKEndpointInfo"];
@@ -448,10 +446,7 @@ static NSRecursiveLock *activeConnectionLock;
                 format: @"This DKEndpoint has been create with a private initializer and cannot be encoded."];
   }
 
-  if ([super respondsToSelector: @selector(encodeWithCoder:)])
-  {
-    [(id<NSCoding>)super encodeWithCoder: coder];
-  }
+  // NSObject doesn't adopt NSCoding, so we don't do [super encodeWithCoder:].
 
   if ([coder allowsKeyedCoding])
   {

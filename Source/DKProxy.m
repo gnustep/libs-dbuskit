@@ -320,6 +320,11 @@
   return path;
 }
 
+- (BOOL)_isLocal
+{
+  // True only for outgoing proxies representing local objects.
+  return NO;
+}
 - (BOOL) hasSameScopeAs: (DKProxy*)aProxy
 {
   BOOL sameService = [service isEqualToString: [aProxy _service]];

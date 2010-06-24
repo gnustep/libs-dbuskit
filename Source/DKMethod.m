@@ -288,7 +288,7 @@ DKMethod *_DKMethodIntrospect;
     NSMethodSignature *sig = [inv methodSignature];
 
     // Make sure the method did return an object:
-    NSAssert2((@encode(id) == [sig methodReturnType]),
+    NSAssert2((0 == strcmp(@encode(id), [sig methodReturnType])),
       @"Invalid return value when constucting D-Bus reply for '%@' on %@",
       NSStringFromSelector([inv selector]),
       [inv target]);
