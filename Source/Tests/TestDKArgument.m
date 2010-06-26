@@ -36,6 +36,13 @@
 #include <math.h>
 
 
+@interface DKArgument (ExposeForTest)
+/*
+ * NOTE: Strictly speaking, this is only implemented by DKVariantTypeArgument.
+ *
+ */
+- (DKArgument*) DKArgumentWithObject: (id)object;
+@end
 
 @interface CustomUnboxableObject: NSObject
 {
@@ -490,4 +497,46 @@ static NSDictionary *basicSigsAndClasses;
   [boxedFoo release];
   [arg release];
 }
+
+- (void)testGenerateArrayDBusSignatureForVariantType
+{
+  NSArray *object = [[NSArray alloc] initWithObjects: @"foo", @"bar", nil];
+  NSString *theSig = @"as";
+  DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
+                                                                name: nil
+                                                              parent: nil];
+  DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
+  UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
+  [object release];
+}
+
+- (void)testGenerateDictionaryDBusSignatureForVariantType
+{
+  NSNumber *one = [[NSNumber alloc] initWithInt: 89];
+  NSNumber *two = [[NSNumber alloc] initWithInt: 5879];
+  NSDictionary *object = [[NSDictionary alloc] initWithObjectsAndKeys: one, @"foo", two, @"bar", nil];
+  NSString *theSig = @"a{si}";
+  DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
+                                                                name: nil
+                                                              parent: nil];
+  DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
+  UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
+  [object release];
+}
+
+- (void)testGenerateVariantDBusSignatureForVariantType
+{
+  NSNumber *one = [[NSNumber alloc] initWithInt: 89];
+  NSNumber *two = [[NSNumber alloc] initWithInt: 5879];
+  NSDictionary *object = [[NSArray alloc] initWithObjects: one, @"foo", two, @"bar", nil];
+  NSString *theSig = @"av";
+  DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
+                                                                name: nil
+                                                              parent: nil];
+  DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
+  UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
+  [object release];
+}
+
+
 @end

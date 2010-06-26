@@ -308,6 +308,7 @@ static void
 DKInstallDefaultSelectorTypeMapping()
 {
   [selectorTypeMapLock lock];
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_STRING, @selector(UTF8String));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_INT64, @selector(longLongValue));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_UINT64, @selector(unsignedLongLongValue));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_INT32, @selector(intValue));
@@ -318,7 +319,6 @@ DKInstallDefaultSelectorTypeMapping()
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_BOOLEAN, @selector(boolValue));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_DOUBLE, @selector(doubleValue));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_DOUBLE, @selector(floatValue));
-  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_STRING, @selector(UTF8String));
   [selectorTypeMapLock unlock];
 }
 
@@ -390,6 +390,16 @@ DKDBusTypeForUnboxingObject(id object)
   if ([object respondsToSelector: @selector(objCType)])
   {
     type = DKDBusTypeForObjCType([object objCType]);
+  }
+
+  /*
+   * Special case: NSString. It responds to all kinds of crazy selectors,
+   * converting the string to a numeric value.  So we default to returning the
+   * string type for NSString.
+   */
+  if ([object isKindOfClass: [NSString class]])
+  {
+    return DBUS_TYPE_STRING;
   }
 
   // Slow case: We need to find a selector in the table and get the matching
