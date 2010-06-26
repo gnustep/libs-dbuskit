@@ -89,6 +89,26 @@
 - (void) addArgument: (DKArgument*)arg
            direction: (NSString*)direction;
 
+/**
+ * Deserializes the appropriate values from the message iterator and places them
+ * in the invocation. Use type to indicate whether this is done for an method
+ * call or method return and doBox to indicate whether the values should or
+ * should not be boxed.
+ */
+- (void) unmarshallFromIterator: (DBusMessageIter*)iter
+                 intoInvocation: (NSInvocation*)inv
+   	            messageType: (int)type
+	                 boxing: (BOOL)doBox;
+/**
+ * Serializes the appropriate values from the invocation and appends them using
+ * the message iterator. Use type to indicate whether this is done for an method
+ * call or method return and doBox to indicate whether the values should or
+ * should not be boxed.
+ */
+- (void)marshallFromInvocation: (NSInvocation*)inv
+                  intoIterator: (DBusMessageIter*)iter
+                   messageType: (int)type
+                        boxing: (BOOL)doBox;
 @end
 
 /**
