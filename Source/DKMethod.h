@@ -23,6 +23,7 @@
    */
 
 #import "DKIntrospectionNode.h"
+#include <dbus/dbus.h>
 @class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
 @interface DKMethod: DKIntrospectionNode
 {
