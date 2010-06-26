@@ -521,7 +521,28 @@ static NSDictionary *basicSigsAndClasses;
                                                               parent: nil];
   DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
   UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
+  [one release];
+  [two release];
   [object release];
+}
+- (void)testGenerateFallbackStructDBusSignatureForVariantType
+{
+  NSNumber *one = [[NSNumber alloc] initWithInt: 89];
+  NSNumber *two = [[NSNumber alloc] initWithInt: 5879];
+  NSArray *arrayOne = [[NSArray alloc] initWithObjects: one, nil];
+  NSArray *arrayTwo = [[NSArray alloc] initWithObjects: two, nil];
+  NSDictionary *object = [[NSDictionary alloc] initWithObjectsAndKeys: @"foo", arrayOne, @"bar", arrayTwo, nil];
+  NSString *theSig = @"a(ais)";
+  DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
+                                                                name: nil
+                                                              parent: nil];
+  DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
+  UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
+  [object release];
+  [arrayOne release];
+  [arrayTwo release];
+  [one release];
+  [two release];
 }
 
 - (void)testGenerateVariantDBusSignatureForVariantType
@@ -536,6 +557,8 @@ static NSDictionary *basicSigsAndClasses;
   DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
   UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
   [object release];
+  [one release];
+  [two release];
 }
 
 
