@@ -17,6 +17,7 @@ libDBusKit_OBJC_FILES = \
 	DKEndpoint.m \
 	DKInterface.m \
         DKIntrospectionNode.m \
+        DKMessage.m \
         DKMethod.m \
 	DKOutgoingProxy.m \
 	DKPort.m \

@@ -490,6 +490,10 @@ static NSRecursiveLock *activeConnectionLock;
   }
 }
 
+- (DBusConnection*)DBusConnection
+{
+  return connection;
+}
 - (void)dealloc
 {
   [self cleanup];

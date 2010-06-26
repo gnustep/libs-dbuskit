@@ -47,6 +47,8 @@
 - (id) initWithConnectionTo: (NSString*)endpoint;
 
 - (id) initWithWellKnownBus: (DBusBusType)type;
+
+- (DBusConnection*) DBusConnection;
 @end
 
 @interface DKSystemBusEndpoint: DKEndpoint;
