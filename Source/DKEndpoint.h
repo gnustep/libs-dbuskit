@@ -23,7 +23,7 @@
 #import <Foundation/NSObject.h>
 #include <dbus/dbus.h>
 
-@class NSString, NSDictionary;
+@class DKRunLoopContext, NSRunLoop, NSString, NSDictionary;
 @protocol NSCoding;
 
 /**
@@ -34,6 +34,7 @@
 {
   DBusConnection *connection;
   NSDictionary *info;
+  DKRunLoopContext *ctx;
 }
 
 /**
@@ -48,7 +49,28 @@
 
 - (id) initWithWellKnownBus: (DBusBusType)type;
 
+/**
+ * Returns the libdbus DBusConnection object.
+ */
 - (DBusConnection*) DBusConnection;
+
+/**
+ * Flush the connection, so that it will marshall all pending messages to the
+ * wire.
+ */
+- (void) flush;
+
+/**
+ * Returns the run loop in which D-Bus connections are handled.
+ */
+- (NSRunLoop*)runLoop;
+
+/**
+ * Returns the run loop mode in which D-Bus connections are handled.
+ */
+- (NSString*)runLoopMode;
+
+
 @end
 
 @interface DKSystemBusEndpoint: DKEndpoint;

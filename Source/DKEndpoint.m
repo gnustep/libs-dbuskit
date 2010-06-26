@@ -160,7 +160,6 @@ static NSRecursiveLock *activeConnectionLock;
 - (id) _initWithConnection: (DBusConnection*)conn
 {
   DKEndpoint *oldConnection = nil;
-  DKRunLoopContext *ctx = nil;
   BOOL initSuccess = NO;
 
   if (nil == (self = [super init]))
@@ -407,6 +406,7 @@ static NSRecursiveLock *activeConnectionLock;
 
         dbus_connection_unref(connection);
         connection = NULL;
+	[ctx release];
       }
     }
     NS_HANDLER
@@ -418,6 +418,21 @@ static NSRecursiveLock *activeConnectionLock;
     [activeConnectionLock unlock];
   }
 
+}
+
+- (NSRunLoop*)runLoop
+{
+  return [ctx runLoop];
+}
+
+- (NSString*)runLoopMode
+{
+  return [ctx runLoopMode];
+}
+
+- (void) flush
+{
+  dbus_connection_flush(connection);
 }
 
 /**

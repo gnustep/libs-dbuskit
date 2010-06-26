@@ -19,6 +19,7 @@ libDBusKit_OBJC_FILES = \
         DKIntrospectionNode.m \
         DKMessage.m \
         DKMethod.m \
+	DKMethodCall.m \
 	DKOutgoingProxy.m \
 	DKPort.m \
         DKProxy.m
@@ -35,6 +36,7 @@ ifeq ($(test), yes)
 libDBusKit_OBJC_FILES += \
 	Tests/TestDKArgument.m \
         Tests/TestDKMethod.m \
+	Tests/TestDKMethodCall.m \
         Tests/TestDKPort.m \
 	Tests/TestDKProxy.m
 endif

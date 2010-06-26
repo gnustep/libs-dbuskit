@@ -355,7 +355,7 @@ DKMethod *_DKMethodIntrospect;
   DKArgument *argument = nil;
   NSEnumerator *argEnum = [inArgs objectEnumerator];
 
-  NSAssert1([inArgs count] == [[inv methodSignature] numberOfArguments],
+  NSAssert1(([inArgs count] == ([[inv methodSignature] numberOfArguments] -2)),
     @"Argument number mismatch when constructing D-Bus call for '%@'", name);
 
   while (nil != (argument = [argEnum nextObject]))
