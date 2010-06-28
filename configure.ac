@@ -88,14 +88,14 @@ AC_SUBST(HAVE_TYPED_SELECTORS)
 # framework
 #--------------------------------------------------------------------
 
-
-AC_CHECK_HEADERS(objc/runtime.h,have_libobjc2_runtime_h=yes,have_libobjc2_runtime_h=no)
-if test "$have_libobjc2_runtime_h" = "yes"; then
-  OBJC_RUNTIME_H="objc/runtime.h"
+CPPFLAGS="$CPPFLAGS -Werror"
+AC_CHECK_HEADERS(ObjectiveC2/runtime.h,have_objectivec2_runtime_h=yes,have_objectivec2_runtime_h=no)
+if test "$have_objectivec2_runtime_h" = "yes"; then
+  OBJC_RUNTIME_H="ObjectiveC2/runtime.h"
 else
-  AC_CHECK_HEADERS(ObjectiveC2/runtime.h,have_objectivec2_runtime_h=yes,have_objectivec2_runtime_h=no)
-  if test "$have_objectivec2_runtime_h" = "yes"; then
-    OBJC_RUNTIME_H="ObjectiveC2/runtime.h"
+  AC_CHECK_HEADERS(objc/runtime.h,have_libobjc2_runtime_h=yes,have_libobjc2_runtime_h=no)
+  if test "$have_libobjc2_runtime_h" = "yes"; then
+    OBJC_RUNTIME_H="objc/runtime.h"
   else
     AC_MSG_ERROR("could not find runtime.h. DBusKit requires gnustep-base >=1.20.")
   fi

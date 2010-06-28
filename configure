@@ -2083,7 +2083,7 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 if test -n "$ac_tool_prefix"; then
-  for ac_prog in clang cc gcc c1 egcs
+  for ac_prog in clang gcc cc c1 egcs
   do
     # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
 set dummy $ac_tool_prefix$ac_prog; ac_word=$2
@@ -2127,7 +2127,7 @@ fi
 fi
 if test -z "$CC"; then
   ac_ct_CC=$CC
-  for ac_prog in clang cc gcc c1 egcs
+  for ac_prog in clang gcc cc c1 egcs
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3847,25 +3847,8 @@ fi
 # framework
 #--------------------------------------------------------------------
 
-
-for ac_header in objc/runtime.h
-do :
-  ac_fn_objc_check_header_mongrel "$LINENO" "objc/runtime.h" "ac_cv_header_objc_runtime_h" "$ac_includes_default"
-if test "x$ac_cv_header_objc_runtime_h" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_OBJC_RUNTIME_H 1
-_ACEOF
- have_libobjc2_runtime_h=yes
-else
-  have_libobjc2_runtime_h=no
-fi
-
-done
-
-if test "$have_libobjc2_runtime_h" = "yes"; then
-  OBJC_RUNTIME_H="objc/runtime.h"
-else
-  for ac_header in ObjectiveC2/runtime.h
+CPPFLAGS="$CPPFLAGS -Werror"
+for ac_header in ObjectiveC2/runtime.h
 do :
   ac_fn_objc_check_header_mongrel "$LINENO" "ObjectiveC2/runtime.h" "ac_cv_header_ObjectiveC2_runtime_h" "$ac_includes_default"
 if test "x$ac_cv_header_ObjectiveC2_runtime_h" = x""yes; then :
@@ -3879,8 +3862,25 @@ fi
 
 done
 
-  if test "$have_objectivec2_runtime_h" = "yes"; then
-    OBJC_RUNTIME_H="ObjectiveC2/runtime.h"
+if test "$have_objectivec2_runtime_h" = "yes"; then
+  OBJC_RUNTIME_H="ObjectiveC2/runtime.h"
+else
+  for ac_header in objc/runtime.h
+do :
+  ac_fn_objc_check_header_mongrel "$LINENO" "objc/runtime.h" "ac_cv_header_objc_runtime_h" "$ac_includes_default"
+if test "x$ac_cv_header_objc_runtime_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OBJC_RUNTIME_H 1
+_ACEOF
+ have_libobjc2_runtime_h=yes
+else
+  have_libobjc2_runtime_h=no
+fi
+
+done
+
+  if test "$have_libobjc2_runtime_h" = "yes"; then
+    OBJC_RUNTIME_H="objc/runtime.h"
   else
     as_fn_error "\"could not find runtime.h. DBusKit requires gnustep-base >=1.20.\"" "$LINENO" 5
   fi
