@@ -524,6 +524,7 @@ static NSDictionary *basicSigsAndClasses;
   [one release];
   [two release];
   [object release];
+  [variantArg release];
 }
 - (void)testGenerateFallbackStructDBusSignatureForVariantType
 {
@@ -538,11 +539,12 @@ static NSDictionary *basicSigsAndClasses;
                                                               parent: nil];
   DKArgument *containedArg =  [variantArg DKArgumentWithObject: object];
   UKObjectsEqual(theSig, [containedArg DBusTypeSignature]);
-  [object release];
   [arrayOne release];
   [arrayTwo release];
   [one release];
   [two release];
+  [object release];
+  [variantArg release];
 }
 
 - (void)testGenerateVariantDBusSignatureForVariantType

@@ -59,11 +59,6 @@
 - (DKMethod*) methodForSelector: (SEL)selector;
 
 /**
- * Returns the parent.
- */
-- (id)parent;
-
-/**
  * Returns the description of all methods in the interface as a protocol
  * declaration suitable for an Objective-C header file.
  */

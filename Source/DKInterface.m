@@ -49,6 +49,7 @@
   parent = aParent;
 
   methods = [NSMutableDictionary new];
+
   //TODO: Init map table
   return self;
 }
@@ -85,11 +86,6 @@
 - (DKMethod*) methodForSelector: (SEL)selector
 {
   return NSMapGet(selectorToMethodMap, selector);
-}
-
-- (id)parent
-{
-  return parent;
 }
 
 - (NSString*)mangledName

@@ -23,7 +23,7 @@
 
 #import <Foundation/NSProxy.h>
 
-@class DKEndpoint, NSString, NSMapTable;
+@class DKEndpoint, DKInterface, NSConditionLock, NSString, NSMapTable, NSMutableDictionary;
 @protocol NSCoding;
 
 @interface DKProxy: NSProxy <NSCoding>
@@ -32,6 +32,9 @@
   NSString *service;
   NSString *path;
   NSMapTable *selectorToMethodMap;
+  NSMutableDictionary *interfaces;
+  DKInterface *activeInterface;
+  NSConditionLock *tableLock;
 }
 
 + (id) proxyWithEndpoint: (DKEndpoint*)anEndpoint

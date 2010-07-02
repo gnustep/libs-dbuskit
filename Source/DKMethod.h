@@ -41,6 +41,21 @@
                 interface: (NSString*)anInterface
                    parent: (id)parent;
 
+
+/**
+ * Returns the Objective-C type string the method corresponds to. Use doBox to
+ * indicate whether the boxed signature is requested.
+ */
+- (const char*)objCTypesBoxed: (BOOL)doBox;
+
+/**
+ * Returns whether the method signature sig matches the signature for this
+ * method. Use isBoxed to indicate whether you are interested in the boxed or
+ * non-boxed case.
+ */
+- (BOOL) isEqualToMethodSignature: (NSMethodSignature*)sig
+                            boxed: (BOOL)isBoxed;
+
 /**
  * Returns the method signature that the Objective-C type system will use to
  * construct invocations for this method. This will be the boxed representation

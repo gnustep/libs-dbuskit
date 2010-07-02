@@ -28,7 +28,7 @@
 
 #import "../../Headers/DKProxy.h"
 #import "../DKEndpoint.h"
-
+#import "../../Headers/DKPort.h"
 
 @interface DKProxy (Private)
 - (SEL)_unmangledSelector: (SEL)selector
@@ -37,6 +37,10 @@
 @end
 
 @interface TestDKProxy: NSObject <UKTest>
+@end
+
+@interface NSObject (FakeIntrospectionSelector)
+- (NSString*)Introspect;
 @end
 
 @implementation TestDKProxy
@@ -71,5 +75,21 @@
   NSWarnMLog(@"FIXME: This test will fail until the handling of D-Bus interfaces is implemented");
   UKObjectsEqual(@"org.gnustep.fake", interface);
   [proxy release];
+}
+
+- (void)testSendIntrospectMessage
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  id returnValue = nil;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  aProxy = [conn rootProxy];
+  returnValue = [aProxy Introspect];
+
+  UKNotNil(returnValue);
+  UKTrue([returnValue isKindOfClass: [NSString class]]);
+  UKTrue([returnValue length] > 0);
 }
 @end

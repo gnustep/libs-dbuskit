@@ -98,7 +98,13 @@ DKMethod *_DKMethodIntrospect;
   }
 }
 
-- (NSMethodSignature*) methodSignatureBoxed: (BOOL)doBox
+- (BOOL) isEqualToMethodSignature: (NSMethodSignature*)methodSignature
+                            boxed: (BOOL)isBoxed
+{
+  return [methodSignature isEqual: [self methodSignatureBoxed: isBoxed]];
+}
+
+- (const char*)objCTypesBoxed: (BOOL)doBox
 {
   /* Type-encodings are as follows:
    * <return-type><arg-frame length><type/offset pairs>
@@ -109,11 +115,8 @@ DKMethod *_DKMethodIntrospect;
 
   // Initial type string containing self and _cmd.
   NSMutableString *typeString = [[NSMutableString alloc] initWithFormat: @"@0:%d", sizeof(id)];
-  // Dummy offset value:
-  NSUInteger offset = 8;
-  NSString *fullString = nil;
-  NSMethodSignature *ret = nil;
-
+  NSUInteger offset = sizeof(id) + sizeof(SEL);
+  NSString *returnValue = nil;
   NSEnumerator *en = [inArgs objectEnumerator];
   DKArgument *arg = nil;
 
@@ -130,16 +133,28 @@ DKMethod *_DKMethodIntrospect;
     }
 
     [typeString appendFormat: @"%s%d", typeChar, offset];
+
+    if (doBox)
+    {
+      offset = offset + sizeof(id);
+    }
+    else
+    {
+      offset = offset + [arg unboxedObjCTypeSize];
+    }
   }
 
-  fullString = [[NSString alloc] initWithFormat: @"%s%d%@", [self returnTypeBoxed: doBox],
+  returnValue = [NSString stringWithFormat: @"%s%d%@", [self returnTypeBoxed: doBox],
     offset,
     typeString];
   [typeString release];
-  NSDebugMLog(@"Generated type signature '%@' for method '%@'.", fullString, name);
-  ret = [NSMethodSignature signatureWithObjCTypes: [fullString UTF8String]];
-  [fullString release];
-  return ret;
+  NSDebugMLog(@"Generated Obj-C type string: %@", returnValue);
+  return [returnValue UTF8String];
+}
+
+- (NSMethodSignature*) methodSignatureBoxed: (BOOL)doBox
+{
+  return [NSMethodSignature signatureWithObjCTypes: [self objCTypesBoxed: doBox]];
 }
 
 - (NSMethodSignature*) methodSignature
