@@ -686,7 +686,6 @@ DKDBusTypeForUnboxingObject(id object)
 	 DKOutgoingProxy *newProxy = [DKOutgoingProxy proxyWithParent: rootProxy
 	                                                       object: value];
 	 *buffer = (uintptr_t)[[newProxy _path] UTF8String];
-	 [newProxy release];
 	 return YES;
        }
 

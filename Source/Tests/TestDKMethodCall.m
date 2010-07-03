@@ -58,7 +58,8 @@
                                       boxing: YES];
   UKNotNil(call);
   [call sendSynchronouslyAndWaitUntil: 0];
-  [inv getReturnValue: &returnValue];
+
+  UKDoesNotRaiseException([inv getReturnValue: &returnValue]);
   UKNotNil(returnValue);
   UKTrue([returnValue isKindOfClass: [NSString class]]);
   UKTrue([returnValue length] > 0);

@@ -420,7 +420,7 @@ static NSDictionary *basicSigsAndClasses;
 
   if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
   {
-    UKTrue((fabs(foo - *(double*)&buffer) < 0.00001));
+    UKFloatsEqual(foo, *(double*)&buffer, 0.0001);
   }
   else
   {
