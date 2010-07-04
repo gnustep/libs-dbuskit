@@ -1235,7 +1235,7 @@ DKDBusTypeForUnboxingObject(id object)
 
 - (BOOL) isDictionary
 {
-  return YES;
+  return NO;
 }
 
 - (void) setIsDictionary: (BOOL)isDict
