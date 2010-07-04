@@ -42,6 +42,10 @@
 #import "DKOutgoingProxy.h"
 #import "DKArgument.h"
 
+#define INCLUDE_RUNTIME_H
+#include "config.h"
+#undef INCLUDE_RUNTIME_H
+
 #include <dbus/dbus.h>
 
 NSString *DKArgumentDirectionIn = @"in";
@@ -946,13 +950,10 @@ DKDBusTypeForUnboxingObject(id object)
                 parent: (id)_parent
 {
   DBusSignatureIter subIterator;
-  if (nil == (self = [super initWithIterator: iterator
-                                        name: _name
-                                      parent: _parent]))
-  {
-    return nil;
-  }
+  Class concreteClass = Nil;
 
+  // Get the type from the iterator:
+  DBusType = dbus_signature_iter_get_current_type(iterator);
   if (!dbus_type_is_container(DBusType))
   {
     NSWarnMLog(@"Incorrectly initialized container type D-Bus argument ('%@' is not a container type).",
@@ -961,34 +962,61 @@ DKDBusTypeForUnboxingObject(id object)
       return nil;
   }
 
+
+  /*
+   * If the initializer is called for the DKContainerTypeArgument class, we need
+   * to get concrete subclass from the DBusType
+   */
+  if ([DKContainerTypeArgument class] == [self class])
+  {
+    switch (DBusType)
+    {
+      case DBUS_TYPE_VARIANT:
+        concreteClass = [DKVariantTypeArgument class];
+        break;
+      case DBUS_TYPE_ARRAY:
+        concreteClass = [DKArrayTypeArgument class];
+        break;
+      case DBUS_TYPE_STRUCT:
+        concreteClass = [DKStructTypeArgument class];
+        break;
+      case DBUS_TYPE_DICT_ENTRY:
+        concreteClass = [DKDictEntryTypeArgument class];
+        break;
+      default:
+        NSWarnMLog(@"Cannot handle unkown container type.");
+        [self release];
+        return nil;
+    }
+
+    [self release];
+    return [[concreteClass alloc] initWithIterator: iterator
+                                              name: _name
+                                            parent: _parent];
+  }
+
+  if (nil == (self = [super initWithIterator: iterator
+                                        name: _name
+                                      parent: _parent]))
+  {
+    return nil;
+  }
+
+
   children = [[NSMutableArray alloc] init];
 
-  switch (DBusType)
+  /*
+   * A shortcut is needed for variant types. libdbus classifies them as
+   * containers, but it is clearly wrong about that at least with regard to
+   * the signatures:
+   * They have no children and dbus will fail and crash if it tries to loop
+   * over their non-existent sub-arguments. Hence we return after setting the
+   * subclass.
+   */
+
+  if (DBUS_TYPE_VARIANT == DBusType)
   {
-    case DBUS_TYPE_VARIANT:
-     /*
-      * A shortcut is needed for variant types. libdbus classifies them as
-      * containers, but it is clearly wrong about that at least with regard to
-      * the signatures:
-      * They have no children and dbus will fail and crash if it tries to loop
-      * over their non-existent sub-arguments. Hence we return after setting the
-      * subclass.
-      */
-      isa = [DKVariantTypeArgument class];
-      return self;
-    case DBUS_TYPE_ARRAY:
-      isa = [DKArrayTypeArgument class];
-      break;
-    case DBUS_TYPE_STRUCT:
-      isa = [DKStructTypeArgument class];
-      break;
-    case DBUS_TYPE_DICT_ENTRY:
-      isa = [DKDictEntryTypeArgument class];
-      break;
-    default:
-      NSWarnMLog(@"Cannot handle unkown container type.");
-      [self release];
-      return nil;
+    return self;
   }
 
   /*
@@ -1207,22 +1235,28 @@ DKDBusTypeForUnboxingObject(id object)
 
 - (BOOL) isDictionary
 {
-  return [self isKindOfClass: [DKDictionaryTypeArgument class]];
+  return YES;
 }
 
 - (void) setIsDictionary: (BOOL)isDict
 {
+# ifndef NDEBUG
+  GSDebugAllocationRemove(isa, self);
+# endif
   if (isDict)
   {
-    isa = [DKDictionaryTypeArgument class];
+    object_setClass(self,[DKDictionaryTypeArgument class]);
     [self setObjCEquivalent: [NSDictionary class]];
   }
   else
   {
     // Not sure why somebody would want to do that
-    isa = [DKArrayTypeArgument class];
+    object_setClass(self,[DKArrayTypeArgument class]);
     [self setObjCEquivalent: [NSArray class]];
   }
+#ifndef NDEBUG
+  GSDebugAllocationAdd(isa, self);
+#endif
 }
 
 - (DKArgument*)elementTypeArgument
@@ -1338,6 +1372,10 @@ DKDBusTypeForUnboxingObject(id object)
   return self;
 }
 
+- (BOOL) isDictionary
+{
+  return YES;
+}
 
 - (void) assertSaneIterator: (DBusMessageIter*)iter
 {
@@ -1697,9 +1735,10 @@ DKDBusTypeForUnboxingObject(id object)
     [self release];
     return nil;
   }
-  else if (![[children objectAtIndex: 0] isContainerType])
+  else if ([[children objectAtIndex: 0] isContainerType])
   {
-    NSWarnMLog(@"Invalid (complex) type as dict entry key. Ignoring argument.");
+    NSWarnMLog(@"Invalid (complex) type '%@' as dict entry key. Ignoring argument.",
+      [[children objectAtIndex: 0] DBusTypeSignature]);
     [self release];
     return nil;
   }
