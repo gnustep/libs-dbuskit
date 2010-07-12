@@ -159,16 +159,16 @@
   // Handle the error case:
   if (msgType == DBUS_MESSAGE_TYPE_ERROR)
   {
-    dbus_error_init(&error);
     NSString *errorName = nil;
     NSString *errorMessage = nil;
     NSDictionary *infoDict = nil;
 
+    dbus_error_init(&error);
     dbus_set_error_from_message(&error, reply);
     if (dbus_error_is_set(&error))
     {
       NSString *exceptionName = @"DKDBusMethodReplyException";
-      NSString *exceptionReason = @"An remote object returned an error upon a method call.";
+      NSString *exceptionReason = @"A remote object returned an error upon a method call.";
       errorName = [NSString stringWithUTF8String: error.name];
       errorMessage = [NSString stringWithUTF8String: error.message];
 

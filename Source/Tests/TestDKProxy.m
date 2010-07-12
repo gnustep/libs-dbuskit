@@ -44,6 +44,7 @@
 @interface NSObject (FakeDBusSelectors)
 - (NSString*)Introspect;
 - (NSString*)GetId;
+- (NSString*)Hello;
 - (char*)GetNameOwner: (char*)name;
 @end
 
@@ -119,5 +120,16 @@
   UKNotNil(returnValue);
   UKTrue([returnValue isKindOfClass: [NSString class]]);
   UKTrue([returnValue length] > 0);
+}
+
+- (void)testExceptionOnSecondHello
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  aProxy = [conn rootProxy];
+  UKRaisesExceptionNamed([aProxy Hello], @"DKDBusMethodReplyException");
 }
 @end
