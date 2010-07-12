@@ -347,6 +347,16 @@ enum
    */
   DKMethod *method = [self _methodForSelector: aSelector
                                         block: NO];
+  const char *types = NULL;
+# if HAVE_TYPED_SELECTORS == 0
+  // Without typed selectors, we have the old gcc libobjc which, in fact, has
+  // typed selectors but no API to access them. But we can still copy them from
+  // the SEL structure.
+  types = aSelector->sel_types;
+# else
+  types = sel_getType_np(aSelector);
+# endif
+
   if (nil == method)
   {
     //Fall back to the untyped version
@@ -360,8 +370,20 @@ enum
     NSStringFromSelector(aSelector));
   if (nil != method)
   {
-    // TODO: Find out whether we want the boxed or non-boxed signature
-    return [method methodSignature];
+    BOOL willBox = YES;
+    if (0 == strcmp(types, [method objCTypesBoxed: NO]))
+    {
+      willBox = NO;
+    }
+    else if (0 != strcmp(types, [method objCTypesBoxed: YES]))
+    {
+      //Consistency check: This should not happen.
+      [NSException raise: @"DKInvalidArgumentException"
+                  format: @"D-Bus object %@ for service %@: Mismatched method signature.",
+        path,
+        service];
+    }
+    return [method methodSignatureBoxed: willBox];
   }
   else
   {
