@@ -46,6 +46,8 @@
 - (NSString*)GetId;
 - (NSString*)Hello;
 - (char*)GetNameOwner: (char*)name;
+// Also declare the mangled variant:
+- (char*)_DKNoBox_GetNameOwner: (char*)name;
 @end
 
 @implementation TestDKProxy
@@ -131,5 +133,18 @@
                                         sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
   aProxy = [conn rootProxy];
   UKRaisesExceptionNamed([aProxy Hello], @"DKDBusMethodReplyException");
+}
+
+- (void)testUnboxedMethodCallMangled
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  char *returnValue = NULL;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  aProxy = [conn rootProxy];
+  returnValue = [aProxy _DKNoBox_GetNameOwner: "org.freedesktop.DBus"];
+  UKTrue(NULL != returnValue);
 }
 @end

@@ -228,8 +228,15 @@ enum
   NSRange ifStartRange = NSMakeRange(NSNotFound, 0);
   NSRange ifEndRange = NSMakeRange(NSNotFound, 0);
   // defaults:
-  *shallBox = YES;
-  *interface = nil;
+  if (NULL != shallBox)
+  {
+    *shallBox = YES;
+  }
+  if (NULL != interface)
+  {
+    *interface = nil;
+  }
+
   if (0 == selector)
   {
     return 0;
@@ -358,7 +365,29 @@ enum
   }
   else
   {
-    //TODO: Do stuff for mangled selectors.
+    NSString *interface = nil;
+    BOOL willBox = YES;
+    SEL unmangledSel = [self _unmangledSelector: aSelector
+                                  boxingRequest: &willBox
+                                      interface: &interface];
+    if (0 == unmangledSel)
+    {
+      // We can't do anything then.
+      return nil;
+    }
+
+    if (nil != interface)
+    {
+      // The interface was specified. Retrieve the corresponding method;
+      method = [(DKInterface*)[interfaces objectForKey: interface] methodForSelector: unmangledSel];
+    }
+    else
+    {
+      // No interface, so we try the standard dispatch table:
+      method = [self _methodForSelector: unmangledSel
+                                  block: NO];
+    }
+    return [method methodSignatureBoxed: willBox];
   }
 
   return nil;
@@ -421,10 +450,31 @@ enum
 
   NSMethodSignature *signature = [inv methodSignature];
   BOOL isBoxed = YES;
+  NSString *interface = nil;
   DKMethod *method = [self _methodForSelector: selector
                                         block: YES];
   DKMethodCall *call = nil;
 
+  if (nil == method)
+  {
+    SEL newSel = 0;
+    newSel = [self _unmangledSelector: selector
+                        boxingRequest: NULL
+                            interface: &interface];
+    if (0 != newSel)
+    {
+      [inv setSelector: newSel];
+      if (nil != interface)
+      {
+	method = [(DKInterface*)[interfaces objectForKey: interface] methodForSelector: newSel];
+      }
+      else
+      {
+	method = [self _methodForSelector: newSel
+	                            block: YES];
+      }
+    }
+  }
   if (nil == method)
   {
     // Test whether this selector is already untyped:
@@ -464,7 +514,7 @@ enum
   call = [[DKMethodCall alloc] initWithProxy: self
                                       method: method
                                   invocation: inv
-                                      boxing: YES];
+                                      boxing: isBoxed];
 
   //TODO: Implement asynchronous method calls using futures
   [call sendSynchronouslyAndWaitUntil: 0];
