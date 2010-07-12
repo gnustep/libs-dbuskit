@@ -159,6 +159,7 @@
   // Handle the error case:
   if (msgType == DBUS_MESSAGE_TYPE_ERROR)
   {
+    dbus_error_init(&error);
     NSString *errorName = nil;
     NSString *errorMessage = nil;
     NSDictionary *infoDict = nil;

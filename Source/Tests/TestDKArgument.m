@@ -225,7 +225,7 @@ static NSDictionary *basicSigsAndClasses;
                                                                            name: nil
                                                                          parent: nil];
   DKArgument *arg = [[superArg children] objectAtIndex: 0];
-  UKObjectsEqual([arg DBusTypeSignature], @"{su}");
+  UKObjectsEqual(@"{su}",[arg DBusTypeSignature]);
   [superArg release];
 }
 

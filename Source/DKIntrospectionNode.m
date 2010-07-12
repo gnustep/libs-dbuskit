@@ -23,6 +23,8 @@
 
 #import "DKIntrospectionNode.h"
 
+#import "DBusKit/DKProxy.h"
+
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSNull.h>
@@ -53,6 +55,24 @@
 - (id) parent
 {
   return parent;
+}
+
+- (DKProxy*)proxyParent
+{
+  id ancestor = [self parent];
+  do
+  {
+    if ([ancestor isKindOfClass: [DKProxy class]])
+    {
+      return ancestor;
+    }
+    else if (![ancestor respondsToSelector: @selector(parent)])
+    {
+      return nil;
+    }
+  } while (nil != (ancestor = [ancestor parent]));
+
+  return nil;
 }
 
 - (void) setAnnotationValue: (id)value
@@ -108,6 +128,20 @@ didStartElement: (NSString*)aNode
 {
   NSDebugMLog(@"Started node: %@ (attributes: %@)", aNode, someAttributes);
   xmlDepth++;
+  if ([@"annotation" isEqualToString: aNode])
+  {
+    NSString *theName = [someAttributes objectForKey: @"name"];
+    id theValue = [someAttributes objectForKey: @"value"];
+    if (theName != nil)
+    {
+      if (nil == theValue)
+      {
+	theValue = [NSNull null];
+      }
+      [self setAnnotationValue: theValue
+                        forKey: theName];
+    }
+  }
 }
 
 - (void) parser: (NSXMLParser*)aParser

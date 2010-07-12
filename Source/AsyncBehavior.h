@@ -30,12 +30,13 @@
 
 #define ASYNC_INIT_QUEUE(x,y) x = dispatch_queue_create(y, 0)
 #define ASYNC_IF_POSSIBLE(queue, func, data) dispatch_async_f(queue, func, (void*)data)
-
+#define IF_ASYNC(x) x
 #else
 
 // Without toydispatch, we work synchronously
 #define ASYNC_INIT_QUEUE(x,y)
 #define ASYNC_IF_POSSIBLE(queue, func, data) func(data)
+#define IF_ASYNC(x) do { if (0) { x;} } while (0)
 
 #endif // HAVE_TOYDISPATCH
 

@@ -64,4 +64,8 @@
  */
 - (NSString*)protocolDeclaration;
 
+/**
+ * Returns the interface name with all dots replaced by underscores.
+ */
+- (NSString*)mangledName;
 @end

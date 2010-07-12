@@ -24,11 +24,13 @@
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSObjCRuntime.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLParser.h>
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #import "DKMethod.h"
 #import "DKInterface.h"
+
 
 @implementation DKInterface
 - (id) initWithInterfaceName: (NSString*)aName
@@ -50,7 +52,9 @@
 
   methods = [NSMutableDictionary new];
 
-  //TODO: Init map table
+  selectorToMethodMap = NSCreateMapTable(NSIntMapKeyCallBacks,
+    NSObjectMapValueCallBacks,
+    10);
   return self;
 }
 
@@ -76,11 +80,22 @@
 - (void) installMethod: (DKMethod*)method
            forSelector: (SEL)selector
 {
+  if ((method == nil) || (0 == selector))
+  {
+    return;
+  }
+
   if (nil == [methods objectForKey: [method name]])
   {
     [self addMethod: method];
   }
-  // TODO: Actually install it.
+  if (NULL != NSMapInsertIfAbsent(selectorToMethodMap, selector, method))
+  {
+    NSWarnMLog(@"Overloading selector '%@' for method '%@' in interface '%@' not supported",
+      NSStringFromSelector(selector),
+      [method name],
+      name);
+  }
 }
 
 - (DKMethod*) methodForSelector: (SEL)selector
@@ -116,7 +131,57 @@
 - (void)dealloc
 {
   [methods release];
-  // TODO: Release map table.
+  NSFreeMapTable(selectorToMethodMap);
   [super dealloc];
 }
+
+
+// XML parser delegate methods:
+- (void) parser: (NSXMLParser*)aParser
+didStartElement: (NSString*)aNode
+   namespaceURI: (NSString*)aNamespaceURI
+  qualifiedName: (NSString*)aQualifierName
+     attributes: (NSDictionary*)someAttributes
+{
+  NSString *theName = [someAttributes objectForKey: @"name"];
+  DKIntrospectionNode *newNode = nil;
+  if ([@"method" isEqualToString: aNode])
+  {
+    newNode = [[DKMethod alloc] initWithMethodName: theName
+                                         interface: name
+                                            parent: self];
+    [methods setObject: newNode
+                forKey: theName];
+  }
+  else if (([@"signal" isEqualToString: aNode])
+    || ([@"property" isEqualToString: aNode]))
+  {
+    newNode = [[DKIntrospectionNode alloc] initWithName: theName
+                                                 parent: self];
+    [[newNode retain] autorelease];
+    NSLog(@"Handling <%@>-nodes not implemented: Ignoring %@ '%@'.",
+      aNode, aNode,
+      theName);
+  }
+
+  if (nil != newNode)
+  {
+    [newNode parser: aParser
+    didStartElement: aNode
+       namespaceURI: aNamespaceURI
+      qualifiedName: aQualifierName
+         attributes: someAttributes];
+    [aParser setDelegate: newNode];
+    [newNode release];
+    // No need to call super if we found somebody to handle this:
+    return;
+  }
+  // increase xmlDepth and catch annotations
+  [super parser: aParser
+didStartElement: aNode
+   namespaceURI: aNamespaceURI
+  qualifiedName: aQualifierName
+     attributes: someAttributes];
+}
+
 @end

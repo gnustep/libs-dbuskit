@@ -31,9 +31,8 @@
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
 
-#include "AsyncBehavior.h"
-
 #import <Foundation/NSCoder.h>
+#import <Foundation/NSData.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSInvocation.h>
@@ -41,6 +40,8 @@
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSThread.h>
+#import <Foundation/NSXMLParser.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 
@@ -77,20 +78,12 @@ enum
 - (NSString*)Introspect;
 @end
 
-#if HAVE_TOYDISPATCH == 1
-static dispatch_queue_t cacheBuilderQueue;
-#endif
-
-static inline void
-DKProxyBuildMethodCache(void* proxy);
-
 @implementation DKProxy
 
 + (void)initialize
 {
   if ([DKProxy class] == self)
   {
-    ASYNC_INIT_QUEUE(cacheBuilderQueue, "DKProxy method cache generator queue");
     // Trigger generation of static introspection method:
     [DKMethod class];
   }
@@ -198,7 +191,22 @@ DKProxyBuildMethodCache(void* proxy);
  */
 - (NSString*)DBusInterfaceForMangledString: (NSString*)string
 {
-  //TODO: Implement
+  DKInterface *anIf = nil;
+  NSEnumerator *enumerator = nil;
+  if (nil == string)
+  {
+    return nil;
+  }
+
+  enumerator =[interfaces objectEnumerator];
+
+  while (nil != (anIf = [enumerator nextObject]))
+  {
+    if ([string isEqualToString: [anIf mangledName]])
+    {
+      return [anIf name];
+    }
+  }
   return nil;
 }
 
@@ -331,12 +339,12 @@ DKProxyBuildMethodCache(void* proxy);
    * the signature from the associated method.
    */
   DKMethod *method = [self _methodForSelector: aSelector
-                                        block: YES];
+                                        block: NO];
   if (nil == method)
   {
     //Fall back to the untyped version
     method = [self _methodForSelector: sel_getUid(sel_getName(aSelector))
-                                block: YES];
+                                block: NO];
   }
   NSDebugMLog(@"Got method %@ (%@) for %p (%@)",
     method,
@@ -345,7 +353,12 @@ DKProxyBuildMethodCache(void* proxy);
     NSStringFromSelector(aSelector));
   if (nil != method)
   {
+    // TODO: Find out whether we want the boxed or non-boxed signature
     return [method methodSignature];
+  }
+  else
+  {
+    //TODO: Do stuff for mangled selectors.
   }
 
   return nil;
@@ -355,7 +368,7 @@ DKProxyBuildMethodCache(void* proxy);
                            block: (BOOL)doBlock
 {
   DKMethod *m = nil;
-
+  BOOL isIntrospect = [@"Introspect" isEqualToString: NSStringFromSelector(aSel)];
   if (nil != activeInterface)
   {
     // If an interface was marked active, try to find the selector there first
@@ -364,8 +377,7 @@ DKProxyBuildMethodCache(void* proxy);
   }
   if (nil == m)
   {
-    if (([@"Introspect" isEqualToString: NSStringFromSelector(aSel)])
-      || (NO == doBlock))
+    if (isIntrospect || (NO == doBlock))
     {
       // For the introspection selector, just lock the table because the
       // introspection selector has been installed on init time. Also, when
@@ -375,6 +387,7 @@ DKProxyBuildMethodCache(void* proxy);
     }
     else if (doBlock)
     {
+
       // Else, we need to wait for the correct state to be signaled by the
       // caching thread.
       [tableLock lockWhenCondition: HAVE_CACHE];
@@ -382,8 +395,21 @@ DKProxyBuildMethodCache(void* proxy);
     m = NSMapGet(selectorToMethodMap, aSel);
     [tableLock unlock];
   }
+
+  // If we could not find a method for the selector, we want to trigger building
+  // the cache, but only if we are not looking for the introspection selector.
+  if (((nil == m) && (HAVE_CACHE != [tableLock condition]))
+    && (NO == isIntrospect))
+  {
+    [self _buildMethodCache];
+
+    // Retry, but this time, block until the introspection data is resolved.
+    m = [self _methodForSelector: aSel
+                           block: YES];
+  }
   return m;
 }
+
 - (void)forwardInvocation: (NSInvocation*)inv
 {
 # if HAVE_TYPED_SELECTORS == 1
@@ -396,26 +422,8 @@ DKProxyBuildMethodCache(void* proxy);
   NSMethodSignature *signature = [inv methodSignature];
   BOOL isBoxed = YES;
   DKMethod *method = [self _methodForSelector: selector
-                                        block: NO];
+                                        block: YES];
   DKMethodCall *call = nil;
-
-
-  if ((nil == method) && (HAVE_CACHE != [tableLock condition]))
-  {
-    /*
-     * We retain ourselves once be cause we might build the cache in a separate
-     * thread. The DKProxyBuildMethodCache() function will do the release.
-     */
-    [self retain];
-    // Build method cache
-    ASYNC_IF_POSSIBLE(cacheBuilderQueue, DKProxyBuildMethodCache, self);
-
-    // This time, we will try to get the method an block until the cache has
-    // been built
-    method = [self _methodForSelector: selector
-                                block: YES];
-  }
-
 
   if (nil == method)
   {
@@ -499,6 +507,12 @@ DKProxyBuildMethodCache(void* proxy);
   // True only for outgoing proxies representing local objects.
   return NO;
 }
+
+- (NSDictionary*)_interfaces
+{
+  return [NSDictionary dictionaryWithDictionary: interfaces];
+}
+
 - (BOOL) hasSameScopeAs: (DKProxy*)aProxy
 {
   BOOL sameService = [service isEqualToString: [aProxy _service]];
@@ -547,7 +561,7 @@ DKProxyBuildMethodCache(void* proxy);
 
   if (nil == selName)
   {
-    selectorString = [[aMethod name] UTF8String];
+    selectorString = [[aMethod selectorString] UTF8String];
   }
   else
   {
@@ -640,9 +654,18 @@ DKProxyBuildMethodCache(void* proxy);
 
 - (void)_buildMethodCache
 {
-  NSString *introspectionXML = [self Introspect];
-  NSDebugMLog(@"Building method cache for:\n%@", introspectionXML);
+  NSData *introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
+  NSXMLParser *parser = nil;
+  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
+  [tableLock lock];
+  parser = [[NSXMLParser alloc] initWithData: introspectionData];
+  [parser setDelegate: self];
+  [parser parse];
+  [tableLock unlockWithCondition: HAVE_CACHE];
+  [arp release];
+  [parser release];
 }
+
 - (void) dealloc
 {
   [endpoint release];
@@ -652,24 +675,113 @@ DKProxyBuildMethodCache(void* proxy);
   [interfaces release];
   [super dealloc];
 }
-@end
 
-static inline void
-DKProxyBuildMethodCache(void* proxy)
+/* Parser delegate methods */
+
+- (void) parser: (NSXMLParser*)aParser
+didStartElement: (NSString*)aNode
+   namespaceURI: (NSString*)aNamespaceURI
+  qualifiedName: (NSString*)aQualifierName
+     attributes: (NSDictionary*)someAttributes
 {
-  DKProxy *p = (DKProxy*)proxy;
-  NS_DURING
+  NSString *theName = [someAttributes objectForKey: @"name"];
+  DKIntrospectionNode *newNode = nil;
+  xmlDepth++;
+  if ([@"node" isEqualToString: aNode])
   {
-    [p _buildMethodCache];
+    BOOL isRoot = YES;
+    if ([theName length] > 0)
+    {
+      if ('/' != [theName characterAtIndex: 0])
+      {
+	isRoot = NO;
+	// relative paths must refer to nodes contained in the main node.
+	if ((xmlDepth - 1) == 0)
+	{
+	  [NSException raise: @"DKIntrospectionException"
+	  format: @"Introspection data contains invalid root node named '%@'",
+	    theName];
+	}
+	// TODO: Maybe check whether the proxy name and the node name match?
+      }
+    }
+    if (NO == isRoot)
+    {
+      // TODO: Generate information about child nodes
+      // (For now, just create a DKIntrospectionNode to store them)
+      newNode = [[DKIntrospectionNode alloc] initWithName: theName
+                                                   parent: self];
+      [childNodes addObject: newNode];
+    }
   }
-  NS_HANDLER
+  else if (([@"interface" isEqualToString: aNode]) && ([theName length] > 0))
   {
-    [p release];
-    [localException raise];
+    newNode = [[DKInterface alloc] initWithInterfaceName: theName
+                                                  parent: self];
+    [interfaces setObject: newNode
+                   forKey: theName];
   }
-  NS_ENDHANDLER
+  else
+  {
+    // catch-all node: Will just count xmlDepth and return control to us when
+    // the xml tree is balanced.
+    newNode = [[DKIntrospectionNode alloc] initWithName: theName
+                                                 parent: self];
 
-  // We did one extra retain to keep the proxy from going away while we build
-  // the cache.
-  [p release];
+    // extra -retain so we can use a simple -release for all node-types at the
+    // end of this method
+    [[newNode retain] autorelease];
+  }
+
+  if (newNode != nil)
+  {
+    // pass on the started node information so that the new delegate knows that
+    // it has been opened.
+    [newNode parser: aParser
+    didStartElement: aNode
+       namespaceURI: aNamespaceURI
+      qualifiedName: aQualifierName
+         attributes: someAttributes];
+
+    // Continue parsing with the new delegate:
+    [aParser setDelegate: newNode];
+
+    // newNode has either been retained in an array or dictionary, or we did an
+    // extra -retain before autoreleasing a catch-all node.
+    [newNode release];
+    newNode = nil;
+  }
 }
+
+- (void) parser: (NSXMLParser*)aParser
+  didEndElement: (NSString*)aNode
+   namespaceURI: (NSString*)aNamespaceURI
+  qualifiedName: (NSString*)aQualifierName
+{
+  NSDebugMLog(@"Ended node: %@", aNode);
+  xmlDepth--;
+  if (0 == xmlDepth)
+  {
+    NSDebugMLog(@"Ended parsing");
+  }
+}
+
+- (void)parserDidStartDocument: (NSXMLParser*)aParser
+{
+  // Dummy method to prevent NSXMLParser from calling
+  // -methodSignatureForSelector: on us
+}
+
+- (void)parserDidEndDocument: (NSXMLParser*)aParser
+{
+  // Dummy method to prevent NSXMLParser from calling
+  // -methodSignatureForSelector: on us
+}
+
+- (void)parser: (NSXMLParser*)aParser foundCharacters: (NSString*)chars
+{
+  // Dummy method to prevent NSXMLParser from calling
+  // -methodSignatureForSelector: on us
+}
+
+@end

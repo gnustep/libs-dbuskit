@@ -34,47 +34,45 @@
 - (SEL)_unmangledSelector: (SEL)selector
             boxingRequest: (BOOL*)shallBox
                 interface: (NSString**)interface;
+- (void)_buildMethodCache;
+- (NSDictionary*)_interfaces;
 @end
 
 @interface TestDKProxy: NSObject <UKTest>
 @end
 
-@interface NSObject (FakeIntrospectionSelector)
+@interface NSObject (FakeDBusSelectors)
 - (NSString*)Introspect;
+- (NSString*)GetId;
+- (char*)GetNameOwner: (char*)name;
 @end
 
 @implementation TestDKProxy
 - (void)testSelectorUnmangling
 {
 
-  NSString *mangledString = @"_DKNoBox_DKIf_org_gnustep_fake_DKIfEnd_release";
+  NSString *mangledString = @"_DKNoBox_DKIf_org_freedesktop_DBus_DKIfEnd_GetNameOwner:";
   SEL mangledSelector = 0;
   SEL unmangledSel = 0;
   BOOL shallBox = YES;
   NSString *interface = nil;
+  NSConnection *conn = nil;
+  id proxy = nil;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  proxy = [conn rootProxy];
+  [proxy _buildMethodCache];
 
-  /*
-   * Initialize a dummy proxy that won't work. FIXME: Will fail when DKProxy is
-   * rewritten to check the endpoint passed in the initializer.
-   */
-  DKProxy *proxy = [[DKProxy alloc] initWithEndpoint: (DKEndpoint*)[NSNull null]
-                                          andService: @"dummy"
-                                             andPath: @"/"];
-
-  // Since nobody really calls this selector, we must register it manually with
-  // the runtime.
   sel_registerName([mangledString UTF8String]);
   mangledSelector = NSSelectorFromString(mangledString);
 
   unmangledSel = [proxy _unmangledSelector: mangledSelector
                              boxingRequest: &shallBox
                                  interface: &interface];
-  UKObjectsEqual(@"release", NSStringFromSelector(unmangledSel));
+  UKObjectsEqual(@"GetNameOwner:", NSStringFromSelector(unmangledSel));
   UKFalse(shallBox);
-
-  NSWarnMLog(@"FIXME: This test will fail until the handling of D-Bus interfaces is implemented");
-  UKObjectsEqual(@"org.gnustep.fake", interface);
-  [proxy release];
+  UKObjectsEqual(@"org.freedesktop.DBus", interface);
 }
 
 - (void)testSendIntrospectMessage
@@ -88,6 +86,36 @@
   aProxy = [conn rootProxy];
   returnValue = [aProxy Introspect];
 
+  UKNotNil(returnValue);
+  UKTrue([returnValue isKindOfClass: [NSString class]]);
+  UKTrue([returnValue length] > 0);
+}
+
+- (void)testBuildMethodCache
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  NSDictionary *interfaces = nil;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  aProxy = [conn rootProxy];
+  [aProxy _buildMethodCache];
+  interfaces = [aProxy _interfaces];
+  UKNotNil(interfaces);
+  UKTrue([interfaces count] > 0);
+}
+
+- (void)testSendGetId
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  id returnValue = nil;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  aProxy = [conn rootProxy];
+  returnValue = [aProxy GetId];
   UKNotNil(returnValue);
   UKTrue([returnValue isKindOfClass: [NSString class]]);
   UKTrue([returnValue length] > 0);

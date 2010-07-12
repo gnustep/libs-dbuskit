@@ -100,6 +100,11 @@
 - (NSString*)methodDeclaration;
 
 /**
+ * Returns a string that can be use as a Objective-C selector for the method.
+ */
+- (NSString*)selectorString;
+
+/**
  * Adds an argument specification to the method.
  */
 - (void) addArgument: (DKArgument*)arg

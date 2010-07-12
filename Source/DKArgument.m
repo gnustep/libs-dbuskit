@@ -554,29 +554,7 @@ DKDBusTypeForUnboxingObject(id object)
   return NO;
 }
 
-/**
- * This method returns the root ancestor in the method/arugment tree if it is a
- * proxy. Otherwise it returns nil. This information is needed for boxing and
- * unboxing values that depend on the object to which a method is associated
- * (i.e. object paths).
- */
-- (DKProxy*)proxyParent
-{
-  id ancestor = [self parent];
-  do
-  {
-    if ([ancestor isKindOfClass: [DKProxy class]])
-    {
-      return ancestor;
-    }
-    else if (![ancestor respondsToSelector: @selector(parent)])
-    {
-      return nil;
-    }
-  } while (nil != (ancestor = [ancestor parent]));
 
-  return nil;
-}
 
 
 - (BOOL) unboxValue: (id)value

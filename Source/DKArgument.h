@@ -134,11 +134,6 @@ extern NSString *DKArgumentDirectionOut;
 - (void) marshallObject: (id)object
            intoIterator: (DBusMessageIter*)iter;
 
-/**
- * Returns the proxy from which the receiver descends, if any.
- */
-- (DKProxy*) proxyParent;
-
 @end
 
 /**

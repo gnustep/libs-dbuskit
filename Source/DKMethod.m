@@ -33,11 +33,19 @@
 #import "DKArgument.h"
 #import "DKMethod.h"
 
+#import "DBusKit/DKProxy.h"
+
 #include <dbus/dbus.h>
 #include <stdint.h>
 
 
 DKMethod *_DKMethodIntrospect;
+
+@interface DKProxy (DKProxyPrivate)
+- (void)_installMethod: (DKMethod*)aMethod
+      inInterfaceNamed: (NSString*)anInterface
+      forSelectorNamed: (NSString*)selName;
+@end
 
 @implementation DKMethod
 
@@ -194,7 +202,7 @@ DKMethod *_DKMethodIntrospect;
     return;
   }
 
-  if ([direction isEqualToString: DKArgumentDirectionIn])
+  if ((direction == nil) || [direction isEqualToString: DKArgumentDirectionIn])
   {
     [inArgs addObject: argument];
   }
@@ -490,6 +498,15 @@ DKMethod *_DKMethodIntrospect;
   return declaration;
 }
 
+- (NSString*)selectorString
+{
+  // TODO: Look aside whether a custom selector is specified somewhere
+  // This means appending the correct number of colons
+  NSUInteger newLength = [name length] + [inArgs count];
+  return [name stringByPaddingToLength: newLength
+                            withString: @":"
+                       startingAtIndex: 0];
+}
 
 - (void)dealloc
 {
@@ -497,5 +514,68 @@ DKMethod *_DKMethodIntrospect;
   [inArgs release];
   [outArgs release];
   [super dealloc];
+}
+
+// XML parser delegate methods:
+- (void) parser: (NSXMLParser*)aParser
+didStartElement: (NSString*)aNode
+   namespaceURI: (NSString*)aNamespaceURI
+  qualifiedName: (NSString*)aQualifierName
+     attributes: (NSDictionary*)someAttributes
+{
+  NSString *theName = [someAttributes objectForKey: @"name"];
+  DKIntrospectionNode *newNode = nil;
+
+  if ([@"arg" isEqualToString: aNode])
+  {
+    NSString *direction = [someAttributes objectForKey: @"direction"];
+    NSString *type = [someAttributes objectForKey: @"type"];
+    NSMutableArray *directedArgs = nil;
+    if ([direction isEqualToString: DKArgumentDirectionOut])
+    {
+      directedArgs = outArgs;
+    }
+    else
+    {
+      // Default direction for arguments to methods is in as per D-Bus spec.
+      directedArgs = inArgs;
+    }
+    newNode = [[DKArgument alloc] initWithDBusSignature: [type UTF8String]
+                                                   name: theName
+                                                 parent: self];
+    [directedArgs addObject: newNode];
+  }
+
+  if (nil != newNode)
+  {
+    // we only expect <arg> type nodes which are closed immediately, so there is
+    // no point in setting the parser delegate to the new node. We simply
+    // release it because it hase been retained by the argument array.
+    [newNode release];
+  }
+  // Increase xmlDepth and catch annotations:
+  [super parser: aParser
+didStartElement: aNode
+   namespaceURI: aNamespaceURI
+  qualifiedName: aQualifierName
+     attributes: someAttributes];
+}
+
+- (void)parser: (NSXMLParser*)aParser
+ didEndElement: (NSString*)aNode
+  namespaceURI: (NSString*)aNamespaceURI
+ qualifiedName: (NSString*)aQualifiedName
+{
+  [super parser: aParser
+  didEndElement: aNode
+   namespaceURI: aNamespaceURI
+  qualifiedName: aQualifiedName];
+
+  if (0 == xmlDepth)
+  {
+    [[self proxyParent] _installMethod: self
+                      inInterfaceNamed: interface
+                      forSelectorNamed: [self selectorString]];
+  }
 }
 @end

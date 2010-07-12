@@ -23,7 +23,7 @@
    */
 
 #import <Foundation/NSObject.h>
-@class NSString,NSXMLParser, NSMutableDictionary;
+@class DKProxy, NSString, NSXMLParser, NSMutableDictionary;
 @interface DKIntrospectionNode: NSObject
 {
   NSString *name;
@@ -47,6 +47,11 @@
  * Returns the parent of the node.
  */
 - (id) parent;
+
+/**
+ * Returns the next parent proxy in the tree.
+ */
+- (DKProxy*) proxyParent;
 
 /**
  * Records metadata for the node.
