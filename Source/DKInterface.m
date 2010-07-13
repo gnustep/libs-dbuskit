@@ -110,7 +110,7 @@
 
 - (NSString*)protocolDeclaration
 {
-  NSMutableString *declaration = [NSMutableString stringWithFormat: @"@protocol(%@)\n\n", [self mangledName]];
+  NSMutableString *declaration = [NSMutableString stringWithFormat: @"@protocol %@\n\n", [self mangledName]];
   NSEnumerator *methodEnum = [methods objectEnumerator];
   DKMethod *method = nil;
 
