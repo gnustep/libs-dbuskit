@@ -52,6 +52,33 @@ NSString *DKArgumentDirectionIn = @"in";
 NSString *DKArgumentDirectionOut = @"out";
 
 
+/*
+ * Macros to call D-Bus function and check whether they returned OOM:
+ */
+
+#define DK_MARSHALLING_RAISE_OOM [NSException raise: @"DKArgumentMarshallingException"\
+                                             format: @"Out of memory when marshalling arument."]
+
+#define DK_ITER_APPEND(iter, type, addr) do {\
+  if (NO == (BOOL)dbus_message_iter_append_basic(iter, type, (void*)addr))\
+  {\
+    DK_MARSHALLING_RAISE_OOM; \
+  }\
+}  while (0)
+
+#define DK_ITER_OPEN_CONTAINER(iter, type, sig, subIter) do {\
+  if (NO == (BOOL)dbus_message_iter_open_container(iter, type, sig, subIter))\
+  {\
+    DK_MARSHALLING_RAISE_OOM; \
+  }\
+} while (0)
+
+#define DK_ITER_CLOSE_CONTAINER(iter, subIter) do {\
+  if (NO == (BOOL)dbus_message_iter_close_container(iter, subIter))\
+  {\
+    DK_MARSHALLING_RAISE_OOM; \
+  }\
+} while (0)
 
 static Class
 DKObjCClassForDBusType(int type)
@@ -886,9 +913,12 @@ DKDBusTypeForUnboxingObject(id object)
                atIndex: index];
     }
 
-    NSAssert1([self unboxValue: value intoBuffer: (long long int*)(void*)&buffer],
-      @"Could not unbox object '%@' into D-Bus format",
-      value);
+    if (NO == [self unboxValue: value intoBuffer: (long long*)(void*)&buffer])
+    {
+      [NSException raise: @"DKArgumentUnboxingException"
+                  format: @"Could not unbox object '%@' into D-Bus format",
+        value];
+    }
   }
   else
   {
@@ -903,19 +933,20 @@ DKDBusTypeForUnboxingObject(id object)
     }
   }
 
-  NSAssert(dbus_message_iter_append_basic(iter, DBusType, (void*)&buffer),
-    @"Out of memory when marshalling D-Bus data.");
+  DK_ITER_APPEND(iter, DBusType, &buffer);
 }
 
 - (void) marshallObject: (id)object
            intoIterator: (DBusMessageIter*)iter
 {
   long long int buffer = 0;
-  NSAssert1([self unboxValue: object intoBuffer: &buffer],
-    @"Could not unbox object '%@' into D-Bus format",
-    object);
-  NSAssert(dbus_message_iter_append_basic(iter, DBusType, (void*)&buffer),
-    @"Out of memory when marshalling D-Bus data.");
+  if (NO == [self unboxValue: object intoBuffer: &buffer])
+  {
+    [NSException raise: @"DKArgumentUnboxingException"
+                format: @"Could not unbox object '%@' into D-Bus format",
+      object];
+  }
+  DK_ITER_APPEND(iter, DBusType, &buffer);
 }
 
 @end
@@ -1294,11 +1325,7 @@ DKDBusTypeForUnboxingObject(id object)
     @"Cannot enumerate contents of %@ when creating D-Bus array.",
     object);
 
-  NSAssert(dbus_message_iter_open_container(iter,
-    DBUS_TYPE_ARRAY,
-    [[theChild DBusTypeSignature] UTF8String],
-    &subIter),
-    @"Out of memory when creating D-Bus iterator for container.");
+  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_ARRAY, [[theChild DBusTypeSignature] UTF8String], &subIter);
 
   elementEnum = [object objectEnumerator];
   NS_DURING
@@ -1319,8 +1346,7 @@ DKDBusTypeForUnboxingObject(id object)
   }
   NS_ENDHANDLER
 
-  NSAssert(dbus_message_iter_close_container(iter, &subIter),
-    @"Out of memory when closing D-Bus container.");
+  DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
 
@@ -1430,11 +1456,8 @@ DKDBusTypeForUnboxingObject(id object)
     @"Cannot marshall non key/value dictionary '%@' to D-Bus iterator.",
     object);
 
-  NSAssert(dbus_message_iter_open_container(iter,
-    DBUS_TYPE_ARRAY,
-    [[pairArgument DBusTypeSignature] UTF8String],
-    &subIter),
-    @"Out of memory when creating D-Bus iterator for container.");
+  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_ARRAY, [[pairArgument DBusTypeSignature] UTF8String], &subIter);
+
   keys = [object allKeys];
   keyEnum = [keys objectEnumerator];
 
@@ -1456,8 +1479,7 @@ DKDBusTypeForUnboxingObject(id object)
   }
   NS_ENDHANDLER
 
-  NSAssert(dbus_message_iter_close_container(iter, &subIter),
-    @"Out of memory when closing D-Bus container.");
+  DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
 
@@ -1507,11 +1529,7 @@ DKDBusTypeForUnboxingObject(id object)
 
   structEnum = [object objectEnumerator];
 
-  NSAssert(dbus_message_iter_open_container(iter,
-    DBUS_TYPE_STRUCT,
-    NULL, // contained_signature set to NULL as per libdbus documentation
-    &subIter),
-    @"Out of memory when opening D-Bus container.");
+  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_STRUCT, NULL, &subIter);
 
   NS_DURING
   {
@@ -1532,9 +1550,7 @@ DKDBusTypeForUnboxingObject(id object)
   }
   NS_ENDHANDLER
 
-  NSAssert(dbus_message_iter_close_container(iter, &subIter),
-    @"Out of memory when closing D-Bus container.");
-
+  DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
 
@@ -1667,11 +1683,7 @@ DKDBusTypeForUnboxingObject(id object)
     @"Could not marshall object %@ as D-Bus variant type",
     subArg);
 
-  NSAssert(dbus_message_iter_open_container(iter,
-    DBUS_TYPE_ARRAY,
-    [[subArg DBusTypeSignature] UTF8String],
-    &subIter),
-    @"Out of memory when creating D-Bus iterator for container.");
+  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_ARRAY, [[subArg DBusTypeSignature] UTF8String], &subIter);
 
   NS_DURING
   {
@@ -1685,8 +1697,7 @@ DKDBusTypeForUnboxingObject(id object)
   }
   NS_ENDHANDLER
 
-  NSAssert(dbus_message_iter_close_container(iter, &subIter),
-    @"Out of memory when closing D-Bus container.");
+  DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
 
@@ -1761,11 +1772,7 @@ DKDBusTypeForUnboxingObject(id object)
            intoIterator: (DBusMessageIter*)iter
 {
   DBusMessageIter subIter;
-  NSAssert(dbus_message_iter_open_container(iter,
-    DBUS_TYPE_DICT_ENTRY,
-    NULL, // contained_signature set to NULL as per libdbus documentation
-    &subIter),
-    @"Out of memory when opening D-Bus container.");
+  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_DICT_ENTRY, NULL, &subIter);
   NS_DURING
   {
     [[self keyArgument] marshallObject: key
@@ -1781,7 +1788,6 @@ DKDBusTypeForUnboxingObject(id object)
   }
   NS_ENDHANDLER
 
-  NSAssert(dbus_message_iter_close_container(iter, &subIter),
-    @"Out of memory when closing D-Bus container.");
+  DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end

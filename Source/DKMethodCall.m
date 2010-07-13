@@ -221,8 +221,11 @@
   // we are operating asynchronously.
   NS_DURING
   {
-    NSAssert(dbus_message_iter_init(reply, &iter),
-      @"Out of memory when creating D-Bus message iterator.");
+    if (NO ==(BOOL)dbus_message_iter_init(reply, &iter))
+    {
+      [NSException raise: @"DKMethodCallException"
+                  format: @"Out of memory when creating D-Bus message iterator."];
+    }
     [method unmarshallFromIterator: &iter
                     intoInvocation: invocation
                        messageType: DBUS_MESSAGE_TYPE_METHOD_RETURN
