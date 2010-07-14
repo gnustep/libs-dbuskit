@@ -3,16 +3,26 @@ include $(GNUSTEP_MAKEFILES)/common.make
 #
 # Main framework
 #
-SUBPROJECT_NAME = libDBusKit
+FRAMEWORK_NAME = DBusKit
+VERSION = 0.1
 
 # Include configuration
 
 -include ../config.make
 
 #
+# Public headers (will be installed)
+#
+DBusKit_HEADER_FILES_DIR = ../Headers
+DBusKit_HEADER_FILES = \
+		  DBusKit.h \
+		  DKPort.h \
+                  DKProxy.h
+
+#
 # Class files
 #
-libDBusKit_OBJC_FILES = \
+DBusKit_OBJC_FILES = \
         DKArgument.m \
 	DKEndpoint.m \
 	DKInterface.m \
@@ -25,23 +35,14 @@ libDBusKit_OBJC_FILES = \
         DKProxy.m
 
 
-libDBusKit_OBJCFLAGS += $(WARN_FLAGS)
+DBusKit_OBJCFLAGS += $(WARN_FLAGS)
 
 # Treat warnings as errors unless someone chooses to ignore them.
 ifneq ($(nonstrict), yes)
-libDBusKit_OBJCFLAGS += -Werror
-endif
-
-ifeq ($(test), yes)
-libDBusKit_OBJC_FILES += \
-	Tests/TestDKArgument.m \
-        Tests/TestDKMethod.m \
-	Tests/TestDKMethodCall.m \
-        Tests/TestDKPort.m \
-	Tests/TestDKProxy.m
+DBusKit_OBJCFLAGS += -Werror
 endif
 
 -include ../GNUmakefile.preamble
-include $(GNUSTEP_MAKEFILES)/subproject.make
+include $(GNUSTEP_MAKEFILES)/framework.make
 
 -include GNUmakefile.postamble

@@ -28,9 +28,9 @@
 
 #import <UnitKit/UnitKit.h>
 
-#import "../../Headers/DKProxy.h"
-#import "../../Headers/DKPort.h"
-#import "../DKArgument.h"
+#import "../Headers/DKProxy.h"
+#import "../Headers/DKPort.h"
+#import "../Source/DKArgument.h"
 
 #include <stdint.h>
 #include <math.h>

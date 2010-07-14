@@ -26,10 +26,10 @@
 #import <Foundation/NSString.h>
 #import <UnitKit/UnitKit.h>
 
-#import "../../Headers/DKPort.h"
-#import "../../Headers/DKProxy.h"
-#import "../DKMethodCall.h"
-#import "../DKMethod.h"
+#import "../Headers/DKPort.h"
+#import "../Headers/DKProxy.h"
+#import "../Source/DKMethodCall.h"
+#import "../Source/DKMethod.h"
 @interface TestDKMethodCall: NSObject <UKTest>
 @end
 

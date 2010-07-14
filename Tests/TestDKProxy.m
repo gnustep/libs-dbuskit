@@ -23,12 +23,12 @@
 #import <Foundation/NSObject.h>
 #import <UnitKit/UnitKit.h>
 #define INCLUDE_RUNTIME_H
-#include "../config.h"
+#include "../Source/config.h"
 #undef INCLUDE_RUNTIME_H
 
-#import "../../Headers/DKProxy.h"
-#import "../DKEndpoint.h"
-#import "../../Headers/DKPort.h"
+#import "../Headers/DKProxy.h"
+#import "../Source/DKEndpoint.h"
+#import "../Headers/DKPort.h"
 
 @interface DKProxy (Private)
 - (SEL)_unmangledSelector: (SEL)selector

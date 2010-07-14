@@ -1,8 +1,3 @@
-# If we are compiling tests, we need to provide a link to the public headers.
-ifeq ($(test), yes)
-before-all::
-	test -L DBusKit || ln -s ../Headers DBusKit
-after-all::
-	rm -rf DBusKit
-endif
-
+after-clean::
+	@-$(RM) -rf Source/DBusKit.framework
+	@-$(RM) -rf Source/derived_src

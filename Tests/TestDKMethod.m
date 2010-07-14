@@ -24,7 +24,7 @@
 #import <Foundation/NSNull.h>
 #import <UnitKit/UnitKit.h>
 
-#import "../DKMethod.h"
+#import "../Source/DKMethod.h"
 #include <string.h>
 @interface TestDKMethod: NSObject <UKTest>
 @end
