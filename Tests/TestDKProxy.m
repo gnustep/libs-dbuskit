@@ -45,6 +45,7 @@
 - (NSString*)GetId;
 - (NSString*)Hello;
 - (char*)GetNameOwner: (char*)name;
+- (BOOL)NameHasOwner: (NSString*)name;
 @end
 
 @implementation TestDKProxy
@@ -140,5 +141,18 @@
   aProxy = [conn rootProxy];
   returnValue = [aProxy GetNameOwner: "org.freedesktop.DBus"];
   UKTrue(NULL != returnValue);
+}
+
+- (void)testMixedBoxingStateMethodCall
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  BOOL returnValue = NO;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+  aProxy = [conn rootProxy];
+  returnValue = [aProxy NameHasOwner: @"org.freedesktop.DBus"];
+  UKTrue(returnValue);
 }
 @end
