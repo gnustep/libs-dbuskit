@@ -36,7 +36,6 @@
   NSMutableArray *childNodes;
   DKInterface *activeInterface;
   NSConditionLock *tableLock;
-  NSUInteger xmlDepth;
 }
 
 + (id) proxyWithEndpoint: (DKEndpoint*)anEndpoint

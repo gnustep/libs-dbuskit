@@ -57,6 +57,13 @@
                             boxed: (BOOL)isBoxed;
 
 /**
+ * Checks whether it is valid to use the receiver to handle an invocation with
+ * the specified method signature, no matter whether the boxed or non-boxed
+ * version of an argument is used.
+ */
+- (BOOL) isValidForMethodSignature: (NSMethodSignature*)aSignature;
+
+/**
  * Returns the method signature that the Objective-C type system will use to
  * construct invocations for this method. This will be the boxed representation
  * by default.
@@ -118,8 +125,7 @@
  */
 - (void) unmarshallFromIterator: (DBusMessageIter*)iter
                  intoInvocation: (NSInvocation*)inv
-   	            messageType: (int)type
-	                 boxing: (BOOL)doBox;
+   	            messageType: (int)type;
 /**
  * Serializes the appropriate values from the invocation and appends them using
  * the message iterator. Use type to indicate whether this is done for an method
@@ -128,8 +134,7 @@
  */
 - (void)marshallFromInvocation: (NSInvocation*)inv
                   intoIterator: (DBusMessageIter*)iter
-                   messageType: (int)type
-                        boxing: (BOOL)doBox;
+                   messageType: (int)type;
 @end
 
 /**

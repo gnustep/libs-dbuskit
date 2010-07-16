@@ -49,7 +49,6 @@
 /*
  * Definitions of the strings used for selector mangling.
  */
-#define SEL_MANGLE_NOBOX_STRING @"_DKNoBox_"
 #define SEL_MANGLE_IFSTART_STRING @"_DKIf_"
 #define SEL_MANGLE_IFEND_STRING @"_DKIfEnd_"
 
@@ -217,101 +216,19 @@ enum
  */
 
 - (SEL)_unmangledSelector: (SEL)selector
-            boxingRequest: (BOOL*)shallBox
                 interface: (NSString**)interface
 {
   NSMutableString *selectorString = [NSStringFromSelector(selector) mutableCopy];
   SEL unmangledSelector = 0;
-  // Ranges for string manipulation;
-  NSRange noBoxRange = [selectorString rangeOfString: SEL_MANGLE_NOBOX_STRING];
-  // We cannot set the other ranges now, because they change when the mangled
-  // metadata is removed.
-  NSRange ifStartRange = NSMakeRange(NSNotFound, 0);
-  NSRange ifEndRange = NSMakeRange(NSNotFound, 0);
-  // defaults:
-  if (NULL != shallBox)
-  {
-    *shallBox = YES;
-  }
-  if (NULL != interface)
-  {
-    *interface = nil;
-  }
+
+  NSRange ifStartRange = [selectorString rangeOfString: SEL_MANGLE_IFSTART_STRING];
+  NSRange ifEndRange = [selectorString rangeOfString: SEL_MANGLE_IFEND_STRING];
 
   if (0 == selector)
   {
     return 0;
   }
 
-  /*
-   * First, strip potential information about not boxing the arguments.
-   */
-  if (NSNotFound != noBoxRange.location)
-  {
-    /*
-     * We need to look ahead for _DKIf_ to perserve the underscore. So we skip
-     * ahead one character less then the length of this range to find the range
-     * where it could be.
-     */
-    NSRange lookAhead = NSMakeRange((noBoxRange.location + (noBoxRange.length - 1)),
-      [SEL_MANGLE_IFSTART_STRING length]);
-
-    /*
-     * And we also need to look behind for _DK_IfEnd_, so we skip the
-     * appropriate ammount of characters back.
-     */
-    NSUInteger ifEndLength = [SEL_MANGLE_IFEND_STRING length];
-    NSRange lookBehind;
-
-
-    // Make sure there are enough characters to look for.
-    if (noBoxRange.location >= ifEndLength)
-    {
-      lookBehind = NSMakeRange((noBoxRange.location - (ifEndLength - 1)),
-        ifEndLength);
-    }
-    else
-    {
-      lookBehind = NSMakeRange(NSNotFound, 0);
-    }
-
-    // Check whether the range fits within the selectorString.
-    if (NSMaxRange(lookAhead) <= [selectorString length])
-    {
-      // Check whether _DKIf_ exists after _DKNoBox
-      if ([SEL_MANGLE_IFSTART_STRING isEqualToString: [selectorString substringWithRange: lookAhead]])
-      {
-	// If so, reduce the length in order to perserve the underscore.
-        noBoxRange.length--;
-      }
-    }
-
-    // Check wheter it is senible to look behind
-    if (NSNotFound != lookBehind.location)
-    {
-      // Check whether DKNoBox_ is preceeded by _DKEndIf_
-      if ([SEL_MANGLE_IFEND_STRING isEqualToString: [selectorString substringWithRange: lookBehind]])
-      {
-	// If so, move the index one character to the right to perserve the underscore.
-        noBoxRange.location++;
-	// Also reduce the length.
-	noBoxRange.length--;
-      }
-    }
-
-    // Do not try to dereference NULL
-    if (shallBox != NULL)
-    {
-      *shallBox = NO;
-    }
-
-    // Remove the _DK_NoBox_ but leave underscores that might be needed
-    [selectorString deleteCharactersInRange: noBoxRange];
-  }
-
-
-  ifStartRange = [selectorString rangeOfString: SEL_MANGLE_IFSTART_STRING];
-  ifEndRange = [selectorString rangeOfString: SEL_MANGLE_IFEND_STRING];
   // Sanity check for presence and order of both the starting and the ending
   // string.
   if ((NSNotFound != ifStartRange.location)
@@ -349,6 +266,7 @@ enum
   DKMethod *method = [self _methodForSelector: aSelector
                                         block: NO];
   const char *types = NULL;
+  NSMethodSignature *theSig = nil;
 # if HAVE_TYPED_SELECTORS == 0
   // Without typed selectors, we have the old gcc libobjc which, in fact, has
   // typed selectors but no API to access them. But we can still copy them from
@@ -358,40 +276,26 @@ enum
   types = sel_getType_np(aSelector);
 # endif
 
+  // Build a signature with the types:
+  theSig = [NSMethodSignature signatureWithObjCTypes: types];
+
+  /*
+   * Second chance to find the method: Fall back to the untyped version.
+   */
   if (nil == method)
   {
-    //Fall back to the untyped version
     method = [self _methodForSelector: sel_getUid(sel_getName(aSelector))
                                 block: NO];
   }
-  NSDebugMLog(@"Got method %@ (%@) for %p (%@)",
-    method,
-    [method name],
-    aSelector,
-    NSStringFromSelector(aSelector));
-  if (nil != method)
-  {
-    BOOL willBox = YES;
-    if (0 == strcmp(types, [method objCTypesBoxed: NO]))
-    {
-      willBox = NO;
-    }
-    else if (0 != strcmp(types, [method objCTypesBoxed: YES]))
-    {
-      //Consistency check: This should not happen.
-      [NSException raise: @"DKInvalidArgumentException"
-                  format: @"D-Bus object %@ for service %@: Mismatched method signature.",
-        path,
-        service];
-    }
-    return [method methodSignatureBoxed: willBox];
-  }
-  else
+
+  /*
+   * Third chance to find the method: Remove mangling constructs from the
+   * selector string.
+   */
+  if (nil == method)
   {
     NSString *interface = nil;
-    BOOL willBox = YES;
     SEL unmangledSel = [self _unmangledSelector: aSelector
-                                  boxingRequest: &willBox
                                       interface: &interface];
     if (0 == unmangledSel)
     {
@@ -410,7 +314,28 @@ enum
       method = [self _methodForSelector: unmangledSel
                                   block: NO];
     }
-    return [method methodSignatureBoxed: willBox];
+  }
+
+
+  // Finally check whether we have a sensible method and signature:
+  if (nil == method)
+  {
+    // Bad luck, the method is not there:
+    return nil;
+  }
+  else if ([method isValidForMethodSignature: theSig])
+  {
+    // Good, the method can handle the signature for which we are being called:
+    return theSig;
+  }
+  else
+  {
+    // Bad luck, we got a method, but it is not compatible with this method
+    // signature:
+    [NSException raise: @"DKInvalidArgumentException"
+                format: @"D-Bus object %@ for service %@: Mismatched method signature.",
+      path,
+      service];
   }
 
   return nil;
@@ -472,7 +397,6 @@ enum
 # endif
 
   NSMethodSignature *signature = [inv methodSignature];
-  BOOL isBoxed = YES;
   NSString *interface = nil;
   DKMethod *method = [self _methodForSelector: selector
                                         block: YES];
@@ -482,7 +406,6 @@ enum
   {
     SEL newSel = 0;
     newSel = [self _unmangledSelector: selector
-                        boxingRequest: NULL
                             interface: &interface];
     if (0 != newSel)
     {
@@ -516,17 +439,7 @@ enum
     [self forwardInvocation: inv];
   }
 
-  if ([method isEqualToMethodSignature: signature
-                                 boxed: YES])
-  {
-    isBoxed = YES;
-  }
-  else if ([method isEqualToMethodSignature: signature
-                                      boxed: NO])
-  {
-    isBoxed = NO;
-  }
-  else
+  if (NO == [method isValidForMethodSignature: signature])
   {
     [NSException raise: @"DKInvalidArgumentException"
                 format: @"D-Bus object %@ for service %@: Mismatched method signature.",
@@ -536,8 +449,7 @@ enum
 
   call = [[DKMethodCall alloc] initWithProxy: self
                                       method: method
-                                  invocation: inv
-                                      boxing: isBoxed];
+                                  invocation: inv];
 
   //TODO: Implement asynchronous method calls using futures
   [call sendSynchronouslyAndWaitUntil: 0];

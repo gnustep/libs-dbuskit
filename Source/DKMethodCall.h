@@ -40,11 +40,6 @@
    * also store the return value in it.
    */
    NSInvocation *invocation;
-
-  /**
-   * Flag to determine whether we deal with boxed arguments.
-   */
-  BOOL doBox;
 }
 
 /**
@@ -54,8 +49,7 @@
  */
 - (id) initWithProxy: (DKProxy*)aProxy
               method: (DKMethod*)aMethod
-          invocation: (NSInvocation*)anInvocation
-	      boxing: (BOOL)boxingRequested;
+          invocation: (NSInvocation*)anInvocation;
 
 /**
  * Sends the method call asynchronously via D-Bus. User code should retrieve

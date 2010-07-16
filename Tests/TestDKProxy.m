@@ -32,7 +32,6 @@
 
 @interface DKProxy (Private)
 - (SEL)_unmangledSelector: (SEL)selector
-            boxingRequest: (BOOL*)shallBox
                 interface: (NSString**)interface;
 - (void)_buildMethodCache;
 - (NSDictionary*)_interfaces;
@@ -46,18 +45,15 @@
 - (NSString*)GetId;
 - (NSString*)Hello;
 - (char*)GetNameOwner: (char*)name;
-// Also declare the mangled variant:
-- (char*)_DKNoBox_GetNameOwner: (char*)name;
 @end
 
 @implementation TestDKProxy
 - (void)testSelectorUnmangling
 {
 
-  NSString *mangledString = @"_DKNoBox_DKIf_org_freedesktop_DBus_DKIfEnd_GetNameOwner:";
+  NSString *mangledString = @"_DKIf_org_freedesktop_DBus_DKIfEnd_GetNameOwner:";
   SEL mangledSelector = 0;
   SEL unmangledSel = 0;
-  BOOL shallBox = YES;
   NSString *interface = nil;
   NSConnection *conn = nil;
   id proxy = nil;
@@ -71,10 +67,8 @@
   mangledSelector = NSSelectorFromString(mangledString);
 
   unmangledSel = [proxy _unmangledSelector: mangledSelector
-                             boxingRequest: &shallBox
                                  interface: &interface];
   UKObjectsEqual(@"GetNameOwner:", NSStringFromSelector(unmangledSel));
-  UKFalse(shallBox);
   UKObjectsEqual(@"org.freedesktop.DBus", interface);
 }
 
@@ -145,19 +139,6 @@
                                         sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
   aProxy = [conn rootProxy];
   returnValue = [aProxy GetNameOwner: "org.freedesktop.DBus"];
-  UKTrue(NULL != returnValue);
-}
-
-- (void)testUnboxedMethodCallMangled
-{
-  NSConnection *conn = nil;
-  id aProxy = nil;
-  char *returnValue = NULL;
-  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
-  conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
-  aProxy = [conn rootProxy];
-  returnValue = [aProxy _DKNoBox_GetNameOwner: "org.freedesktop.DBus"];
   UKTrue(NULL != returnValue);
 }
 @end

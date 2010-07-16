@@ -48,7 +48,6 @@
 - (id) initWithProxy: (DKProxy*)aProxy
               method: (DKMethod*)aMethod
           invocation: (NSInvocation*)anInvocation
-              boxing: (BOOL)boxingRequested
 {
   DBusMessage *theMessage = NULL;
   DKEndpoint *theEndpoint = [aProxy _endpoint];
@@ -89,7 +88,6 @@
 
   ASSIGN(invocation,anInvocation);
   ASSIGN(method,aMethod);
-  doBox = boxingRequested;
   if (NO == [self serialize])
   {
     [self release];
@@ -108,8 +106,7 @@
   {
     [method marshallFromInvocation: invocation
                       intoIterator: &iter
-                       messageType: DBUS_MESSAGE_TYPE_METHOD_CALL
-                            boxing: doBox];
+                       messageType: DBUS_MESSAGE_TYPE_METHOD_CALL];
   }
   NS_HANDLER
   {
@@ -228,8 +225,7 @@
     }
     [method unmarshallFromIterator: &iter
                     intoInvocation: invocation
-                       messageType: DBUS_MESSAGE_TYPE_METHOD_RETURN
-                            boxing: doBox];
+                       messageType: DBUS_MESSAGE_TYPE_METHOD_RETURN];
   }
   NS_HANDLER
   {

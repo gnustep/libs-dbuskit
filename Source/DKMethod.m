@@ -41,6 +41,13 @@
 
 DKMethod *_DKMethodIntrospect;
 
+enum
+{
+  DK_ARGUMENT_UNBOXED = 0,
+  DK_ARGUMENT_BOXED = 1,
+  DK_ARGUMENT_INVALID = -1
+};
+
 @implementation DKMethod
 
 + (void)initialize
@@ -100,10 +107,110 @@ DKMethod *_DKMethodIntrospect;
   }
 }
 
+- (char*) argumentTypeAtIndex: (NSUInteger)index
+                        boxed: (BOOL)doBox
+{
+  if (YES == doBox)
+  {
+    return @encode(id);
+  }
+  else if (index < [inArgs count])
+  {
+    return [[inArgs objectAtIndex: index] unboxedObjCTypeChar];
+  }
+  return NULL;
+}
+
 - (BOOL) isEqualToMethodSignature: (NSMethodSignature*)methodSignature
                             boxed: (BOOL)isBoxed
 {
   return [methodSignature isEqual: [self methodSignatureBoxed: isBoxed]];
+}
+
+- (NSInteger)boxingStateForArgumentAtIndex: (NSUInteger)argIndex
+                       fromMethodSignature: (NSMethodSignature*)aSignature
+{
+  NSUInteger argCount = [inArgs count];
+  if (argIndex < argCount)
+  {
+    const char* typeFromSig = [aSignature getArgumentTypeAtIndex: (argIndex + 2)];
+    const char* boxedType = @encode(id);
+    const char *unboxedTypeFromDBus = [[inArgs objectAtIndex: argIndex] unboxedObjCTypeChar];
+    BOOL boxedMatch = NO;
+    BOOL unboxedMatch = NO;
+    if ((typeFromSig == NULL) || (unboxedTypeFromDBus == NULL))
+    {
+      return DK_ARGUMENT_INVALID;
+    }
+    boxedMatch = (0 == strcmp(typeFromSig, boxedType));
+    if (NO == boxedMatch)
+    {
+      unboxedMatch = (0 == strcmp(typeFromSig, unboxedTypeFromDBus));
+      if (unboxedMatch)
+      {
+	return DK_ARGUMENT_UNBOXED;
+      }
+    }
+    else
+    {
+      return DK_ARGUMENT_BOXED;
+    }
+  }
+  return DK_ARGUMENT_INVALID;
+}
+
+- (NSInteger)boxingStateForReturnValueFromMethodSignature: (NSMethodSignature*)aSignature
+{
+  const char* sigReturn = [aSignature methodReturnType];
+  BOOL boxedReturnMatch = (0 == strcmp(sigReturn, [self returnTypeBoxed: YES]));
+  BOOL unboxedReturnMatch = NO;
+  if (boxedReturnMatch)
+  {
+    return DK_ARGUMENT_BOXED;
+  }
+
+  unboxedReturnMatch = (0 == strcmp(sigReturn, [self returnTypeBoxed: NO]));
+  if (unboxedReturnMatch)
+  {
+    return DK_ARGUMENT_UNBOXED;
+  }
+
+  return DK_ARGUMENT_INVALID;
+}
+/**
+ * Checks whether it is valid to use the receiver to handle an invocation with
+ * the specified method signature, no matter whether the boxed or non-boxed
+ * version of an argument is used.
+ */
+- (BOOL) isValidForMethodSignature: (NSMethodSignature*)aSignature
+{
+  NSUInteger argIndex = 0;
+  NSUInteger argCount = [inArgs count];
+
+  // Subtract 2 to account for self and _cmd in the NSMethodSignature.
+  if (argCount != ([aSignature numberOfArguments] - 2))
+  {
+    return NO;
+  }
+
+  if (DK_ARGUMENT_INVALID == [self boxingStateForReturnValueFromMethodSignature: aSignature])
+  {
+    return NO;
+  }
+
+  while (argIndex < argCount)
+  {
+    NSInteger boxingState = [self boxingStateForArgumentAtIndex: argIndex
+                                            fromMethodSignature: aSignature];
+    if (DK_ARGUMENT_INVALID == boxingState)
+    {
+      return NO;
+    }
+    argIndex++;
+  }
+
+  // We passed all checks and can use the method for the given signature:
+  return YES;
 }
 
 - (const char*)objCTypesBoxed: (BOOL)doBox
@@ -228,9 +335,20 @@ DKMethod *_DKMethodIntrospect;
 
 - (void) unmarshallReturnValueFromIterator: (DBusMessageIter*)iter
                             intoInvocation: (NSInvocation*)inv
-                                    boxing: (BOOL)doBox
 {
   NSUInteger numArgs = [outArgs count];
+  NSMethodSignature *sig = [inv methodSignature];
+  BOOL doBox = YES;
+  NSInteger boxingState = [self boxingStateForReturnValueFromMethodSignature: sig];
+
+  // Make sure the return value is boxable
+  NSAssert1((DK_ARGUMENT_INVALID != boxingState),
+    @"The return value cannot be boxed into invocation with signature %@.",
+    sig);
+
+  // If it is not DK_ARGUMENT_INVALID, it leaves 0 and 1 as possible states:
+  doBox = (BOOL)boxingState;
+
   if (0 == numArgs)
   {
     // Void return type, we retrun.
@@ -281,9 +399,20 @@ DKMethod *_DKMethodIntrospect;
 
 - (void) marshallReturnValueFromInvocation: (NSInvocation*)inv
                               intoIterator: (DBusMessageIter*)iter
-                                    boxing: (BOOL)doBox
 {
   NSUInteger numArgs = [outArgs count];
+  NSMethodSignature *sig = [inv methodSignature];
+  BOOL doBox = YES;
+  NSInteger boxingState = [self boxingStateForReturnValueFromMethodSignature: sig];
+
+  // Make sure the return value is boxable
+  NSAssert1(DK_ARGUMENT_INVALID != boxingState,
+    @"The return value cannot be boxed into invocation with signature %@.",
+    sig);
+
+  // If it is not DK_ARGUMENT_INVALID, it leaves 0 and 1 as possible states:
+  doBox = (BOOL)boxingState;
+
   if (0 == numArgs)
   {
     return;
@@ -305,7 +434,6 @@ DKMethod *_DKMethodIntrospect;
     NSArray *retVal = nil;
     NSUInteger retCount = 0;
     NSInteger index = 0;
-    NSMethodSignature *sig = [inv methodSignature];
 
     // Make sure the method did return an object:
     NSAssert2((0 == strcmp(@encode(id), [sig methodReturnType])),
@@ -342,18 +470,27 @@ DKMethod *_DKMethodIntrospect;
 
 - (void)unmarshallArgumentsFromIterator: (DBusMessageIter*)iter
                          intoInvocation: (NSInvocation*)inv
-                                 boxing: (BOOL)doBox
 {
   NSUInteger numArgs = [inArgs count];
   // Arguments start at index 2 (i.e. after self and _cmd)
   NSUInteger index = 2;
+  NSMethodSignature *sig = [inv methodSignature];
   while (index < (numArgs +2))
   {
+    NSUInteger argIndex = index - 2;
+    BOOL doBox = YES;
+    NSInteger boxingState = [self boxingStateForArgumentAtIndex: argIndex
+                                            fromMethodSignature: sig];
+    NSAssert1((DK_ARGUMENT_INVALID != boxingState),
+      @"Argument cannot be boxed into invocation with signature %@.",
+      sig);
+
+    doBox = (BOOL)boxingState;
     // Let the arguments umarshall themselves into the invocation
-    [[inArgs objectAtIndex: (index - 2)] unmarshallFromIterator: iter
-                                                 intoInvocation: inv
-                                                        atIndex: index
-                                                         boxing: doBox];
+    [[inArgs objectAtIndex: argIndex] unmarshallFromIterator: iter
+                                              intoInvocation: inv
+                                                     atIndex: index
+                                                      boxing: doBox];
     /*
      * Proceed to the next value in the message, but raise an exception if
      * we are missing some arguments.
@@ -371,18 +508,27 @@ DKMethod *_DKMethodIntrospect;
 
 - (void) marshallArgumentsFromInvocation: (NSInvocation*)inv
                             intoIterator: (DBusMessageIter*)iter
-                                  boxing: (BOOL)doBox
 {
   // Start with index 2 to get the proper arguments
   NSUInteger index = 2;
   DKArgument *argument = nil;
   NSEnumerator *argEnum = [inArgs objectEnumerator];
+  NSMethodSignature *sig = [inv methodSignature];
 
   NSAssert1(([inArgs count] == ([[inv methodSignature] numberOfArguments] -2)),
     @"Argument number mismatch when constructing D-Bus call for '%@'", name);
 
   while (nil != (argument = [argEnum nextObject]))
   {
+    BOOL doBox = YES;
+    NSInteger boxingState = [self boxingStateForArgumentAtIndex: (index -2 )
+                                            fromMethodSignature: sig];
+    NSAssert1((DK_ARGUMENT_INVALID != boxingState),
+      @"Argument cannot be boxed into invocation with signature %@.",
+      sig);
+
+    doBox = (BOOL)boxingState;
+
     [argument marshallArgumentAtIndex: index
                        fromInvocation: inv
                          intoIterator: iter
@@ -394,44 +540,38 @@ DKMethod *_DKMethodIntrospect;
 - (void) unmarshallFromIterator: (DBusMessageIter*)iter
                  intoInvocation: (NSInvocation*)inv
    	            messageType: (int)type
-	                 boxing: (BOOL)doBox
 {
    if (DBUS_MESSAGE_TYPE_METHOD_RETURN == type)
    {
      // For method returns, we are interested in the return value.
      [self unmarshallReturnValueFromIterator: iter
-                              intoInvocation: inv
-                                      boxing: doBox];
+                              intoInvocation: inv];
    }
    else if (DBUS_MESSAGE_TYPE_METHOD_CALL == type)
    {
      // For method calls, we want to construct the invocation from the
      // arguments.
      [self unmarshallArgumentsFromIterator: iter
-                            intoInvocation: inv
-                                    boxing: doBox];
+                            intoInvocation: inv];
    }
 }
 
 - (void)marshallFromInvocation: (NSInvocation*)inv
                   intoIterator: (DBusMessageIter*)iter
                    messageType: (int)type
-                        boxing: (BOOL)doBox
 {
   if (DBUS_MESSAGE_TYPE_METHOD_RETURN == type)
   {
     // If we are constructing a method return message, we want to obtain the
     // return value.
     [self marshallReturnValueFromInvocation: inv
-                               intoIterator: iter
-                                     boxing: doBox];
+                               intoIterator: iter];
   }
   else if (DBUS_MESSAGE_TYPE_METHOD_CALL == type)
   {
     // If we are constructing a method call, we want to marshall the arguments
     [self marshallArgumentsFromInvocation: inv
-                             intoIterator: iter
-                                   boxing: doBox];
+                             intoIterator: iter];
   }
 }
 - (NSString*)methodDeclaration
