@@ -31,3 +31,7 @@ include $(GNUSTEP_MAKEFILES)/aggregate.make
 include $(GNUSTEP_MAKEFILES)/bundle.make
 
 -include GNUmakefile.postamble
+
+# Quick hack to keep gnustep-make from installing the testcase-bundle:
+DBusKitTests.install.bundle.variables::
+	@echo "Not installing testcases"
