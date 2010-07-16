@@ -41,12 +41,6 @@
 
 DKMethod *_DKMethodIntrospect;
 
-@interface DKProxy (DKProxyPrivate)
-- (void)_installMethod: (DKMethod*)aMethod
-      inInterfaceNamed: (NSString*)anInterface
-      forSelectorNamed: (NSString*)selName;
-@end
-
 @implementation DKMethod
 
 + (void)initialize
@@ -567,21 +561,4 @@ didStartElement: aNode
      attributes: someAttributes];
 }
 
-- (void)parser: (NSXMLParser*)aParser
- didEndElement: (NSString*)aNode
-  namespaceURI: (NSString*)aNamespaceURI
- qualifiedName: (NSString*)aQualifiedName
-{
-  [super parser: aParser
-  didEndElement: aNode
-   namespaceURI: aNamespaceURI
-  qualifiedName: aQualifiedName];
-
-  if (0 == xmlDepth)
-  {
-    [[self proxyParent] _installMethod: self
-                      inInterfaceNamed: interface
-                      forSelectorNamed: [self selectorString]];
-  }
-}
 @end

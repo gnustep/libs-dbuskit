@@ -49,6 +49,11 @@
 - (id) parent;
 
 /**
+ * Changes the parent to a new one.
+ */
+- (void) setParent: (id)parent;
+
+/**
  * Returns the next parent proxy in the tree.
  */
 - (DKProxy*) proxyParent;

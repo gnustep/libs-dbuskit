@@ -40,6 +40,12 @@
 - (id) initWithInterfaceName: (NSString*)aName
                       parent: (id)parent;
 
+
+/**
+ * Returns all methods in the interface
+ */
+- (NSArray*)methods;
+
 /**
  * Adds a method to the interface.
  */

@@ -23,6 +23,7 @@
 
 #import "DKEndpoint.h"
 #import "DKInterface.h"
+#import "DKIntrospectionParserDelegate.h"
 #import "DKMethod.h"
 #import "DKMethodCall.h"
 #import "DBusKit/DKProxy.h"
@@ -67,7 +68,7 @@ enum
 - (void)_buildMethodCache;
 - (void)_installIntrospectionMethod;
 - (void)_installMethod: (DKMethod*)aMethod
-      inInterfaceNamed: (NSString*)anInterface
+           inInterface: (DKInterface*)anInterface
       forSelectorNamed: (NSString*)selName;
 
 - (DKEndpoint*)_endpoint;
@@ -620,11 +621,10 @@ enum
 }
 
 - (void)_installMethod: (DKMethod*)aMethod
-      inInterfaceNamed: (NSString*)anInterface
+           inInterface: (DKInterface*)theIf
       forSelectorNamed: (NSString*)selName
 {
   // NOTE: The caller is responsible for obtaining the tableLock
-  DKInterface *theIf = [interfaces objectForKey: anInterface];
 
   const char* selectorString;
   SEL untypedSelector = 0;
@@ -700,24 +700,48 @@ enum
   if ([tableLock tryLockWhenCondition: NO_CACHE])
   {
     [self _installMethod: _DKMethodIntrospect
-        inInterfaceNamed: nil
+             inInterface: nil
         forSelectorNamed: nil];
     [tableLock unlockWithCondition: NO_CACHE];
   }
 }
 
+- (void)_installAllMethodsFromInterface: (DKInterface*)theIf
+{
+  NSEnumerator *methEnum = [[theIf methods] objectEnumerator];
+  DKMethod *theMethod = nil;
+  //NOTE: The caller is responsible for obtaining the table lock.
+  while (nil != (theMethod = [methEnum nextObject]))
+  {
+    // TODO: Look aside whether there is a custom selector name set somewhere.
+    NSString *theSelName = [theMethod selectorString];
+    [self _installMethod: theMethod
+             inInterface: theIf
+        forSelectorNamed: theSelName];
+  }
+  // NOTE: The caller is responsible for unlocking the tables.
+}
 
+
+- (void) _installAllMethods
+{
+  NSEnumerator *ifEnum = [interfaces objectEnumerator];
+  DKInterface *theIf = nil;
+  [tableLock lock];
+  while (nil != (theIf = [ifEnum nextObject]))
+  {
+    [self _installAllMethodsFromInterface: theIf];
+  }
+
+  [tableLock unlockWithCondition: HAVE_CACHE];
+
+}
 - (void)_setupTables
 {
-  if ((nil == interfaces) || (NULL == selectorToMethodMap))
+  if (NULL == selectorToMethodMap)
   {
     if ([tableLock tryLockWhenCondition: NO_TABLES])
     {
-      if (nil == interfaces)
-      {
-	interfaces = [NSMutableDictionary new];
-      }
-
       if (NULL == selectorToMethodMap)
       {
 	selectorToMethodMap = NSCreateMapTable(NSIntMapKeyCallBacks,
@@ -729,18 +753,37 @@ enum
   }
 }
 
+- (void)setInterfaces: (NSDictionary*)_interfaces
+{
+  [tableLock lock];
+  ASSIGN(interfaces,_interfaces);
+  [tableLock unlock];
+}
+
 - (void)_buildMethodCache
 {
+  // Get the introspection data:
   NSData *introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
-  NSXMLParser *parser = nil;
+
+  // Set up parser and delegate (and an autorelease pool to cache autoreleased
+  // nodes).
+  NSXMLParser *parser = [[NSXMLParser alloc] initWithData: introspectionData];
+  DKIntrospectionParserDelegate *delegate = [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self];
   NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
-  [tableLock lock];
-  parser = [[NSXMLParser alloc] initWithData: introspectionData];
-  [parser setDelegate: self];
+
+  [parser setDelegate: delegate];
   [parser parse];
-  [tableLock unlockWithCondition: HAVE_CACHE];
-  [arp release];
+
+  // Get the interfaces from the delegate:
+  [self setInterfaces: [delegate interfaces]];
+  // TODO: Also get the child nodes
+
+  // Cleanup
   [parser release];
+  [delegate release];
+  [arp release];
+
+  [self _installAllMethods];
 }
 
 - (void) dealloc
@@ -751,114 +794,6 @@ enum
   [tableLock release];
   [interfaces release];
   [super dealloc];
-}
-
-/* Parser delegate methods */
-
-- (void) parser: (NSXMLParser*)aParser
-didStartElement: (NSString*)aNode
-   namespaceURI: (NSString*)aNamespaceURI
-  qualifiedName: (NSString*)aQualifierName
-     attributes: (NSDictionary*)someAttributes
-{
-  NSString *theName = [someAttributes objectForKey: @"name"];
-  DKIntrospectionNode *newNode = nil;
-  xmlDepth++;
-  if ([@"node" isEqualToString: aNode])
-  {
-    BOOL isRoot = YES;
-    if ([theName length] > 0)
-    {
-      if ('/' != [theName characterAtIndex: 0])
-      {
-	isRoot = NO;
-	// relative paths must refer to nodes contained in the main node.
-	if ((xmlDepth - 1) == 0)
-	{
-	  [NSException raise: @"DKIntrospectionException"
-	  format: @"Introspection data contains invalid root node named '%@'",
-	    theName];
-	}
-	// TODO: Maybe check whether the proxy name and the node name match?
-      }
-    }
-    if (NO == isRoot)
-    {
-      // TODO: Generate information about child nodes
-      // (For now, just create a DKIntrospectionNode to store them)
-      newNode = [[DKIntrospectionNode alloc] initWithName: theName
-                                                   parent: self];
-      [childNodes addObject: newNode];
-    }
-  }
-  else if (([@"interface" isEqualToString: aNode]) && ([theName length] > 0))
-  {
-    newNode = [[DKInterface alloc] initWithInterfaceName: theName
-                                                  parent: self];
-    [interfaces setObject: newNode
-                   forKey: theName];
-  }
-  else
-  {
-    // catch-all node: Will just count xmlDepth and return control to us when
-    // the xml tree is balanced.
-    newNode = [[DKIntrospectionNode alloc] initWithName: theName
-                                                 parent: self];
-
-    // extra -retain so we can use a simple -release for all node-types at the
-    // end of this method
-    [[newNode retain] autorelease];
-  }
-
-  if (newNode != nil)
-  {
-    // pass on the started node information so that the new delegate knows that
-    // it has been opened.
-    [newNode parser: aParser
-    didStartElement: aNode
-       namespaceURI: aNamespaceURI
-      qualifiedName: aQualifierName
-         attributes: someAttributes];
-
-    // Continue parsing with the new delegate:
-    [aParser setDelegate: newNode];
-
-    // newNode has either been retained in an array or dictionary, or we did an
-    // extra -retain before autoreleasing a catch-all node.
-    [newNode release];
-    newNode = nil;
-  }
-}
-
-- (void) parser: (NSXMLParser*)aParser
-  didEndElement: (NSString*)aNode
-   namespaceURI: (NSString*)aNamespaceURI
-  qualifiedName: (NSString*)aQualifierName
-{
-  NSDebugMLog(@"Ended node: %@", aNode);
-  xmlDepth--;
-  if (0 == xmlDepth)
-  {
-    NSDebugMLog(@"Ended parsing");
-  }
-}
-
-- (void)parserDidStartDocument: (NSXMLParser*)aParser
-{
-  // Dummy method to prevent NSXMLParser from calling
-  // -methodSignatureForSelector: on us
-}
-
-- (void)parserDidEndDocument: (NSXMLParser*)aParser
-{
-  // Dummy method to prevent NSXMLParser from calling
-  // -methodSignatureForSelector: on us
-}
-
-- (void)parser: (NSXMLParser*)aParser foundCharacters: (NSString*)chars
-{
-  // Dummy method to prevent NSXMLParser from calling
-  // -methodSignatureForSelector: on us
 }
 
 @end

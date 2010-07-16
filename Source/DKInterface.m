@@ -58,6 +58,11 @@
   return self;
 }
 
+- (NSArray*)methods
+{
+  return [methods allValues];
+}
+
 /**
  * Adds a method to the interface.
  */

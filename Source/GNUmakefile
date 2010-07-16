@@ -27,6 +27,7 @@ DBusKit_OBJC_FILES = \
 	DKEndpoint.m \
 	DKInterface.m \
         DKIntrospectionNode.m \
+	DKIntrospectionParserDelegate.m \
         DKMessage.m \
         DKMethod.m \
 	DKMethodCall.m \

@@ -57,6 +57,11 @@
   return parent;
 }
 
+- (void) setParent: aParent
+{
+  parent = aParent;
+}
+
 - (DKProxy*)proxyParent
 {
   if ([parent respondsToSelector: @selector(proxyParent)])
