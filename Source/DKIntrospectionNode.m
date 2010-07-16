@@ -59,19 +59,10 @@
 
 - (DKProxy*)proxyParent
 {
-  id ancestor = [self parent];
-  do
+  if ([parent respondsToSelector: @selector(proxyParent)])
   {
-    if ([ancestor isKindOfClass: [DKProxy class]])
-    {
-      return ancestor;
-    }
-    else if (![ancestor respondsToSelector: @selector(parent)])
-    {
-      return nil;
-    }
-  } while (nil != (ancestor = [ancestor parent]));
-
+    return [parent proxyParent];
+  }
   return nil;
 }
 

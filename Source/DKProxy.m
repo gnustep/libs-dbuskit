@@ -585,6 +585,11 @@ enum
   return [NSDictionary dictionaryWithDictionary: interfaces];
 }
 
+- (id) proxyParent
+{
+  return self;
+}
+
 - (BOOL) hasSameScopeAs: (DKProxy*)aProxy
 {
   BOOL sameService = [service isEqualToString: [aProxy _service]];
