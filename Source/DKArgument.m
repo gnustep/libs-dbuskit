@@ -662,7 +662,7 @@ DKDBusTypeForUnboxingObject(id object)
     case DBUS_TYPE_STRING:
        if ([value respondsToSelector: @selector(UTF8String)])
        {
-	 *buffer = (uintptr_t)[value UTF8String];
+	 *buffer = (uintptr_t)(void*)[value UTF8String];
 	 return YES;
        }
        break;
