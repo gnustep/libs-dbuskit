@@ -591,63 +591,72 @@ DKDBusTypeForUnboxingObject(id object)
   switch (DBusType)
   {
     case DBUS_TYPE_BYTE:
-       if ([value respondsToSelector: @selector(unsignedCharValue)])
+       if (([value respondsToSelector: @selector(unsignedCharValue)])
+         || (nil == value))
        {
 	 *buffer = [value unsignedCharValue];
          return YES;
        }
        break;
     case DBUS_TYPE_BOOLEAN:
-       if ([value respondsToSelector: @selector(boolValue)])
+       if (([value respondsToSelector: @selector(boolValue)])
+         || (nil == value))
        {
 	 *buffer = [value boolValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_INT16:
-       if ([value respondsToSelector: @selector(shortValue)])
+       if (([value respondsToSelector: @selector(shortValue)])
+         || (nil == value))
        {
 	 *buffer = [value shortValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_INT32:
-       if ([value respondsToSelector: @selector(intValue)])
+       if (([value respondsToSelector: @selector(intValue)])
+         || (nil == value))
        {
 	 *buffer = [value intValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_UINT16:
-       if ([value respondsToSelector: @selector(unsignedShortValue)])
+       if (([value respondsToSelector: @selector(unsignedShortValue)])
+         || (nil == value))
        {
 	 *buffer = [value unsignedShortValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_UINT32:
-       if ([value respondsToSelector: @selector(unsignedIntValue)])
+       if (([value respondsToSelector: @selector(unsignedIntValue)])
+         || (nil == value))
        {
 	 *buffer = [value unsignedIntValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_INT64:
-       if ([value respondsToSelector: @selector(longLongValue)])
+       if (([value respondsToSelector: @selector(longLongValue)])
+         || (nil == value))
        {
 	 *buffer = [value longLongValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_UINT64:
-       if ([value respondsToSelector: @selector(unsignedLongLongValue)])
+       if (([value respondsToSelector: @selector(unsignedLongLongValue)])
+         || (nil == value))
        {
 	 *buffer = [value unsignedLongLongValue];
 	 return YES;
        }
        break;
     case DBUS_TYPE_DOUBLE:
-       if ([value respondsToSelector: @selector(doubleValue)])
+       if (([value respondsToSelector: @selector(doubleValue)])
+         || (nil == value))
        {
 	 union fpAndLLRep
 	 {
@@ -660,51 +669,65 @@ DKDBusTypeForUnboxingObject(id object)
        }
        break;
     case DBUS_TYPE_STRING:
-       if ([value respondsToSelector: @selector(UTF8String)])
-       {
-	 *buffer = (uintptr_t)(void*)[value UTF8String];
-	 return YES;
-       }
-       break;
-    case DBUS_TYPE_OBJECT_PATH:
-    if ([value isKindOfClass: [DKProxy class]])
-    {
-      DKProxy *rootProxy = [self proxyParent];
-      /*
-       * Handle remote objects:
-       * We need to make sure that the paths are from the same proxy, because
-       * that is the widest scope in which they are valid.
-       */
-      if ([rootProxy hasSameScopeAs: value])
+      if ([value respondsToSelector: @selector(UTF8String)])
       {
-        *buffer = (uintptr_t)[[value _path] UTF8String];
+        *buffer = (uintptr_t)(void*)[value UTF8String];
         return YES;
       }
-    }
-    else
-    {
-      DKProxy *rootProxy = [self proxyParent];
-      /*
-       * Handle local objects:
-       * We need to find out if the proxy we derive from is an outgoing proxy.
-       * If so, we can export the object via D-Bus, so that the caller can
-       * interact with it.
-       */
-       if ([rootProxy _isLocal])
-       {
-	 DKOutgoingProxy *newProxy = [DKOutgoingProxy proxyWithParent: rootProxy
-	                                                       object: value];
-	 *buffer = (uintptr_t)[[newProxy _path] UTF8String];
-	 return YES;
-       }
-
-    }
-    break;
+      else if (nil == value)
+      {
+        *buffer = (uintptr_t)(void*)"";
+        return YES;
+      }
+      break;
+    case DBUS_TYPE_OBJECT_PATH:
+      if ([value isKindOfClass: [DKProxy class]])
+      {
+        DKProxy *rootProxy = [self proxyParent];
+        /*
+         * Handle remote objects:
+         * We need to make sure that the paths are from the same proxy, because
+         * that is the widest scope in which they are valid.
+         */
+        if ([rootProxy hasSameScopeAs: value])
+        {
+          *buffer = (uintptr_t)[[value _path] UTF8String];
+          return YES;
+        }
+      }
+      else if (nil == value)
+      {
+        *buffer = (uintptr_t)(void*)"";
+        return YES;
+      }
+      else
+      {
+        DKProxy *rootProxy = [self proxyParent];
+        /*
+         * Handle local objects:
+         * We need to find out if the proxy we derive from is an outgoing proxy.
+         * If so, we can export the object via D-Bus, so that the caller can
+         * interact with it.
+         */
+         if ([rootProxy _isLocal])
+         {
+ 	   DKOutgoingProxy *newProxy = [DKOutgoingProxy proxyWithParent: rootProxy
+	                                                         object: value];
+	   *buffer = (uintptr_t)[[newProxy _path] UTF8String];
+	   return YES;
+         }
+      }
+      break;
     case DBUS_TYPE_SIGNATURE:
       if ([value respondsToSelector: @selector(DBusTypeSignature)])
       {
-	*buffer = (uintptr_t)[[value DBusTypeSignature] UTF8String];
+	*buffer = (uintptr_t)(void*)[[value DBusTypeSignature] UTF8String];
 	return YES;
+      }
+      else if (value == nil)
+      {
+        *buffer = (uintptr_t)(void*)"";
+        return YES;
       }
       break;
     default:
@@ -1320,7 +1343,10 @@ DKDBusTypeForUnboxingObject(id object)
   DKArgument *theChild = [self elementTypeArgument];
   NSEnumerator *elementEnum = nil;
   id element = nil;
-
+  if (nil == object)
+  {
+    object = [NSArray array];
+  }
   NSAssert1([object respondsToSelector: @selector(objectEnumerator)],
     @"Cannot enumerate contents of %@ when creating D-Bus array.",
     object);
@@ -1450,6 +1476,10 @@ DKDBusTypeForUnboxingObject(id object)
   id element = nil;
 
   DBusMessageIter subIter;
+  if (nil == object)
+  {
+    object = [NSDictionary dictionary];
+  }
 
   NSAssert1(([object respondsToSelector: @selector(allKeys)]
     && [object respondsToSelector: @selector(objectForKey:)]),
@@ -1517,39 +1547,46 @@ DKDBusTypeForUnboxingObject(id object)
   DBusMessageIter subIter;
   NSEnumerator *structEnum = nil;
   NSUInteger childCount = [children count];
-  NSAssert1(([object respondsToSelector: @selector(count)]
-    && [object respondsToSelector: @selector(objectEnumerator)]),
-    @"Object '%@' cannot be marshalled as D-Bus struct.",
-    object);
-  NSAssert3(([object count] == childCount),
-    @"Could not marshall object '%@' as D-Bus struct: Expected %lu members, got %lu.",
-    object,
-    [object count],
-    childCount);
 
-  structEnum = [object objectEnumerator];
+
+  if (nil != object)
+  {
+    NSAssert1(([object respondsToSelector: @selector(count)]
+      && [object respondsToSelector: @selector(objectEnumerator)]),
+      @"Object '%@' cannot be marshalled as D-Bus struct.",
+      object);
+    NSAssert3(([object count] == childCount),
+      @"Could not marshall object '%@' as D-Bus struct: Expected %lu members, got %lu.",
+      object,
+      [object count],
+      childCount);
+  }
 
   DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_STRUCT, NULL, &subIter);
 
-  NS_DURING
+  if (nil != object)
   {
-    NSUInteger index = 0;
-    id member = nil;
-    while ((nil != (member = [structEnum nextObject]))
-      && (index < childCount))
-    {
-      [[children objectAtIndex: index] marshallObject: member
-                                         intoIterator: &subIter];
-    index++;
-    }
-  }
-  NS_HANDLER
-  {
-    dbus_message_iter_close_container(iter, &subIter);
-    [localException raise];
-  }
-  NS_ENDHANDLER
+    structEnum = [object objectEnumerator];
 
+    NS_DURING
+    {
+      NSUInteger index = 0;
+      id member = nil;
+      while ((nil != (member = [structEnum nextObject]))
+        && (index < childCount))
+      {
+        [[children objectAtIndex: index] marshallObject: member
+                                           intoIterator: &subIter];
+      index++;
+      }
+    }
+    NS_HANDLER
+    {
+      dbus_message_iter_close_container(iter, &subIter);
+      [localException raise];
+    }
+    NS_ENDHANDLER
+  }
   DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
@@ -1679,24 +1716,30 @@ DKDBusTypeForUnboxingObject(id object)
   DKArgument *subArg = [self DKArgumentWithObject: object];
   DBusMessageIter subIter;
 
-  NSAssert1(subArg,
-    @"Could not marshall object %@ as D-Bus variant type",
-    subArg);
-
-  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_ARRAY, [[subArg DBusTypeSignature] UTF8String], &subIter);
-
-  NS_DURING
+  if (nil != object)
   {
-    [subArg marshallObject: object
-              intoIterator: &subIter];
+    NSAssert1(subArg,
+      @"Could not marshall object %@ as D-Bus variant type",
+      subArg);
   }
-  NS_HANDLER
-  {
-    dbus_message_iter_close_container(iter, &subIter);
-    [localException raise];
-  }
-  NS_ENDHANDLER
 
+  DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_VARIANT, [[subArg DBusTypeSignature] UTF8String], &subIter);
+
+
+  if (nil != object)
+  {
+    NS_DURING
+    {
+      [subArg marshallObject: object
+                intoIterator: &subIter];
+    }
+    NS_HANDLER
+    {
+      dbus_message_iter_close_container(iter, &subIter);
+      [localException raise];
+    }
+    NS_ENDHANDLER
+  }
   DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
@@ -1773,21 +1816,24 @@ DKDBusTypeForUnboxingObject(id object)
 {
   DBusMessageIter subIter;
   DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_DICT_ENTRY, NULL, &subIter);
-  NS_DURING
-  {
-    [[self keyArgument] marshallObject: key
-                          intoIterator: &subIter];
-    [[self valueArgument] marshallObject: object
-                            intoIterator: &subIter];
-  }
-  NS_HANDLER
-  {
-    // Again, we don't care for OOM here because we already failed.
-    dbus_message_iter_close_container(iter, &subIter);
-    [localException raise];
-  }
-  NS_ENDHANDLER
 
+  if ((nil != key) && (nil != object))
+  {
+    NS_DURING
+    {
+      [[self keyArgument] marshallObject: key
+                            intoIterator: &subIter];
+      [[self valueArgument] marshallObject: object
+                              intoIterator: &subIter];
+    }
+    NS_HANDLER
+    {
+      // Again, we don't care for OOM here because we already failed.
+      dbus_message_iter_close_container(iter, &subIter);
+      [localException raise];
+    }
+    NS_ENDHANDLER
+  }
   DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
