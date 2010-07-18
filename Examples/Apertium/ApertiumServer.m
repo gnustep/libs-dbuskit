@@ -123,8 +123,26 @@ static ApertiumServer* sharedServer;
   }
   else
   {
-    NSString *translation = [translator translatedString];
-    NSDebugMLog(@"Did translate to '%@'");
+    NSString *translation = nil;
+    NS_DURING
+    {
+      translation = [translator translatedString];
+    }
+    NS_HANDLER
+    {
+      *error = [NSString stringWithFormat: @"Exception during translation: %@",
+        localException];
+      translation = nil;
+    }
+    NS_ENDHANDLER
+    if (nil == translation)
+    {
+      if (nil == *error)
+      {
+	*error = _(@"Could not translate");
+      }
+      return;
+    }
     [pboard setString: translation
               forType: NSStringPboardType];
   }

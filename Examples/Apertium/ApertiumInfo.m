@@ -26,6 +26,7 @@
 #import <DBusKit/DKPort.h>
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSCharacterSet.h>
 #import <Foundation/NSConnection.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSLocale.h>
@@ -113,7 +114,8 @@ static ApertiumInfo *sharedInfo;
   NSEnumerator *langEnum = [langs objectEnumerator];
   NSString *theLang = nil;
 
-  while (nil != (theLang = [langEnum nextObject]))
+  while (nil != (theLang = [[langEnum nextObject]
+    stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceCharacterSet]]))
   {
     NSArray *thePair = [theLang componentsSeparatedByString: @"-"];
     if (2 == [thePair count])
