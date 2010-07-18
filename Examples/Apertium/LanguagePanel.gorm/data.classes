@@ -1,0 +1,33 @@
+{
+    "## Comment" = "Do NOT change this file, Gorm maintains it";
+    ApertiumController = {
+	Actions = (
+	    "translate:",
+	    "abort:",
+	    "didChangeSourceLanguage:",
+	    "didChangeDestinationLanguage:"
+	);
+	Outlets = (
+	    sourceLanguageField,
+	    destinationLanguageField,
+	    translateButton
+	);
+	Super = NSWindowController;
+    };
+    FirstResponder = {
+	Actions = (
+	    "abort:",
+	    "didChangeDestinationLanguage:",
+	    "didChangeSourceLanguage:",
+	    "translate:"
+	);
+	Super = NSObject;
+    };
+    SourceLanguagePopUp = {
+	Actions = (
+	);
+	Outlets = (
+	);
+	Super = NSPopUpButton;
+    };
+}
