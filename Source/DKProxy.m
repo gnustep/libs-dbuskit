@@ -286,7 +286,7 @@ enum
   // Without typed selectors, we have the old gcc libobjc which, in fact, has
   // typed selectors but no API to access them. But we can still copy them from
   // the SEL structure.
-  types = aSelector->sel_types;
+  types = sel_get_type(aSelector);
 # else
   types = sel_getType_np(aSelector);
 # endif
