@@ -185,6 +185,21 @@ enum
   return NSMapGet(selectorToMethodMap, selector);
 }
 
+- (void)setPrimaryDBusInterface: (NSString*)anInterface
+{
+  if (interfaces == nil)
+  {
+    // The interfaces have not yet been resolved, so we temporarily store the
+    // string until the method resolution has run.
+    ASSIGN(activeInterface, anInterface);
+  }
+  else
+  {
+    DKInterface *theIf = [interfaces objectForKey: anInterface];
+    ASSIGN(activeInterface, theIf);
+  }
+}
+
 /**
  * Returns the interface corresponding to the mangled version in which all dots
  * have been replaced with underscores.
@@ -346,7 +361,7 @@ enum
 {
   DKMethod *m = nil;
   BOOL isIntrospect = [@"Introspect" isEqualToString: NSStringFromSelector(aSel)];
-  if (nil != activeInterface)
+  if ([activeInterface isKindOfClass: [DKInterface class]])
   {
     // If an interface was marked active, try to find the selector there first
     // (the interface will perform its own locking).
@@ -462,14 +477,6 @@ enum
     return YES;
   }
   return NO;
-}
-/*
- * Dummy method to test the proxy
- */
-- (void) describeProxy
-{
-  NSLog(@"DKProxy connected to endpoint %@, service %@, path %@.", endpoint,
-    service, path);
 }
 
 - (DKEndpoint*)_endpoint
@@ -669,6 +676,10 @@ enum
 {
   [tableLock lock];
   ASSIGN(interfaces,_interfaces);
+  if ([activeInterface isKindOfClass: [NSString class]])
+  {
+    [self setPrimaryDBusInterface: (NSString*)activeInterface];
+  }
   [tableLock unlock];
 }
 
@@ -705,6 +716,7 @@ enum
   [path release];
   [tableLock release];
   [interfaces release];
+  [activeInterface release];
   [super dealloc];
 }
 

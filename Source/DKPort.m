@@ -27,6 +27,7 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSConnection.h>
 #import <Foundation/NSDate.h>
+#import <Foundation/NSDebug.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSPort.h>
 #import <Foundation/NSPortCoder.h>
@@ -141,7 +142,7 @@ enum {
        * 1. Check whether the remote side exists by sending a ping
        * 2. Schedule generation of reply for NSConnection to consume
        */
-      NSLog(@"Got rootproxy request for remote %@", remote);
+      NSDebugMLog(@"Got rootproxy request for remote %@", remote);
       return [self _returnProxyForPath: @"/"
                    utilizingComponents: components
                               fromPort: recievePort];
@@ -153,7 +154,7 @@ enum {
        *     generation of the cache)
        *  4. Schedule generation of reply for NSConnection to consume.
        */
-       NSLog(@"Got methodtype request");
+       NSDebugMLog(@"Got methodtype request");
        break;
     case METHOD_REQUEST:
       /*
@@ -167,10 +168,10 @@ enum {
       /*
        * TODO: Cleanup
        */
-      NSLog(@"Got CONNECTION_SHUTDOWN");
+      NSDebugMLog(@"Got CONNECTION_SHUTDOWN");
       break;
     case PROXY_RETAIN:
-      NSLog(@"Got PROXY_RETAIN");
+      NSDebugMLog(@"Got PROXY_RETAIN");
       break;
     case METHOD_REPLY:
     /*
@@ -182,7 +183,7 @@ enum {
     case METHODTYPE_REPLY:
     case PROXY_RELEASE:
     case RETAIN_REPLY:
-      NSLog(@"Got reply type %ld", msgid);
+      NSDebugMLog(@"Got reply type %ld", msgid);
       break;
     case PROXY_AT_PATH_REQUEST:
       /*
@@ -191,14 +192,14 @@ enum {
        * 2. Discover the object path.
        * 3. Create proxy
        */
-       NSLog(@"Special proxy request");
+       NSDebugMLog(@"Special proxy request");
       break;
     case PROXY_AT_PATH_REPLY:
        /*
         * TODO:
 	* 1. Do something
 	*/
-        NSLog(@"Special proxy reply");
+        NSDebugMLog(@"Special proxy reply");
       break;
     default:
       break;
@@ -215,7 +216,7 @@ enum {
 	         extra: (void*)extra
                forMode: (NSString*)mode
 {
-  NSLog(@"RunLoop events: Ignoring event of type %llu", (unsigned long long)type);
+  NSDebugMLog(@"RunLoop events: Ignoring event of type %llu", (unsigned long long)type);
 }
 
 /**
@@ -267,7 +268,7 @@ enum {
                                            components: components];
 
    [seqCoder decodeValueOfObjCType: @encode(int) at: &sequence];
-   NSLog(@"Sequence number for proxy request: %d", sequence);
+   NSDebugMLog(@"Sequence number for proxy request: %d", sequence);
    [seqCoder release];
 
    /* Create and encode the proxy. */

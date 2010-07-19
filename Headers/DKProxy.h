@@ -50,4 +50,13 @@
  * Checks whether the to proxies are attached to the same D-Bus service.
  */
 - (BOOL) hasSameScopeAs: (DKProxy*)aProxy;
+
+/**
+ * D-Bus allows identically named methods to appear in multiple interfaces. By
+ * default and in accordance with the D-Bus specification, DKProxy will call the
+ * first available implementation unless you specify the interface. If you
+ * usually call methods from a specific interface, you can designate the
+ * interface as the primary one by calling -setPrimaryDBusInterface:.
+ */
+- (void)setPrimaryDBusInterface: (NSString*)anInteface;
 @end
