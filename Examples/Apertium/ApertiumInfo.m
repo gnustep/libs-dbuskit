@@ -29,6 +29,7 @@
 #import <Foundation/NSCharacterSet.h>
 #import <Foundation/NSConnection.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSException.h>
 #import <Foundation/NSLocale.h>
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
@@ -141,7 +142,25 @@ static ApertiumInfo *sharedInfo;
     NSWarnMLog(@"Could not connect to Apertium.");
     return NO;
   }
-  modes = [infoObject modes];
+  NS_DURING
+  {
+    modes = [infoObject modes];
+  }
+  NS_HANDLER
+  {
+    NSDictionary *info = [localException userInfo];
+    if ([info objectForKey: @"org.freedesktop.DBus.Error.ServiceUnknown"])
+    {
+      NSWarnMLog(@"Apertium service not provided via D-Bus.");
+    }
+    else
+    {
+      NSWarnMLog(@"Error when contacting Apertium service: %@",
+        localException);
+    }
+    modes = nil;
+  }
+  NS_ENDHANDLER
   if (0 == [modes count])
   {
     NSWarnMLog(@"No language pairs found.");
@@ -166,9 +185,15 @@ static ApertiumInfo *sharedInfo;
 - (NSString*)localizedLanguageNameForLangKey: (NSString*)key
 {
   NSString *localeIdentifier = [NSLocale canonicalLanguageIdentifierFromString: key];
-  NSLocale *locale = [NSLocale autoupdatingCurrentLocale];
-  NSString *localizedName = [locale displayNameForKey: NSLocaleLanguageCode
-                                                value: localeIdentifier];
+  NSLocale *locale = [NSLocale currentLocale];
+  NSString *localizedName = nil;
+
+  // Work around the fact that GNUstep's NSLocale does not yet implement
+  // +canonicalLanguageIdentifierFromString:.
+  localeIdentifier = (nil != localeIdentifier) ? localeIdentifier : key;
+
+  localizedName = [locale displayNameForKey: NSLocaleLanguageCode
+                                      value: localeIdentifier];
   return (nil != localizedName) ? localizedName : key;
 }
 
