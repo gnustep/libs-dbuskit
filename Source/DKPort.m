@@ -29,6 +29,7 @@
 #import <Foundation/NSDate.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSInvocation.h>
+#import <Foundation/NSLock.h>
 #import <Foundation/NSPort.h>
 #import <Foundation/NSPortCoder.h>
 #import <Foundation/NSPortMessage.h>
@@ -57,6 +58,21 @@ enum {
  PROXY_AT_PATH_REPLY = 255
 };
 
+
+/*
+ * We maintain connections to the bus objects to obtain information about names
+ * on the bus.
+ */
+static DKProxy *systemBus;
+static DKProxy *sessionBus;
+static NSLock *busLock;
+
+
+@protocol DBus
+- (NSArray*)ListNames;
+- (NSArray*)ListActivatableNames;
+@end
+
 /*
  * We need to access the private -[NSPortCoder _components] method.
  */
@@ -78,6 +94,14 @@ enum {
 
 
 @implementation DKPort
+
++ (void)initialize
+{
+  if ([DKPort class] == self)
+  {
+    busLock = [[NSLock alloc] init];
+  }
+}
 
 + (NSPort*)port
 {
@@ -117,6 +141,68 @@ enum {
 {
   return [self initWithRemote: nil];
 }
+
+
+- (id<DBus>)getBusObjectAt: (DKProxy**)bus
+             withPortClass: (Class)portClass
+{
+  if ([remote isEqualToString: @"org.freedesktop.DBus"])
+  {
+    /*
+     * Don't do this if we are fetching the bus object itself, otherwise we'd
+     * loop infinitely.
+     */
+    return nil;
+  }
+
+  if (nil == *bus)
+  {
+    [busLock lock];
+    if (nil == *bus)
+    {
+      DKPort *sp = [[[portClass alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease];
+      NSConnection *c = [NSConnection connectionWithReceivePort: [portClass port]
+                                                       sendPort: sp];
+      *bus = (id)[c rootProxy];
+    }
+    [busLock unlock];
+  }
+  return (id<DBus>)*bus;
+}
+
+- (id<DBus>)getBusObject
+{
+  return [self getBusObjectAt: &sessionBus
+                withPortClass: [DKSessionBusPort class]];
+}
+
+- (BOOL) hasValidRemote
+{
+  id<DBus> bus = [self getBusObject];
+
+  if ([remote isEqualToString: @"org.freedesktop.DBus"])
+  {
+    // It is save to assume that the bus object is available.
+    return YES;
+  }
+
+  if ([[bus ListNames] containsObject: remote])
+  {
+    return YES;
+  }
+
+  if ([[bus ListActivatableNames] containsObject: remote])
+  {
+    return YES;
+  }
+  else
+  {
+    NSWarnMLog(@"D-Bus service %@ is neither available nor activatable",
+      remote);
+    return NO;
+  }
+}
+
 
 
 /**
@@ -254,13 +340,20 @@ enum {
          utilizingComponents: (NSArray*)components
                     fromPort: (NSPort*)receivePort
 {
-  // TODO: Actually do the checking!
 
   int sequence = -1;
   NSPortCoder *seqCoder = nil;
   NSPortCoder *proxyCoder = nil;
   DKProxy *proxy = nil;
   NSPortMessage *pm = nil;
+
+  /* Check whether the remote service exists. */
+  if (NO == [self hasValidRemote])
+  {
+    return NO;
+  }
+
+  // TODO: Check whether the path is valid.
 
   /* Decode the sequence number, we need it to send the correct reply. */
   seqCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
@@ -334,5 +427,11 @@ enum {
   }
   [ep release];
   return self;
+}
+
+- (void)getBusObject
+{
+  [self getBusObjectAt: &systemBus
+         withPortClass: [DKSystemBusPort class]];
 }
 @end
