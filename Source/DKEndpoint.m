@@ -290,16 +290,26 @@ static NSRecursiveLock *activeConnectionLock;
  */
 - (id) initWithConnectionTo: (NSString*)endpoint
 {
+  DBusError err;
   /* Note: dbus_connection_open_private() would be an option here, but would
    * require us to take care of the connections ourselves. Right now, this does
    * not seem to be worth the effort, so we let D-Bus do this for us (hence we
    * call dbus_connection_unref() and not dbus_connection_close() in -cleanup).
    */
-  DBusConnection *conn = dbus_connection_open([endpoint UTF8String], NULL);
+  DBusConnection *conn = NULL;
+  dbus_error_init(&err);
+
+  dbus_connection_open([endpoint UTF8String], &err);
   if (NULL == conn)
   {
+    NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
+      err.name,
+      err.message);
+    dbus_error_free(&err);
     return nil;
   }
+  dbus_error_free(&err);
+
   self = [self _initWithConnection: conn];
   // -_initWithConnection did increase the refcount, we release ownership of the
   // connection:
@@ -310,11 +320,20 @@ static NSRecursiveLock *activeConnectionLock;
 
 - (id) initWithWellKnownBus: (DBusBusType)type
 {
-  DBusConnection *conn = dbus_bus_get(type, NULL);
+  DBusError err;
+  DBusConnection *conn = NULL;
+
+  dbus_error_init(&err);
+  conn = dbus_bus_get(type, &err);
   if (NULL == conn)
   {
+    NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
+      err.name,
+      err.message);
+    dbus_error_free(&err);
     return nil;
   }
+  dbus_error_free(&err);
   self = [self _initWithConnection: conn];
   // -_initWithConnection did increase the refcount, we release ownership of the
   // connection:
