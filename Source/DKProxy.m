@@ -283,9 +283,8 @@ enum
   const char *types = NULL;
   NSMethodSignature *theSig = nil;
 # if HAVE_TYPED_SELECTORS == 0
-  // Without typed selectors, we have the old gcc libobjc which, in fact, has
-  // typed selectors but no API to access them. But we can still copy them from
-  // the SEL structure.
+  // Without typed selectors (i.e. libobjc2 runtime), we have the old gcc
+  // libobjc which has typed selectors but a slightly different API:
   types = sel_get_type(aSelector);
 # else
   types = sel_getType_np(aSelector);
@@ -404,12 +403,7 @@ enum
 
 - (void)forwardInvocation: (NSInvocation*)inv
 {
-# if HAVE_TYPED_SELECTORS == 1
-  SEL selector = [inv selector];
-# else
-  // If we cannot generate typed selectors, only test for the untyped version
   SEL selector = sel_getUid(sel_getName([inv selector]));
-# endif
 
   NSMethodSignature *signature = [inv methodSignature];
   NSString *interface = nil;
@@ -548,13 +542,6 @@ enum
   const char* selectorString;
   SEL untypedSelector = 0;
 
-# if HAVE_TYPED_SELECTORS == 1
-  SEL typedBoxingSelector = 0;
-  SEL typedNonBoxingSelector = 0;
-  const char* boxedTypes = [aMethod objCTypesBoxed: YES];
-  const char* nonBoxedTypes = [aMethod objCTypesBoxed: NO];
-# endif
-
   if (nil == selName)
   {
     selectorString = [[aMethod selectorString] UTF8String];
@@ -577,40 +564,7 @@ enum
   NSDebugMLog(@"Registered %s as %p (untyped)",
     selectorString,
     untypedSelector);
-# if HAVE_TYPED_SELECTORS == 1
-  if (NULL == boxedTypes)
-  {
-    NSWarnMLog(@"Not registering typed selector for %@ (empty type string)",
-      aMethod);
-  }
-  else
-  {
-    typedBoxingSelector = sel_registerTypedName_np(selectorString, boxedTypes);
-    [self _installMethod: aMethod
-             inInterface: theIf
-             forSelector: typedBoxingSelector];
-  NSDebugMLog(@"Registered %s as %p (%s)",
-    selectorString,
-    typedBoxingSelector,
-    boxedTypes);
-  }
-  if (NULL == nonBoxedTypes)
-  {
-    NSWarnMLog(@"Not registering typed selector for %@ (empty type string)",
-      aMethod);
-  }
-  else
-  {
-    typedNonBoxingSelector = sel_registerTypedName_np(selectorString, nonBoxedTypes);
-    [self _installMethod: aMethod
-             inInterface: theIf
-             forSelector: typedNonBoxingSelector];
-  NSDebugMLog(@"Registered %s as %p (%s)",
-    selectorString,
-    typedNonBoxingSelector,
-    nonBoxedTypes);
-  }
-# endif
+
   // NOTE: The caller is responsible for unlocking the tables.
 }
 
