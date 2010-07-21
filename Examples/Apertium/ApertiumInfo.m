@@ -133,8 +133,9 @@ static ApertiumInfo *sharedInfo;
 
 - (BOOL) getInfo
 {
+  DKPort *sp = [[[DKPort alloc] initWithRemote: @"org.apertium.info"] autorelease];
   NSConnection *connection = [NSConnection connectionWithReceivePort: [DKPort port]
-                                                            sendPort: [[DKPort alloc] initWithRemote: @"org.apertium.info"]];
+                                                            sendPort: sp];
   id<APInfo> infoObject = (id<APInfo>)[connection rootProxy];
   NSArray *modes = nil;
   if (infoObject == nil)

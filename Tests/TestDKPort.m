@@ -36,7 +36,7 @@
   id aProxy = nil;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   UKNotNil(aProxy);
 }

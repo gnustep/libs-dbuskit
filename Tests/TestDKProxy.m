@@ -61,7 +61,7 @@
   id proxy = nil;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   proxy = [conn rootProxy];
   [proxy _buildMethodCache];
 
@@ -81,7 +81,7 @@
   id returnValue = nil;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   returnValue = [aProxy Introspect];
 
@@ -97,7 +97,7 @@
   NSDictionary *interfaces = nil;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   [aProxy _buildMethodCache];
   interfaces = [aProxy _interfaces];
@@ -112,7 +112,7 @@
   id returnValue = nil;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   returnValue = [aProxy GetId];
   UKNotNil(returnValue);
@@ -126,7 +126,7 @@
   id aProxy = nil;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   UKRaisesExceptionNamed([aProxy Hello], @"DKDBusMethodReplyException");
 }
@@ -138,7 +138,7 @@
   char *returnValue = NULL;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   returnValue = [aProxy GetNameOwner: "org.freedesktop.DBus"];
   UKTrue(NULL != returnValue);
@@ -151,7 +151,7 @@
   BOOL returnValue = NO;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
-                                        sendPort: [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"]];
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
   returnValue = [aProxy NameHasOwner: @"org.freedesktop.DBus"];
   UKTrue(returnValue);
@@ -164,7 +164,7 @@
   id returnValue = nil;
   NSWarnMLog(@"This test is an expected failure if the org.freedesktop.Hal service on the system message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKSystemBusPort port]
-                                        sendPort: [[DKSystemBusPort alloc] initWithRemote: @"org.freedesktop.Hal"]];
+                                        sendPort: [[[DKSystemBusPort alloc] initWithRemote: @"org.freedesktop.Hal"] autorelease]];
   aProxy = [conn proxyAtPath: @"/org/freedesktop/Hal"];
   returnValue = [aProxy Introspect];
 

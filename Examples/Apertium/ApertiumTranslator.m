@@ -34,11 +34,9 @@
 @implementation ApertiumTranslator
 - (id)init
 {
+  DKPort *sp = [[[DKPort alloc] initWithRemote: @"org.apertium.mode"] autorelease];
   NSConnection *connection = [NSConnection connectionWithReceivePort: [DKPort port]
-                                                            sendPort: [[DKPort
-							    alloc]
-							    initWithRemote:
-							    @"org.apertium.mode"]];
+                                                            sendPort: sp];
   if (nil == (self = [super init]))
   {
     return nil;
