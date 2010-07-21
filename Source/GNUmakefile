@@ -17,8 +17,8 @@ DBusKit_HEADER_FILES_DIR = ../Headers
 DBusKit_HEADER_FILES = \
 		  DBusKit.h \
 		  DKPort.h \
-                  DKProxy.h
-
+                  DKProxy.h \
+                  NSConnection+DBus.h
 #
 # Class files
 #
@@ -33,7 +33,8 @@ DBusKit_OBJC_FILES = \
 	DKMethodCall.m \
 	DKOutgoingProxy.m \
 	DKPort.m \
-        DKProxy.m
+        DKProxy.m \
+	NSConnection+DBus.m
 
 
 DBusKit_OBJCFLAGS += $(WARN_FLAGS)

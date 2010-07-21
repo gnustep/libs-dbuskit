@@ -1,8 +1,8 @@
-/** Umbrella header for DBusKit.
+/** Category on NSConnection to facilitate D-Bus integration
    Copyright (C) 2010 Free Software Foundation, Inc.
 
    Written by:  Niels Grewe <niels.grewe@halbordnung.de>
-   Created: May 2010
+   Created: July 2010
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -18,8 +18,35 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111 USA.
+
    */
 
-#import <DBusKit/DKPort.h>
-#import <DBusKit/DKProxy.h>
-#import <DBusKit/NSConnection+DBus.h>
+#import "DBusKit/NSConnection+DBus.h"
+#import "DBusKit/DKPort.h"
+#import "DBusKit/DKProxy.h"
+
+#import <Foundation/NSConnection.h>
+#import <Foundation/NSString.h>
+
+#import <GNUstepBase/NSDebug+GNUstepBase.h>
+
+
+@interface DKPort (DKPortPrivate)
+- (DKProxy*)_proxyAtPath: (NSString*)path;
+@end
+
+@implementation NSConnection (DBus)
+
+
+- (DKProxy*)proxyAtPath: (NSString*)path
+{
+  id sp = [self sendPort];
+  if (NO == [sp isKindOfClass: [DKPort class]])
+  {
+    NSWarnMLog(@"Not attempting to find proxy at path '%@' for non D-Bus port", path);
+    return nil;
+  }
+  return [(DKPort*)sp _proxyAtPath: path];
+}
+
+@end

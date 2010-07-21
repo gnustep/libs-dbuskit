@@ -330,6 +330,21 @@ static NSLock *busLock;
   [super dealloc];
 }
 
+- (DKProxy*)_proxyAtPath: (NSString*)path
+{
+
+  /* Check whether the remote service exists. */
+  if (NO == [self hasValidRemote])
+  {
+    return nil;
+  }
+
+  // TODO: Check whether the path is valid.
+  return [[[DKProxy alloc] initWithEndpoint: endpoint
+                                andService: remote
+                                   andPath: path] autorelease];
+
+}
 
 /**
  * Performs checks to ensure that the corresponding D-Bus service and object
@@ -347,14 +362,6 @@ static NSLock *busLock;
   DKProxy *proxy = nil;
   NSPortMessage *pm = nil;
 
-  /* Check whether the remote service exists. */
-  if (NO == [self hasValidRemote])
-  {
-    return NO;
-  }
-
-  // TODO: Check whether the path is valid.
-
   /* Decode the sequence number, we need it to send the correct reply. */
   seqCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
                                              sendPort: self
@@ -370,9 +377,12 @@ static NSLock *busLock;
                                                 sendPort: self
                                               components: nil];
 
-   proxy = [[DKProxy alloc] initWithEndpoint: endpoint
-                                  andService: remote
-                                     andPath: path];
+   proxy = [self _proxyAtPath: path];
+   if (nil == proxy)
+   {
+     [proxyCoder release];
+     return NO;
+   }
 
    [proxyCoder encodeValueOfObjCType: @encode(int) at: &sequence];
    [proxyCoder encodeObject: proxy];
@@ -393,11 +403,10 @@ static NSLock *busLock;
 
   [pm release];
   [proxyCoder release];
-  [proxy release];
   return YES;
 }
-
 @end
+
 
 @implementation DKSessionBusPort
 - (id)initWithRemote: (NSString*)aRemote

@@ -29,6 +29,7 @@
 #import "../Headers/DKProxy.h"
 #import "../Source/DKEndpoint.h"
 #import "../Headers/DKPort.h"
+#import "../Headers/NSConnection+DBus.h"
 
 @interface DKProxy (Private)
 - (SEL)_unmangledSelector: (SEL)selector
@@ -155,4 +156,22 @@
   returnValue = [aProxy NameHasOwner: @"org.freedesktop.DBus"];
   UKTrue(returnValue);
 }
+
+- (void)testProxyAtPath
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  id returnValue = nil;
+  NSWarnMLog(@"This test is an expected failure if the org.freedesktop.Hal service on the system message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKSystemBusPort port]
+                                        sendPort: [[DKSystemBusPort alloc] initWithRemote: @"org.freedesktop.Hal"]];
+  aProxy = [conn proxyAtPath: @"/org/freedesktop/Hal"];
+  returnValue = [aProxy Introspect];
+
+  UKNotNil(returnValue);
+  UKTrue([returnValue isKindOfClass: [NSString class]]);
+  UKTrue([returnValue length] > 0);
+}
+
+
 @end
