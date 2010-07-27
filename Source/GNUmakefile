@@ -34,6 +34,7 @@ DBusKit_OBJC_FILES = \
 	DKOutgoingProxy.m \
 	DKPort.m \
         DKProxy.m \
+	DKSignal.m \
 	NSConnection+DBus.m
 
 

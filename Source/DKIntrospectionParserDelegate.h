@@ -32,9 +32,24 @@
  */
 @interface DKIntrospectionParserDelegate: NSObject
 {
+  /**
+   * Contains all child nodes contained in root node that is parsed.
+   */
   NSMutableArray *childNodes;
+
+  /**
+   * Contains all interfaces exposed by the root node.
+   */
   NSMutableDictionary *interfaces;
-  id nodeParent;
+
+  /**
+   * The stack of objects.
+   */
+  NSMutableArray *stack;
+
+  /**
+   * The present depth in the tree.
+   */
   NSUInteger xmlDepth;
 }
 

@@ -22,13 +22,18 @@
 
 
 #import "DKIntrospectionParserDelegate.h"
+
+#import "DKArgument.h"
 #import "DKInterface.h"
 #import "DKIntrospectionNode.h"
+#import "DKMethod.h"
+#import "DKSignal.h"
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
+#import <Foundation/NSNull.h>
 #import <Foundation/NSXMLParser.h>
 
 
@@ -41,7 +46,11 @@
     return nil;
   }
 
-  nodeParent = _parent;
+  stack = [[NSMutableArray alloc] init];
+  if (nil != _parent)
+  {
+    [stack addObject: _parent];
+  }
   interfaces = [NSMutableDictionary new];
   childNodes = [NSMutableArray new];
   return self;
@@ -51,6 +60,7 @@
 {
   [interfaces release];
   [childNodes release];
+  [stack release];
   [super dealloc];
 }
 
@@ -68,30 +78,42 @@
 }
 
 
-- (void)reparentContentsOfCollection: (id)collection
-                            toParent: (id)newParent
+- (id)leaf
 {
-  NSEnumerator *theEnum = [collection objectEnumerator];
-  DKIntrospectionNode *theNode = nil;
-
-  while (nil != (theNode = [theEnum nextObject]))
+  if (0 == [stack count])
   {
-    if ([theNode respondsToSelector: @selector(setParent:)])
-    {
-      [theNode setParent: newParent];
-    }
+    return nil;
+  }
+  return [stack objectAtIndex: ([stack count] - 1)];
+}
+
+- (void)popStack
+{
+  if (0 != [stack count])
+  {
+    [stack removeObjectAtIndex: ([stack count] - 1) ];
   }
 }
 
-- (void)reparentChildrenTo: (id)newParent
+- (void)pushToStack: (id)obj
 {
-  [self reparentContentsOfCollection: interfaces
-                            toParent: newParent];
-  [self reparentContentsOfCollection: childNodes
-                            toParent: newParent];
+  if (nil == obj)
+  {
+    obj = [NSNull null];
+  }
+  [stack addObject: obj];
 }
 
 /* Parser delegate methods */
+- (void) parserDidStartDocument: (NSXMLParser*)aParser
+{
+  NSDebugMLog(@"Started parsing XML");
+}
+
+- (void) parserDidEndDocument: (NSXMLParser*)aParser
+{
+  NSDebugMLog(@"Stopped parsing XML");
+}
 
 - (void) parser: (NSXMLParser*)aParser
 didStartElement: (NSString*)aNode
@@ -101,7 +123,12 @@ didStartElement: (NSString*)aNode
 {
   NSString *theName = [someAttributes objectForKey: @"name"];
   DKIntrospectionNode *newNode = nil;
+  id leaf = [self leaf];
   xmlDepth++;
+  NSDebugLog(@"Starting <%@> node '%@' at depth %lu.",
+    aNode,
+    theName,
+    xmlDepth);
   if ([@"node" isEqualToString: aNode])
   {
     BOOL isRoot = YES;
@@ -124,44 +151,83 @@ didStartElement: (NSString*)aNode
       // TODO: Generate information about child nodes
       // (For now, just create a DKIntrospectionNode to store them)
       newNode = [[DKIntrospectionNode alloc] initWithName: theName
-                                                   parent: self];
+                                                   parent: leaf];
       [childNodes addObject: newNode];
     }
   }
   else if (([@"interface" isEqualToString: aNode]) && ([theName length] > 0))
   {
     newNode = [[DKInterface alloc] initWithInterfaceName: theName
-                                                  parent: self];
+                                                  parent: leaf];
     [interfaces setObject: newNode
                    forKey: theName];
   }
+  else if (([@"annotation" isEqualToString: aNode]) && ([theName length] > 0))
+  {
+    id theValue = [someAttributes objectForKey: @"value"];
+    if (nil == theValue)
+    {
+      theValue = [NSNull null];
+    }
+    if ([leaf respondsToSelector: @selector(setAnnotationValue:forKey:)])
+    {
+      [leaf setAnnotationValue: theValue
+                        forKey: theName];
+    }
+  }
+  else if ([leaf isKindOfClass: [DKInterface class]])
+  {
+    // Things that should only appear in interfaces (methods, signals,
+    // porperties):
+    DKInterface *ifLeaf = (DKInterface*)leaf;
+    if ([@"method" isEqualToString: aNode])
+    {
+      newNode = [[DKMethod alloc] initWithMethodName: theName
+                                           interface: [ifLeaf name]
+                                              parent: leaf];
+      [ifLeaf addMethod: (DKMethod*)newNode];
+    }
+    else if ([@"signal" isEqualToString: aNode])
+    {
+      //TODO: Implement signals
+    }
+    else if ([@"property" isEqualToString: aNode])
+    {
+      //TODO: Implement properties.
+    }
+  }
+  else if (([leaf isKindOfClass: [DKMethod class]])
+    || [leaf isKindOfClass: [DKSignal class]])
+  {
+    // Arguments should only appear in methods or signals
+    if ([@"arg" isEqualToString: aNode])
+    {
+      NSString *direction = [someAttributes objectForKey: @"direction"];
+      const char *type = [[someAttributes objectForKey: @"type"] UTF8String];
+      newNode = [[DKArgument alloc] initWithDBusSignature: type
+                                                     name: theName
+						   parent: leaf];
+      // DKSignal also implements addArgument:direction: with the same
+      // signature.
+      [(DKMethod*)leaf addArgument: (DKArgument*)newNode
+                         direction: direction];
+    }
+  }
   else
   {
-    // catch-all node: Will just count xmlDepth and return control to us when
-    // the xml tree is balanced.
+    NSDebugMLog(@"Ignoring <%@> node '%@' at depth %lu.",
+      aNode,
+      theName,
+      xmlDepth);
     newNode = [[DKIntrospectionNode alloc] initWithName: theName
-                                                 parent: self];
-
-    // extra -retain so we can use a simple -release for all node-types at the
-    // end of this method
-    [[newNode retain] autorelease];
+                                                 parent: leaf];
   }
 
   if (newNode != nil)
   {
-    // pass on the started node information so that the new delegate knows that
-    // it has been opened.
-    [newNode parser: aParser
-    didStartElement: aNode
-       namespaceURI: aNamespaceURI
-      qualifiedName: aQualifierName
-         attributes: someAttributes];
-
-    // Continue parsing with the new delegate:
-    [aParser setDelegate: newNode];
-
-    // newNode has either been retained in an array or dictionary, or we did an
-    // extra -retain before autoreleasing a catch-all node.
+    [self pushToStack: newNode];
+    // We did not autorelease the nodes when creating them, so we release them
+    // here:
     [newNode release];
     newNode = nil;
   }
@@ -174,9 +240,9 @@ didStartElement: (NSString*)aNode
 {
   NSDebugMLog(@"Ended node: %@", aNode);
   xmlDepth--;
+  [self popStack];
   if (0 == xmlDepth)
   {
-    [self reparentChildrenTo: nodeParent];
     NSDebugMLog(@"Ended parsing");
   }
 }

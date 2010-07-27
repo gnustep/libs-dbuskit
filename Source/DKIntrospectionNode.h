@@ -29,7 +29,6 @@
   NSString *name;
   NSMutableDictionary *annotations;
   id parent;
-  NSUInteger xmlDepth;
 }
 
 /**
@@ -68,23 +67,4 @@
  * Returns the value of the specified annotation key.
  */
 - (id) annotationValueForKey: (NSString*)key;
-
-/*
- * Parser delegate methods.
- */
-
-- (void) parserDidStartDocument: (NSXMLParser*)parser;
-
-- (void) parserDidEndDocument: (NSXMLParser*)parser;
-
-- (void) parser: (NSXMLParser*)aParser
-didStartElement: (NSString*)aNode
-   namespaceURI: (NSString*)aNamespaceURI
-  qualifiedName: (NSString*)aQualifierName
-     attributes: (NSDictionary*)someAttributes;
-
-- (void) parser: (NSXMLParser*)aParser
-  didEndElement: (NSString*)aNode
-   namespaceURI: (NSString*)aNamespaceURI
-  qualifiedName: (NSString*)aQualifierName;
 @end

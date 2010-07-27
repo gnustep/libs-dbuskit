@@ -104,57 +104,5 @@
   [super dealloc];
 }
 
-/* Parser delegate methods */
-
-- (void) parserDidStartDocument: (NSXMLParser*)aParser
-{
-  NSDebugMLog(@"Started parsing XML");
-}
-
-- (void) parserDidEndDocument: (NSXMLParser*)aParser
-{
-  NSDebugMLog(@"Stopped parsing XML");
-}
-
-- (void) parser: (NSXMLParser*)aParser
-didStartElement: (NSString*)aNode
-   namespaceURI: (NSString*)aNamespaceURI
-  qualifiedName: (NSString*)aQualifierName
-     attributes: (NSDictionary*)someAttributes
-{
-  NSDebugMLog(@"Started node: %@ (attributes: %@)", aNode, someAttributes);
-  xmlDepth++;
-  if ([@"annotation" isEqualToString: aNode])
-  {
-    NSString *theName = [someAttributes objectForKey: @"name"];
-    id theValue = [someAttributes objectForKey: @"value"];
-    if (theName != nil)
-    {
-      if (nil == theValue)
-      {
-	theValue = [NSNull null];
-      }
-      [self setAnnotationValue: theValue
-                        forKey: theName];
-    }
-  }
-}
-
-- (void) parser: (NSXMLParser*)aParser
-  didEndElement: (NSString*)aNode
-   namespaceURI: (NSString*)aNamespaceURI
-  qualifiedName: (NSString*)aQualifierName
-{
-  NSDebugMLog(@"Ended node: %@", aNode);
-  xmlDepth--;
-  if (0 == xmlDepth)
-  {
-    if ([parent respondsToSelector:
-        @selector(parser:didStartElement:namespaceURI:qualifiedName:attributes:)])
-    {
-      [aParser setDelegate: parent];
-    }
-  }
-}
 
 @end
