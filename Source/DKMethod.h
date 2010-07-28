@@ -27,20 +27,9 @@
 @class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
 @interface DKMethod: DKIntrospectionNode
 {
-  NSString *interface;
   NSMutableArray *inArgs;
   NSMutableArray *outArgs;
 }
-
-/**
- * Initializes the method description with a name and the corresponding
- * interface. The parent can indicate the proxy/object vendor the method is
- * attached to.
- */
-- (id) initWithName: (NSString*)aName
-          interface: (NSString*)anInterface
-             parent: (id)parent;
-
 
 /**
  * Returns the Objective-C type string the method corresponds to. Use doBox to
@@ -137,9 +126,3 @@
                    messageType: (int)type;
 @end
 
-/**
- * _DKMethodIntrospect is a prototype for the D-Bus introspection method. It
- * will be added to the dispatch table of a proxy because we need it to dispatch
- * the initial introspection data.
- */
-extern DKMethod *_DKMethodIntrospect;

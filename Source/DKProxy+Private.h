@@ -24,5 +24,14 @@
 
 #import "DKObjectPathNode.h"
 
+@class DKInterface;
+
 @interface DKProxy (DKObjectPathNode) <DKObjectPathNode>
 @end
+
+/**
+ * _DKInterfaceIntrospectable is a prototype for the D-Bus
+ * org.freedesktop.DBus.Introspectable. It will be added to the dispatch table
+ * of a proxy because we need it to dispatch the initial introspection data.
+ */
+extern DKInterface *_DKInterfaceIntrospectable;

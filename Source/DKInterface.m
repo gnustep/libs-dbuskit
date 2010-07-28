@@ -28,6 +28,10 @@
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#define INCLUDE_RUNTIME_H
+#include "config.h"
+#undef INCLUDE_RUNTIME_H
+
 #import "DKMethod.h"
 #import "DKInterface.h"
 
@@ -85,6 +89,7 @@
 - (void) installMethod: (DKMethod*)method
            forSelector: (SEL)selector
 {
+  selector = sel_getUid(sel_getName(selector));
   if ((method == nil) || (0 == selector))
   {
     return;
@@ -105,6 +110,7 @@
 
 - (DKMethod*) methodForSelector: (SEL)selector
 {
+  selector = sel_getUid(sel_getName(selector));
   return NSMapGet(selectorToMethodMap, selector);
 }
 

@@ -21,6 +21,7 @@
    Boston, MA 02111 USA.
    */
 
+#import "DKArgument.h"
 #import "DKEndpoint.h"
 #import "DKInterface.h"
 #import "DKIntrospectionParserDelegate.h"
@@ -78,6 +79,8 @@ enum
 - (NSString*)Introspect;
 @end
 
+DKInterface *_DKInterfaceIntrospectable;
+
 @implementation DKProxy
 
 + (void)initialize
@@ -85,9 +88,23 @@ enum
   if ([DKProxy class] == self)
   {
     // Trigger generation of static introspection method:
-    [DKMethod class];
+    DKArgument *xmlOutArg = nil;
+    DKMethod *introspect = nil;
+    _DKInterfaceIntrospectable = [[DKInterface alloc] initWithName: [NSString stringWithUTF8String: DBUS_INTERFACE_INTROSPECTABLE]
+                                                            parent: nil];
+    introspect = [[DKMethod alloc] initWithName: @"Introspect"
+                                         parent: _DKInterfaceIntrospectable];
+    xmlOutArg = [[DKArgument alloc] initWithDBusSignature: "s"
+                                                     name: @"data"
+                                                   parent: introspect];
+    [introspect addArgument: xmlOutArg
+                  direction: DKArgumentDirectionOut];
+    [_DKInterfaceIntrospectable addMethod: introspect];
+    [_DKInterfaceIntrospectable installMethod: introspect
+                                  forSelector: @selector(Introspect)];
+    [introspect release];
+    [xmlOutArg release];
   }
-
 }
 
 + (id)proxyWithEndpoint: (DKEndpoint*)anEndpoint
@@ -586,9 +603,10 @@ enum
 
 - (void) _installIntrospectionMethod
 {
+  [self _addInterface: _DKInterfaceIntrospectable];
   if ([tableLock tryLockWhenCondition: NO_CACHE])
   {
-    [self _installMethod: _DKMethodIntrospect
+    [self _installMethod: [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)]
              inInterface: nil
         forSelectorNamed: nil];
     [tableLock unlockWithCondition: NO_CACHE];
@@ -658,8 +676,8 @@ enum
   NSString *ifName = [interface name];
   if (nil != ifName)
   {
-    [tableLock lock];
     // Only add named interfaces:
+    [tableLock lock];
     [interfaces setObject: interface
                    forKey: ifName];
     // Check whether this is the interface we need to activate:

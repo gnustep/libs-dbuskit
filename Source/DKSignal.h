@@ -27,18 +27,8 @@
 @class NSString, NSMutableArray, DKArgument;
 @interface DKSignal: DKIntrospectionNode
 {
-  NSString *interface;
   NSMutableArray *args;
 }
-
-/**
- * Initializes the signal description with a name and the corresponding
- * interface. The parent can indicate the proxy/object vendor or the interface
- * the signal is attached to.
- */
-- (id) initWithSignalName: (NSString*)aName
-                interface: (NSString*)anInterface
-                   parent: (id)parent;
 
 - (void) addArgument: (DKArgument*)arg
            direction: (NSString*)direction;

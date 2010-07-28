@@ -28,8 +28,11 @@
 
 #import "../Headers/DKPort.h"
 #import "../Headers/DKProxy.h"
+#import "../Source/DKProxy+Private.h"
+#import "../Source/DKInterface.h"
 #import "../Source/DKMethodCall.h"
 #import "../Source/DKMethod.h"
+
 @interface TestDKMethodCall: NSObject <UKTest>
 @end
 
@@ -53,7 +56,7 @@
   [inv setTarget: aProxy];
   [inv setSelector: @selector(Introspect)];
   call = [[DKMethodCall alloc] initWithProxy: aProxy
-                                      method: _DKMethodIntrospect
+                                      method: [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)]
                                   invocation: inv];
   UKNotNil(call);
   [call sendSynchronouslyAndWaitUntil: 0];

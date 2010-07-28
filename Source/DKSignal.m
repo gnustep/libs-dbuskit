@@ -28,13 +28,6 @@
 #import <Foundation/NSString.h>
 @implementation DKSignal
 
-- (id) initWithSignalName: (NSString*)aName
-                interface: (NSString*)anInterface
-                   parent: (id)parent
-{
-  //TODO: Implement
-  return nil;
-}
 - (void) addArgument: (DKArgument*)arg
            direction: (NSString*)direction
 {

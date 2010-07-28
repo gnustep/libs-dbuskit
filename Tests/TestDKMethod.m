@@ -25,6 +25,9 @@
 #import <UnitKit/UnitKit.h>
 
 #import "../Source/DKMethod.h"
+#import "../Source/DKInterface.h"
+#import "../Source/DKProxy+Private.h"
+
 #include <string.h>
 @interface TestDKMethod: NSObject <UKTest>
 @end
@@ -35,7 +38,7 @@
   if ([TestDKMethod class] == self)
   {
     // Do this to initialize the global introspection method:
-    [DKMethod class];
+    [DKProxy class];
   }
 }
 
@@ -43,17 +46,16 @@
 {
   NSNull *dummyParent = [NSNull null];
   DKMethod *method = [[DKMethod alloc] initWithName: @"Fooify"
-                                          interface: @"org.gnustep.fake"
                                              parent: dummyParent];
   UKObjectsEqual(@"Fooify",[method name]);
-  UKObjectsEqual(@"org.gnustep.fake", [method interface]);
   UKObjectsEqual(dummyParent, [method parent]);
   [method release];
 }
 
 - (void)testBuiltInIntrospectSignatureBoxed
 {
-  NSMethodSignature *sig = [_DKMethodIntrospect methodSignature];
+  DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
+  NSMethodSignature *sig = [method methodSignature];
   NSUInteger argCount = [sig numberOfArguments];
   UKTrue((0 == strcmp([sig methodReturnType], @encode(id))));
   if (argCount == 2)
@@ -69,7 +71,8 @@
 }
 - (void)testBuiltInIntrospectSignatureNotBoxed
 {
-  NSMethodSignature *sig = [_DKMethodIntrospect methodSignatureBoxed: NO];
+  DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
+  NSMethodSignature *sig = [method methodSignatureBoxed: NO];
   NSUInteger argCount = [sig numberOfArguments];
   UKTrue((0 == strcmp([sig methodReturnType], @encode(char*))));
   if (argCount == 2)
@@ -86,6 +89,8 @@
 
 - (void)testEmitMethodDeclaration
 {
-  UKObjectsEqual(@"- (NSString*) Introspect;", [_DKMethodIntrospect methodDeclaration]);
+
+  DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
+  UKObjectsEqual(@"- (NSString*) Introspect;", [method methodDeclaration]);
 }
 @end

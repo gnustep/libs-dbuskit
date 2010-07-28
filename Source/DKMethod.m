@@ -39,7 +39,6 @@
 #include <stdint.h>
 
 
-DKMethod *_DKMethodIntrospect;
 
 enum
 {
@@ -50,25 +49,7 @@ enum
 
 @implementation DKMethod
 
-+ (void)initialize
-{
-  if ([DKMethod class] == self)
-  {
-    DKArgument *xmlOutArg = nil;
-    _DKMethodIntrospect = [[DKMethod alloc] initWithName: @"Introspect"
-                                               interface: @"org.freedesktop.DBus.Introspectable"
-                                                  parent: nil];
-    xmlOutArg = [[DKArgument alloc] initWithDBusSignature: "s"
-                                                     name: @"data"
-                                                   parent: _DKMethodIntrospect];
-    [_DKMethodIntrospect addArgument: xmlOutArg
-                           direction: DKArgumentDirectionOut];
-    [xmlOutArg release];
-  }
-}
-
 - (id) initWithName: (NSString*)aName
-          interface: (NSString*)anInterface
              parent: (id)aParent
 {
   if (nil == (self = [super initWithName: aName
@@ -81,7 +62,6 @@ enum
     [self release];
     return nil;
   }
-  ASSIGNCOPY(interface,anInterface);
   inArgs = [NSMutableArray new];
   outArgs = [NSMutableArray new];
   return self;
@@ -319,7 +299,11 @@ enum
 
 - (NSString*) interface
 {
-  return interface;
+  if ([parent respondsToSelector: @selector(name)])
+  {
+    return [parent name];
+  }
+  return nil;
 }
 
 - (BOOL) isDeprecated
@@ -650,7 +634,6 @@ enum
 
 - (void)dealloc
 {
-  [interface release];
   [inArgs release];
   [outArgs release];
   [super dealloc];

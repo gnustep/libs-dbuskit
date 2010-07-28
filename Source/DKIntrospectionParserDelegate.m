@@ -166,7 +166,6 @@ didStartElement: (NSString*)aNode
     if ([@"method" isEqualToString: aNode])
     {
       newNode = [[DKMethod alloc] initWithName: theName
-                                     interface: [ifLeaf name]
                                         parent: leaf];
       [ifLeaf addMethod: (DKMethod*)newNode];
     }
