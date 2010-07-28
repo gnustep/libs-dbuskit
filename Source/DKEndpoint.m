@@ -334,6 +334,16 @@ static NSRecursiveLock *activeConnectionLock;
     return nil;
   }
   dbus_error_free(&err);
+
+  /*
+   * dbus_bus_get() will cause _exit() to be called when the bus goes away.
+   * Since we are library code, we don't want to confuse the user with that.
+   *
+   * TODO: Instead, we will need to watch for the "Disconnected" signal from
+   * DBUS_PATH_LOCAL in DBUS_INTERFACE_LOCAL and invalidate all DBus ports.
+   */
+  dbus_connection_set_exit_on_disconnect(conn, NO);
+
   self = [self _initWithConnection: conn];
   // -_initWithConnection did increase the refcount, we release ownership of the
   // connection:
