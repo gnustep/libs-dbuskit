@@ -33,7 +33,7 @@
 #import "DKArgument.h"
 #import "DKMethod.h"
 
-#import "DBusKit/DKProxy.h"
+#import "DKProxy+Private.h"
 
 #include <dbus/dbus.h>
 #include <stdint.h>
@@ -55,9 +55,9 @@ enum
   if ([DKMethod class] == self)
   {
     DKArgument *xmlOutArg = nil;
-    _DKMethodIntrospect = [[DKMethod alloc] initWithMethodName: @"Introspect"
-                                                     interface: @"org.freedesktop.DBus.Introspectable"
-                                                        parent: nil];
+    _DKMethodIntrospect = [[DKMethod alloc] initWithName: @"Introspect"
+                                               interface: @"org.freedesktop.DBus.Introspectable"
+                                                  parent: nil];
     xmlOutArg = [[DKArgument alloc] initWithDBusSignature: "s"
                                                      name: @"data"
                                                    parent: _DKMethodIntrospect];
@@ -67,9 +67,9 @@ enum
   }
 }
 
-- (id) initWithMethodName: (NSString*)aName
-                interface: (NSString*)anInterface
-                   parent: (id)aParent
+- (id) initWithName: (NSString*)aName
+          interface: (NSString*)anInterface
+             parent: (id)aParent
 {
   if (nil == (self = [super initWithName: aName
                                   parent: aParent]))

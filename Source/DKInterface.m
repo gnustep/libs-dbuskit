@@ -33,8 +33,8 @@
 
 
 @implementation DKInterface
-- (id) initWithInterfaceName: (NSString*)aName
-                      parent: (id)aParent
+- (id) initWithName: (NSString*)aName
+             parent: (id)aParent
 {
   if (nil == (self = [super initWithName: aName
                                   parent: aParent]))
@@ -130,6 +130,8 @@
 
 - (Protocol*)protocol
 {
+  // TODO: Look aside if another protocol was named to correspond to this
+  // interface.
   return NSProtocolFromString([self mangledName]);
 }
 

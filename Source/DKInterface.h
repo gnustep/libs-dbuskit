@@ -34,14 +34,6 @@
 }
 
 /**
- * Initializes the interface description by its name. The parent can indicate the
- * proxy/object vendor the interface is attached to.
- */
-- (id) initWithInterfaceName: (NSString*)aName
-                      parent: (id)parent;
-
-
-/**
  * Returns all methods in the interface
  */
 - (NSArray*)methods;
@@ -69,6 +61,12 @@
  * declaration suitable for an Objective-C header file.
  */
 - (NSString*)protocolDeclaration;
+
+/**
+ * Returns the Objective-C protocol that corresponds to the interface (if any).
+ * The protocol must be registered with the Objective-C runtime.
+ */
+- (Protocol*)protocol;
 
 /**
  * Returns the interface name with all dots replaced by underscores.

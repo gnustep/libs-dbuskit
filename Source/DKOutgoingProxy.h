@@ -21,7 +21,7 @@
    Boston, MA 02111 USA.
    */
 
-#include "DBusKit/DKProxy.h"
+#include "DKProxy+Private.h"
 
 @interface DKOutgoingProxy: DKProxy
 /**

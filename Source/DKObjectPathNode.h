@@ -1,8 +1,8 @@
-/** Category on NSConnection to facilitate D-Bus integration
+/** Interface for the DKObjectPathNode helper class.
    Copyright (C) 2010 Free Software Foundation, Inc.
 
    Written by:  Niels Grewe <niels.grewe@halbordnung.de>
-   Created: July 2010
+   Created: Jly 2010
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -21,32 +21,24 @@
 
    */
 
-#import "DBusKit/NSConnection+DBus.h"
-#import "DBusKit/DKPort.h"
-#import "DKProxy+Private.h"
+#import "DKIntrospectionNode.h"
 
-#import <Foundation/NSConnection.h>
-#import <Foundation/NSString.h>
+@class DKInterface, DKObjectPathNode, NSMutableArray, NSMutableDictionary;
 
-#import <GNUstepBase/NSDebug+GNUstepBase.h>
+/**
+ * The DKObjectPathNode protocol is implemented by classes representing objects
+ * in a D-Bus object path (such as <code>DKProxy</code> and
+ * <code>DKObjectPathNode</code>.
+ */
+@protocol DKObjectPathNode
+- (void)_addInterface: (DKInterface*)interface;
 
+- (void)_addChildNode: (DKObjectPathNode*)node;
+@end;
 
-@interface DKPort (DKPortPrivate)
-- (DKProxy*)_proxyAtPath: (NSString*)path;
-@end
-
-@implementation NSConnection (DBus)
-
-
-- (DKProxy*)proxyAtPath: (NSString*)path
+@interface DKObjectPathNode: DKIntrospectionNode <DKObjectPathNode>
 {
-  id sp = [self sendPort];
-  if (NO == [sp isKindOfClass: [DKPort class]])
-  {
-    NSWarnMLog(@"Not attempting to find proxy at path '%@' for non D-Bus port", path);
-    return nil;
-  }
-  return [(DKPort*)sp _proxyAtPath: path];
+  NSMutableArray *children;
+  NSMutableDictionary *interfaces;
 }
-
 @end

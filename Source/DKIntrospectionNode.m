@@ -23,7 +23,7 @@
 
 #import "DKIntrospectionNode.h"
 
-#import "DBusKit/DKProxy.h"
+#import "DKProxy+Private.h"
 
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>

@@ -33,7 +33,7 @@
   NSString *path;
   NSMapTable *selectorToMethodMap;
   NSMutableDictionary *interfaces;
-  NSMutableArray *childNodes;
+  NSMutableArray *children;
   DKInterface *activeInterface;
   NSConditionLock *tableLock;
 }

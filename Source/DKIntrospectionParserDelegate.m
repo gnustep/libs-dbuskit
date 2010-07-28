@@ -27,6 +27,7 @@
 #import "DKInterface.h"
 #import "DKIntrospectionNode.h"
 #import "DKMethod.h"
+#import "DKObjectPathNode.h"
 #import "DKSignal.h"
 
 #import <Foundation/NSArray.h>
@@ -36,10 +37,15 @@
 #import <Foundation/NSNull.h>
 #import <Foundation/NSXMLParser.h>
 
+@interface DKIntrospectionParserDelegate (StackManagement)
+- (void)pushToStack: (id)obj;
+- (void)popStack;
+- (id)leaf;
+@end
 
 @implementation DKIntrospectionParserDelegate
 
-- (id) initWithParentForNodes: (id)_parent
+- (id) initWithParentForNodes: (id)parent
 {
   if (nil == (self = [super init]))
   {
@@ -47,51 +53,27 @@
   }
 
   stack = [[NSMutableArray alloc] init];
-  if (nil != _parent)
-  {
-    [stack addObject: _parent];
-  }
-  interfaces = [NSMutableDictionary new];
-  childNodes = [NSMutableArray new];
+  [self pushToStack: parent];
   return self;
 }
 
 - (void) dealloc
 {
-  [interfaces release];
-  [childNodes release];
   [stack release];
   [super dealloc];
 }
 
-
-- (NSDictionary*)interfaces
-{
-  // Return an immutable copy
-  return [[interfaces copy] autorelease];
-}
-
-- (NSArray*) childNodes
-{
-  // Return an immutable copy
-  return [[childNodes copy] autorelease];
-}
-
-
 - (id)leaf
 {
-  if (0 == [stack count])
-  {
-    return nil;
-  }
   return [stack objectAtIndex: ([stack count] - 1)];
 }
 
 - (void)popStack
 {
-  if (0 != [stack count])
+  NSUInteger count = [stack count];
+  if (0 != count)
   {
-    [stack removeObjectAtIndex: ([stack count] - 1) ];
+    [stack removeObjectAtIndex: (count - 1) ];
   }
 }
 
@@ -124,21 +106,21 @@ didStartElement: (NSString*)aNode
   NSString *theName = [someAttributes objectForKey: @"name"];
   DKIntrospectionNode *newNode = nil;
   id leaf = [self leaf];
+  BOOL isRoot = (0 == xmlDepth);
   xmlDepth++;
   NSDebugLog(@"Starting <%@> node '%@' at depth %lu.",
     aNode,
     theName,
     xmlDepth);
+
   if ([@"node" isEqualToString: aNode])
   {
-    BOOL isRoot = YES;
     if ([theName length] > 0)
     {
       if ('/' != [theName characterAtIndex: 0])
       {
-	isRoot = NO;
 	// relative paths must refer to nodes contained in the main node.
-	if ((xmlDepth - 1) == 0)
+	if (isRoot)
 	{
 	  [NSException raise: @"DKIntrospectionException"
 	  format: @"Introspection data contains invalid root node named '%@'",
@@ -146,21 +128,22 @@ didStartElement: (NSString*)aNode
 	}
       }
     }
-    if (NO == isRoot)
+
+    newNode = [[DKObjectPathNode alloc] initWithName: theName
+                                              parent: leaf];
+    if ([leaf conformsToProtocol: @protocol(DKObjectPathNode)])
     {
-      // TODO: Generate information about child nodes
-      // (For now, just create a DKIntrospectionNode to store them)
-      newNode = [[DKIntrospectionNode alloc] initWithName: theName
-                                                   parent: leaf];
-      [childNodes addObject: newNode];
+      [(id<DKObjectPathNode>)leaf _addChildNode: (DKObjectPathNode*)newNode];
     }
   }
   else if (([@"interface" isEqualToString: aNode]) && ([theName length] > 0))
   {
-    newNode = [[DKInterface alloc] initWithInterfaceName: theName
-                                                  parent: leaf];
-    [interfaces setObject: newNode
-                   forKey: theName];
+    newNode = [[DKInterface alloc] initWithName: theName
+                                         parent: leaf];
+      if ([leaf conformsToProtocol: @protocol(DKObjectPathNode)])
+      {
+	[(id<DKObjectPathNode>)leaf _addInterface: (DKInterface*)newNode];
+      }
   }
   else if (([@"annotation" isEqualToString: aNode]) && ([theName length] > 0))
   {
@@ -182,9 +165,9 @@ didStartElement: (NSString*)aNode
     DKInterface *ifLeaf = (DKInterface*)leaf;
     if ([@"method" isEqualToString: aNode])
     {
-      newNode = [[DKMethod alloc] initWithMethodName: theName
-                                           interface: [ifLeaf name]
-                                              parent: leaf];
+      newNode = [[DKMethod alloc] initWithName: theName
+                                     interface: [ifLeaf name]
+                                        parent: leaf];
       [ifLeaf addMethod: (DKMethod*)newNode];
     }
     else if ([@"signal" isEqualToString: aNode])
@@ -223,9 +206,18 @@ didStartElement: (NSString*)aNode
                                                  parent: leaf];
   }
 
-  if (newNode != nil)
+  /*
+   * We do not push an object to the stack if we are parsing a root node and
+   * there is already exactly one object on the stack (this will be the proxy
+   * that represents the root node).
+   */
+  if (NO == (isRoot && ([stack count] == 1)))
   {
     [self pushToStack: newNode];
+  }
+
+  if (newNode != nil)
+  {
     // We did not autorelease the nodes when creating them, so we release them
     // here:
     [newNode release];

@@ -33,17 +33,7 @@
 @interface DKIntrospectionParserDelegate: NSObject
 {
   /**
-   * Contains all child nodes contained in root node that is parsed.
-   */
-  NSMutableArray *childNodes;
-
-  /**
-   * Contains all interfaces exposed by the root node.
-   */
-  NSMutableDictionary *interfaces;
-
-  /**
-   * The stack of objects.
+   * The stack of objects in the tree.
    */
   NSMutableArray *stack;
 
@@ -58,16 +48,4 @@
  * all nodes it creates.
  */
 - (id) initWithParentForNodes: (id)_parent;
-
-
-/**
- * Returns a dictionary of all interfaces present in the introspection data.
- */
-- (NSDictionary*) interfaces;
-
-/**
- * Returns all nodes descending from the introspected object.
- */
-- (NSArray*) childNodes;
-
 @end

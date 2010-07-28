@@ -37,9 +37,9 @@
  * interface. The parent can indicate the proxy/object vendor the method is
  * attached to.
  */
-- (id) initWithMethodName: (NSString*)aName
-                interface: (NSString*)anInterface
-                   parent: (id)parent;
+- (id) initWithName: (NSString*)aName
+          interface: (NSString*)anInterface
+             parent: (id)parent;
 
 
 /**

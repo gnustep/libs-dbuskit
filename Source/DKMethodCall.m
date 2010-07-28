@@ -22,7 +22,7 @@
    */
 
 #import "DKMethodCall.h"
-#import "DBusKit/DKProxy.h"
+#import "DKProxy+Private.h"
 #import "DKEndpoint.h"
 #import "DKMethod.h"
 

@@ -26,7 +26,7 @@
 #import "DKIntrospectionParserDelegate.h"
 #import "DKMethod.h"
 #import "DKMethodCall.h"
-#import "DBusKit/DKProxy.h"
+#import "DKProxy+Private.h"
 
 #define INCLUDE_RUNTIME_H
 #include "config.h"
@@ -171,7 +171,23 @@ enum
   return [DKProxy class];
 }
 
-
+- (BOOL)conformsToProtocol: (Protocol*)aProto
+{
+  NSEnumerator *ifEnum = [interfaces objectEnumerator];
+  DKInterface *anIf = nil;
+  if (protocol_isEqual(@protocol(DKObjectPathNode), aProto))
+  {
+    return YES;
+  }
+  while (nil != (anIf = [ifEnum nextObject]))
+  {
+    if (protocol_isEqual([anIf protocol], aProto))
+    {
+      return YES;
+    }
+  }
+  return [super conformsToProtocol: aProto];
+}
 
 /**
  * Returns the DKMethod that handles the selector.
@@ -191,7 +207,7 @@ enum
   {
     // The interfaces have not yet been resolved, so we temporarily store the
     // string until the method resolution has run.
-    ASSIGN(activeInterface, anInterface);
+    ASSIGNCOPY(activeInterface, anInterface);
   }
   else
   {
@@ -611,7 +627,9 @@ enum
 }
 - (void)_setupTables
 {
-  if (NULL == selectorToMethodMap)
+  if ((NULL == selectorToMethodMap)
+    || (nil == interfaces)
+    || (nil == children))
   {
     if ([tableLock tryLockWhenCondition: NO_TABLES])
     {
@@ -621,20 +639,49 @@ enum
 	  NSObjectMapValueCallBacks,
 	  10);
       }
+      if (nil == interfaces)
+      {
+	interfaces = [NSMutableDictionary new];
+      }
+      if (nil == children)
+      {
+	children = [NSMutableArray new];
+      }
       [tableLock unlockWithCondition: NO_CACHE];
     }
+
   }
 }
 
-- (void)setInterfaces: (NSDictionary*)_interfaces
+- (void)_addInterface: (DKInterface*)interface
 {
-  [tableLock lock];
-  ASSIGN(interfaces,_interfaces);
-  if ([activeInterface isKindOfClass: [NSString class]])
+  NSString *ifName = [interface name];
+  if (nil != ifName)
   {
-    [self setPrimaryDBusInterface: (NSString*)activeInterface];
+    [tableLock lock];
+    // Only add named interfaces:
+    [interfaces setObject: interface
+                   forKey: ifName];
+    // Check whether this is the interface we need to activate:
+    if ([activeInterface isKindOfClass: [NSString class]])
+    {
+      if ([ifName isEqualToString: (NSString*)activeInterface])
+      {
+	ASSIGN(activeInterface, interface);
+      }
+    }
+    [tableLock unlock];
   }
-  [tableLock unlock];
+}
+
+- (void)_addChildNode: (DKObjectPathNode*)node
+{
+  if (nil != node)
+  {
+    [tableLock lock];
+    [children addObject: node];
+    [tableLock unlock];
+  }
 }
 
 - (void)_buildMethodCache
@@ -651,10 +698,6 @@ enum
   [parser setDelegate: delegate];
   [parser parse];
 
-  // Get the interfaces from the delegate:
-  [self setInterfaces: [delegate interfaces]];
-  // TODO: Also get the child nodes
-
   // Cleanup
   [parser release];
   [delegate release];
@@ -668,9 +711,11 @@ enum
   [endpoint release];
   [service release];
   [path release];
-  [tableLock release];
   [interfaces release];
+  [children release];
   [activeInterface release];
+  NSFreeMapTable(selectorToMethodMap);
+  [tableLock release];
   [super dealloc];
 }
 

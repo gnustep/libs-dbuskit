@@ -1,8 +1,8 @@
-/** Category on NSConnection to facilitate D-Bus integration
+/** Implementation of the DKObjectPathNode helper class.
    Copyright (C) 2010 Free Software Foundation, Inc.
 
    Written by:  Niels Grewe <niels.grewe@halbordnung.de>
-   Created: July 2010
+   Created: Jly 2010
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -21,32 +21,47 @@
 
    */
 
-#import "DBusKit/NSConnection+DBus.h"
-#import "DBusKit/DKPort.h"
-#import "DKProxy+Private.h"
+#import "DKObjectPathNode.h"
+#import "DKInterface.h"
 
-#import <Foundation/NSConnection.h>
+#import <Foundation/NSArray.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
 
-#import <GNUstepBase/NSDebug+GNUstepBase.h>
+@implementation DKObjectPathNode
 
-
-@interface DKPort (DKPortPrivate)
-- (DKProxy*)_proxyAtPath: (NSString*)path;
-@end
-
-@implementation NSConnection (DBus)
-
-
-- (DKProxy*)proxyAtPath: (NSString*)path
+- (id) initWithName: (NSString*)aName
+             parent: (id)aParent
 {
-  id sp = [self sendPort];
-  if (NO == [sp isKindOfClass: [DKPort class]])
+  if (nil == (self = [super initWithName: aName
+                                  parent: aParent]))
   {
-    NSWarnMLog(@"Not attempting to find proxy at path '%@' for non D-Bus port", path);
     return nil;
   }
-  return [(DKPort*)sp _proxyAtPath: path];
+  children = [NSMutableArray new];
+  interfaces = [NSDictionary new];
+  return self;
 }
 
+- (void)_addInterface: (DKInterface*)interface
+{
+  NSString *ifName = [interface name];
+  if (nil != name)
+  {
+    [interfaces setObject: interface
+                   forKey: ifName];
+  }
+}
+
+- (void)_addChildNode: (DKObjectPathNode*)node
+{
+  [children addObject: node];
+}
+
+- (void)dealloc
+{
+  [children release];
+  [interfaces release];
+  [super dealloc];
+}
 @end

@@ -37,7 +37,7 @@
 #import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
-#import "DBusKit/DKProxy.h"
+#import "DKProxy+Private.h"
 #import "DKEndpoint.h"
 #import "DKOutgoingProxy.h"
 #import "DKArgument.h"

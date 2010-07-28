@@ -42,9 +42,9 @@
 - (void)testInitializerAssignments
 {
   NSNull *dummyParent = [NSNull null];
-  DKMethod *method = [[DKMethod alloc] initWithMethodName: @"Fooify"
-                interface: @"org.gnustep.fake"
-                   parent: dummyParent];
+  DKMethod *method = [[DKMethod alloc] initWithName: @"Fooify"
+                                          interface: @"org.gnustep.fake"
+                                             parent: dummyParent];
   UKObjectsEqual(@"Fooify",[method name]);
   UKObjectsEqual(@"org.gnustep.fake", [method interface]);
   UKObjectsEqual(dummyParent, [method parent]);

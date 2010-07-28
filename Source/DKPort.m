@@ -21,7 +21,7 @@
    */
 
 #import "DBusKit/DKPort.h"
-#import "DBusKit/DKProxy.h"
+#import "DKProxy+Private.h"
 #import "DKEndpoint.h"
 
 #import <Foundation/NSArray.h>

@@ -31,6 +31,7 @@ DBusKit_OBJC_FILES = \
         DKMessage.m \
         DKMethod.m \
 	DKMethodCall.m \
+	DKObjectPathNode.m \
 	DKOutgoingProxy.m \
 	DKPort.m \
         DKProxy.m \
