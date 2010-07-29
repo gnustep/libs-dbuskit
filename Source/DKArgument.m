@@ -680,7 +680,7 @@ DKDBusTypeForUnboxingObject(id object)
          */
         if ([rootProxy hasSameScopeAs: value])
         {
-          *buffer = (uintptr_t)[[value _path] UTF8String];
+          *buffer = (uintptr_t)(void*)[[value _path] UTF8String];
           return YES;
         }
       }

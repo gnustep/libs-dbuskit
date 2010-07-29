@@ -64,7 +64,7 @@ enum
 
 - (void)_setupTables;
 - (DKMethod*)_methodForSelector: (SEL)aSelector
-                          block: (BOOL)doBlock;
+                   waitForCache: (BOOL)doWait;
 - (void)_buildMethodCache;
 - (void)_installIntrospectionMethod;
 - (void)_installMethod: (DKMethod*)aMethod
@@ -308,7 +308,7 @@ DKInterface *_DKInterfaceIntrospectable;
    * the signature from the associated method.
    */
   DKMethod *method = [self _methodForSelector: aSelector
-                                        block: NO];
+                                 waitForCache: NO];
   const char *types = NULL;
   NSMethodSignature *theSig = nil;
 # if HAVE_TYPED_SELECTORS == 0
@@ -328,7 +328,7 @@ DKInterface *_DKInterfaceIntrospectable;
   if (nil == method)
   {
     method = [self _methodForSelector: sel_getUid(sel_getName(aSelector))
-                                block: NO];
+                         waitForCache: NO];
   }
 
   /*
@@ -355,7 +355,7 @@ DKInterface *_DKInterfaceIntrospectable;
     {
       // No interface, so we try the standard dispatch table:
       method = [self _methodForSelector: unmangledSel
-                                  block: NO];
+                           waitForCache: NO];
     }
   }
 
@@ -385,7 +385,7 @@ DKInterface *_DKInterfaceIntrospectable;
 }
 
 - (DKMethod*) _methodForSelector: (SEL)aSel
-                           block: (BOOL)doBlock
+                    waitForCache: (BOOL)doWait
 {
   DKMethod *m = nil;
   BOOL isIntrospect = [@"Introspect" isEqualToString: NSStringFromSelector(aSel)];
@@ -397,15 +397,15 @@ DKInterface *_DKInterfaceIntrospectable;
   }
   if (nil == m)
   {
-    if (isIntrospect || (NO == doBlock))
+    if (isIntrospect || (NO == doWait))
     {
       // For the introspection selector, just lock the table because the
       // introspection selector has been installed on init time. Also, when
-      // doBlock == NO, we won't wait for the correct state but simply lock the
+      // doWait == NO, we won't wait for the correct state but simply lock the
       // table.
       [tableLock lock];
     }
-    else if (doBlock)
+    else if (doWait)
     {
 
       // Else, we need to wait for the correct state to be signaled by the
@@ -425,7 +425,7 @@ DKInterface *_DKInterfaceIntrospectable;
 
     // Retry, but this time, block until the introspection data is resolved.
     m = [self _methodForSelector: aSel
-                           block: YES];
+                    waitForCache: YES];
   }
   return m;
 }
@@ -437,7 +437,7 @@ DKInterface *_DKInterfaceIntrospectable;
   NSMethodSignature *signature = [inv methodSignature];
   NSString *interface = nil;
   DKMethod *method = [self _methodForSelector: selector
-                                        block: YES];
+                                 waitForCache: YES];
   DKMethodCall *call = nil;
 
   if (nil == method)
@@ -455,7 +455,7 @@ DKInterface *_DKInterfaceIntrospectable;
       else
       {
 	method = [self _methodForSelector: newSel
-	                            block: YES];
+	                     waitForCache: YES];
       }
     }
   }
