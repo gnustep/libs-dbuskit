@@ -23,6 +23,7 @@
 
 #import "DKObjectPathNode.h"
 #import "DKInterface.h"
+#import "DKProxy+Private.h"
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
@@ -36,6 +37,11 @@
   if (nil == (self = [super initWithName: aName
                                   parent: aParent]))
   {
+    return nil;
+  }
+  if (nil == aName)
+  {
+    [self release];
     return nil;
   }
   children = [NSMutableArray new];
@@ -56,6 +62,25 @@
 - (void)_addChildNode: (DKObjectPathNode*)node
 {
   [children addObject: node];
+}
+
+- (NSString*)_path
+{
+  if ([parent conformsToProtocol: @protocol(DKObjectPathNode)])
+  {
+    return [NSString stringWithFormat: @"%@/%@", [parent _path], [self name]];
+  }
+  return nil;
+}
+
+- (DKProxy*)proxy
+{
+  DKProxy *rootProxy = [self proxyParent];
+  DKEndpoint *theEndpoint = [rootProxy _endpoint];
+  NSString *theService = [rootProxy _service];
+  return [DKProxy proxyWithEndpoint: theEndpoint
+                         andService: theService
+                            andPath: [self _path]];
 }
 
 - (void)dealloc

@@ -34,6 +34,8 @@
 - (void)_addInterface: (DKInterface*)interface;
 
 - (void)_addChildNode: (DKObjectPathNode*)node;
+
+- (NSString*)_path;
 @end;
 
 @interface DKObjectPathNode: DKIntrospectionNode <DKObjectPathNode>
@@ -41,4 +43,9 @@
   NSMutableArray *children;
   NSMutableDictionary *interfaces;
 }
+
+/**
+ * Returns a proxy representing the object specified by this node.
+ */
+- (DKProxy*)proxy;
 @end

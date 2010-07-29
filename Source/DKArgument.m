@@ -249,17 +249,6 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
 }
 
 /*
- * Expose DKProxy privates that we need to access.
- */
-@interface DKProxy (Private)
-- (NSString*)_path;
-- (NSString*)_service;
-- (DKEndpoint*)_endpoint;
-- (BOOL)_isLocal;
-@end
-
-
-/*
  * Private Container argument subclasses:
  */
 

@@ -34,11 +34,6 @@
 #import <Foundation/NSString.h>
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
-@interface DKProxy (DKProxyPrivate)
-- (NSString*)_path;
-- (NSString*)_service;
-- (DKEndpoint*)_endpoint;
-@end
 
 @interface DKMethodCall (Private)
 - (BOOL) serialize;

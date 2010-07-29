@@ -60,7 +60,7 @@ enum
   HAVE_CACHE
 };
 
-@interface DKProxy (DKProxyPrivate)
+@interface DKProxy (DKProxyInternal)
 
 - (void)_setupTables;
 - (DKMethod*)_methodForSelector: (SEL)aSelector
@@ -71,10 +71,6 @@ enum
            inInterface: (DKInterface*)anInterface
       forSelectorNamed: (NSString*)selName;
 
-- (DKEndpoint*)_endpoint;
-- (NSString*)_service;
-- (NSString*)_path;
-- (BOOL)_isLocal;
 /* Define introspect on ourselves. */
 - (NSString*)Introspect;
 @end

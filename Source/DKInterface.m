@@ -51,8 +51,6 @@
     [self release];
     return nil;
   }
-  ASSIGNCOPY(name,aName);
-  parent = aParent;
 
   methods = [NSMutableDictionary new];
 

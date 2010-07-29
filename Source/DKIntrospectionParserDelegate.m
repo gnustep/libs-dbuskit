@@ -117,23 +117,28 @@ didStartElement: (NSString*)aNode
   {
     if ([theName length] > 0)
     {
-      if ('/' != [theName characterAtIndex: 0])
+      if (isRoot && ('/' != [theName characterAtIndex: 0]))
       {
 	// relative paths must refer to nodes contained in the main node.
-	if (isRoot)
-	{
-	  [NSException raise: @"DKIntrospectionException"
-	  format: @"Introspection data contains invalid root node named '%@'",
-	    theName];
-	}
+	[NSException raise: @"DKIntrospectionException"
+	            format: @"Introspection data contains invalid root node named '%@'",
+	  theName];
       }
     }
 
-    newNode = [[DKObjectPathNode alloc] initWithName: theName
-                                              parent: leaf];
-    if ([leaf conformsToProtocol: @protocol(DKObjectPathNode)])
+    if (isRoot)
     {
-      [(id<DKObjectPathNode>)leaf _addChildNode: (DKObjectPathNode*)newNode];
+      // For the root node, we just push the leaf we got initially once again:
+      newNode = RETAIN(leaf);
+    }
+    else
+    {
+      newNode = [[DKObjectPathNode alloc] initWithName: theName
+                                                parent: leaf];
+      if ([leaf conformsToProtocol: @protocol(DKObjectPathNode)])
+      {
+        [(id<DKObjectPathNode>)leaf _addChildNode: (DKObjectPathNode*)newNode];
+      }
     }
   }
   else if (([@"interface" isEqualToString: aNode]) && ([theName length] > 0))
@@ -205,15 +210,7 @@ didStartElement: (NSString*)aNode
                                                  parent: leaf];
   }
 
-  /*
-   * We do not push an object to the stack if we are parsing a root node and
-   * there is already exactly one object on the stack (this will be the proxy
-   * that represents the root node).
-   */
-  if (NO == (isRoot && ([stack count] == 1)))
-  {
-    [self pushToStack: newNode];
-  }
+  [self pushToStack: newNode];
 
   if (newNode != nil)
   {
