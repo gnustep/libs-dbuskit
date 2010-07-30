@@ -36,7 +36,7 @@
 // Without toydispatch, we work synchronously
 #define ASYNC_INIT_QUEUE(x,y)
 #define ASYNC_IF_POSSIBLE(queue, func, data) func(data)
-#define IF_ASYNC(x) do { if (0) { x;} } while (0)
+#define IF_ASYNC(x) do { } while (0)
 
 #endif // HAVE_TOYDISPATCH
 

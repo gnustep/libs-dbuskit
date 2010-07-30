@@ -33,6 +33,8 @@
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
 
+#undef HAVE_TOYDISPATCH
+#define HAVE_TOYDISPATCH 0
 #include "AsyncBehavior.h"
 
 #import <Foundation/NSCoder.h>
