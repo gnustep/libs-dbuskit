@@ -103,11 +103,15 @@ static NSRecursiveLock *activeConnectionLock;
   DBusConnection *connection;
   NSMapTable *timers;
   NSMapTable *watchers;
+  NSString *runLoopMode;
+  NSRunLoop *runLoop;
+  NSLock *lock;
 }
 
 - (id)_initWithConnection: (DBusConnection*)connection;
 - (NSRunLoop*)runLoop;
 - (NSString*)runLoopMode;
+- (void)reschedule;
 @end
 
 /**
@@ -465,6 +469,10 @@ static NSRecursiveLock *activeConnectionLock;
   dbus_connection_flush(connection);
 }
 
+- (void)scheduleInCurrentThread
+{
+  [ctx reschedule];
+}
 /**
  * Override the default implementation, which would return a proxy.
  */
@@ -571,8 +579,9 @@ static NSRecursiveLock *activeConnectionLock;
 @end
 
 @implementation DKWatcher
-- (void)monitorForEvents: (NSUInteger)events
+- (void)monitorForEvents
 {
+  NSUInteger events = dbus_watch_get_flags(watch);
   // Dispatch new events to the runLoop:
   if (events & DBUS_WATCH_READABLE)
     {
@@ -590,8 +599,9 @@ static NSRecursiveLock *activeConnectionLock;
     }
 }
 
-- (void)unmonitorForEvents: (NSUInteger)events
+- (void)unmonitorForEvents
 {
+  NSUInteger events = dbus_watch_get_flags(watch);
   // Remove events to the runLoop:
   if (events & DBUS_WATCH_READABLE)
     {
@@ -622,8 +632,18 @@ static NSRecursiveLock *activeConnectionLock;
   // The context retains its watchers and timers:
   ctx = aCtx;
   watch = _watch;
-  [self monitorForEvents: dbus_watch_get_flags(watch)];
+  [self monitorForEvents];
   return self;
+}
+
+- (void)reschedule
+{
+  while (callbackInProgress)
+  {
+    //No-Op, let the callback complete.
+  }
+  [self unmonitorForEvents];
+  [self monitorForEvents];
 }
 
 - (void)receivedEvent: (void*)data
@@ -637,7 +657,7 @@ static NSRecursiveLock *activeConnectionLock;
       //Not good
       return;
     }
-
+  callbackInProgress = YES;
   switch (type)
     {
       case ET_RDESC:
@@ -649,8 +669,9 @@ static NSRecursiveLock *activeConnectionLock;
         dbus_watch_handle(watch, DBUS_WATCH_WRITABLE);
         break;
       default:
-        return;
+        break;
     }
+  callbackInProgress = NO;
 }
 
 /*
@@ -685,6 +706,7 @@ static NSRecursiveLock *activeConnectionLock;
   watchers = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
     NSObjectMapValueCallBacks,
     10);
+  lock = [[NSLock alloc] init];
   return self;
 }
 
@@ -694,12 +716,58 @@ static NSRecursiveLock *activeConnectionLock;
  */
 - (NSRunLoop*)runLoop
 {
-  return [NSRunLoop currentRunLoop];
+  if (nil == runLoop)
+  {
+    return [NSRunLoop currentRunLoop];
+  }
+  else
+  {
+    return runLoop;
+  }
 }
 
 - (NSString*)runLoopMode
 {
-  return NSDefaultRunLoopMode;
+  if (nil == runLoopMode)
+  {
+    return NSDefaultRunLoopMode;
+  }
+  else
+  {
+    return runLoopMode;
+  }
+}
+
+- (void)reschedule
+{
+  NSMapEnumerator watchEnum = NSEnumerateMapTable(watchers);
+  NSMapEnumerator timerEnum = NSEnumerateMapTable(timers);
+  NSTimer *aTimer = nil;
+  DKWatcher *aWatcher = nil;
+  NSRunLoop *rl = nil;
+  NSString *rlMode = nil;
+  void *watch = NULL;
+  void *timeout = NULL;
+  [lock lock];
+  rlMode = [self runLoopMode];
+  rl = [self runLoop];
+  while (NSNextMapEnumeratorPair(&watchEnum, &timeout, (void**)&aWatcher))
+  {
+    [aWatcher reschedule];
+  }
+
+  while (NSNextMapEnumeratorPair(&timerEnum, &watch, (void**)&aTimer))
+  {
+    if ([aTimer isValid])
+    {
+      [rl addTimer: aTimer
+           forMode: rlMode];
+    }
+  }
+  [lock unlock];
+
+  NSEndMapTableEnumeration(&watchEnum);
+  NSEndMapTableEnumeration(&timerEnum);
 }
 
 /*
@@ -716,6 +784,8 @@ static NSRecursiveLock *activeConnectionLock;
   //TODO: Further Cleanup.
   NSFreeMapTable(watchers);
   NSFreeMapTable(timers);
+  [lock release];
+  [runLoopMode release];
   [super dealloc];
 }
 
@@ -725,7 +795,6 @@ static NSRecursiveLock *activeConnectionLock;
   NSTimer *timer = nil;
   NSTimeInterval interval = (milliSeconds / 1000.0);
   NSAssert(timeout, @"Missing timeout data during D-Bus event handling.");
-
   // Just return if we already have a timer for this timeout:
   if (NSMapGet(timers,timeout))
   {
@@ -745,7 +814,8 @@ static NSRecursiveLock *activeConnectionLock;
   else
   {
     NSMapInsert(timers,timeout,timer);
-    [[self runLoop] addTimer: timer forMode: [self runLoopMode]];
+    [[self runLoop] addTimer: timer
+                     forMode: [self runLoopMode]];
     return YES;
   }
 }
@@ -835,7 +905,7 @@ static NSRecursiveLock *activeConnectionLock;
   watcher = NSMapGet(watchers,watch);
   if (nil != watcher)
   {
-    [watcher unmonitorForEvents: dbus_watch_get_flags(watch)];
+    [watcher unmonitorForEvents];
     NSMapRemove(watchers, watch);
   }
 }

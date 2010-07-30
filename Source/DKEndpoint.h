@@ -70,7 +70,10 @@
  */
 - (NSString*)runLoopMode;
 
-
+/**
+ * Will reinstall timers and watchers for the current run loop.
+ */
+- (void)scheduleInCurrentThread;
 @end
 
 @interface DKSystemBusEndpoint: DKEndpoint;

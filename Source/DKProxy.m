@@ -33,6 +33,8 @@
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
 
+#include "AsyncBehavior.h"
+
 #import <Foundation/NSCoder.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSException.h>
@@ -41,6 +43,7 @@
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSRunLoop.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSThread.h>
 #import <Foundation/NSXMLParser.h>
@@ -75,7 +78,14 @@ enum
 - (NSString*)Introspect;
 @end
 
+static inline void DKBuildMethodCacheForProxy(void *p);
+
 DKInterface *_DKInterfaceIntrospectable;
+
+#if HAVE_TOYDISPATCH == 1
+dispatch_queue_t introspectionQueue;
+static void DKInitIntrospectionThread(void *data);
+#endif
 
 @implementation DKProxy
 
@@ -100,6 +110,8 @@ DKInterface *_DKInterfaceIntrospectable;
                                   forSelector: @selector(Introspect)];
     [introspect release];
     [xmlOutArg release];
+    ASYNC_INIT_QUEUE(introspectionQueue, "Introspection parser queue");
+    IF_ASYNC(dispatch_async_f(introspectionQueue, NULL, DKInitIntrospectionThread));
   }
 }
 
@@ -203,6 +215,26 @@ DKInterface *_DKInterfaceIntrospectable;
 }
 
 /**
+ * Triggers generation of the method cache. This will use ASYNC_IF_POSSIBLE to
+ * make  -_buildMethodCache run in a separate thread if libtoydispatch is
+ * available. Otherwise, DKBuildMethodCache may be inlined by the compiler and
+ * -_buildMethodCache will be executed in the present thread.
+ *
+ * This is not that much useful if cache generation is requested directly by
+ * -methodSignatureForSelector (it will go on and block right away because it
+ * needs the cache), but it is quite handy if we want to update the cache
+ * periodically.
+ */
+- (void)DBusBuildMethodCache
+{
+  // If we are doing the cache generation in a separate thread, we need to
+  // retain ourselves to make sure we don't go away while the cache
+  // generation is in progress.
+  IF_ASYNC([self retain]);
+  ASYNC_IF_POSSIBLE(introspectionQueue, DKBuildMethodCacheForProxy, self);
+}
+
+/**
  * Returns the DKMethod that handles the selector.
  */
 - (DKMethod*)DBusMethodForSelector: (SEL)selector
@@ -249,8 +281,9 @@ DKInterface *_DKInterfaceIntrospectable;
     /* If we don't have a cache yet, we trigger it's generation */
     if (HAVE_CACHE != condition)
     {
-      [self _buildMethodCache];
+      [self DBusBuildMethodCache];
     }
+
     /* Retry, but this time, block until the introspection data is resolved. */
     m = [self _methodForSelector: selector
                     waitForCache: YES];
@@ -496,6 +529,11 @@ DKInterface *_DKInterfaceIntrospectable;
                                       method: method
                                   invocation: inv];
 
+  // Reschedule the endpoint so that the call does not spin infinitely when a
+  // different thread is trying to invoke a D-Bus method and the main thread is
+  // blocked.
+  [endpoint scheduleInCurrentThread];
+
   //TODO: Implement asynchronous method calls using futures
   [call sendSynchronouslyAndWaitUntil: 0];
   [call release];
@@ -708,9 +746,6 @@ DKInterface *_DKInterfaceIntrospectable;
 
 - (void)_buildMethodCache
 {
-  // Set up an autorelease pool since we will create quite a few autoreleased
-  // objects on the way.
-  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
 
   // Get the introspection data:
   NSData *introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
@@ -725,7 +760,6 @@ DKInterface *_DKInterfaceIntrospectable;
   // Cleanup
   [parser release];
   [delegate release];
-  [arp release];
 
   [self _installAllMethods];
 }
@@ -744,3 +778,33 @@ DKInterface *_DKInterfaceIntrospectable;
 }
 
 @end
+
+#if HAVE_TOYDISPATCH == 1
+static void DKInitIntrospectionThread(void *data)
+{
+  /*
+   * Make GNUstep aware of the fact that we are using a thread that it doesn't
+   * yet know about:
+   */
+  GSRegisterCurrentThread();
+}
+#endif
+
+static inline void DKBuildMethodCacheForProxy(void *p)
+{
+  /*
+   * Set up an autorelease pool since we will create quite a few autoreleased
+   * objects on the way. Also, if we are executed in a new thread, we strictly
+   * need to create the pool ourselves.
+   */
+  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
+  [(DKProxy*)p _buildMethodCache];
+  [arp release];
+
+  /*
+   * In asynchronous mode, we did retain the proxy before triggering cache
+   * generation to keep it from going away while in use. Hence, we need to
+   * release it here.
+   */
+  IF_ASYNC([(DKProxy*)p release]);
+}

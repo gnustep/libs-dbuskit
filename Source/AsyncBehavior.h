@@ -29,7 +29,7 @@
 #include <toydispatch/toydispatch.h>
 
 #define ASYNC_INIT_QUEUE(x,y) x = dispatch_queue_create(y, 0)
-#define ASYNC_IF_POSSIBLE(queue, func, data) dispatch_async_f(queue, func, (void*)data)
+#define ASYNC_IF_POSSIBLE(queue, func, data) dispatch_async_f(queue, (void*)data, func)
 #define IF_ASYNC(x) x
 #else
 
