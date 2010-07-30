@@ -207,11 +207,56 @@ DKInterface *_DKInterfaceIntrospectable;
  */
 - (DKMethod*)DBusMethodForSelector: (SEL)selector
 {
+  DKMethod *m = nil;
+  const char* selName;
+
   if (0 == selector)
   {
     return nil;
   }
-  return NSMapGet(selectorToMethodMap, selector);
+
+  // Normalize the selector to its untyped version:
+  selName = sel_getName(selector);
+  selector = sel_getUid(selName);
+
+  /*
+   * We need the "Introspect" selector to build the method cache and gurantee
+   * that there is a method available for it. Hence, we won't wait for the cache
+   * to be build when looking it up.
+   */
+  if (0 == strcmp("Introspect", selName))
+  {
+    m = [self _methodForSelector: selector
+                    waitForCache: NO];
+  }
+
+  /*
+   * For "Introspect", we now will have a method. We need to look one up for
+   * everything else now:
+   */
+  if (nil == m)
+  {
+    /*
+     * Get the present condition of the lock in a synchronized fashion. This
+     * will also cause the condition to be signaled, just in case anyone is
+     * still waiting for it.
+     */
+    NSInteger condition = 0;
+    [tableLock lock];
+    condition = [tableLock condition];
+    [tableLock unlockWithCondition: condition];
+
+    /* If we don't have a cache yet, we trigger it's generation */
+    if (HAVE_CACHE != condition)
+    {
+      [self _buildMethodCache];
+    }
+    /* Retry, but this time, block until the introspection data is resolved. */
+    m = [self _methodForSelector: selector
+                    waitForCache: YES];
+  }
+
+  return m;
 }
 
 - (void)setPrimaryDBusInterface: (NSString*)anInterface
@@ -307,8 +352,7 @@ DKInterface *_DKInterfaceIntrospectable;
    * For simple cases we can simply look up the selector in the table and return
    * the signature from the associated method.
    */
-  DKMethod *method = [self _methodForSelector: aSelector
-                                 waitForCache: NO];
+  DKMethod *method = [self DBusMethodForSelector: aSelector];
   const char *types = NULL;
   NSMethodSignature *theSig = nil;
 # if HAVE_TYPED_SELECTORS == 0
@@ -323,16 +367,7 @@ DKInterface *_DKInterfaceIntrospectable;
   theSig = [NSMethodSignature signatureWithObjCTypes: types];
 
   /*
-   * Second chance to find the method: Fall back to the untyped version.
-   */
-  if (nil == method)
-  {
-    method = [self _methodForSelector: sel_getUid(sel_getName(aSelector))
-                         waitForCache: NO];
-  }
-
-  /*
-   * Third chance to find the method: Remove mangling constructs from the
+   * Second chance to find the method: Remove mangling constructs from the
    * selector string.
    */
   if (nil == method)
@@ -354,8 +389,7 @@ DKInterface *_DKInterfaceIntrospectable;
     else
     {
       // No interface, so we try the standard dispatch table:
-      method = [self _methodForSelector: unmangledSel
-                           waitForCache: NO];
+      method = [self DBusMethodForSelector: unmangledSel];
     }
   }
 
@@ -388,7 +422,6 @@ DKInterface *_DKInterfaceIntrospectable;
                     waitForCache: (BOOL)doWait
 {
   DKMethod *m = nil;
-  BOOL isIntrospect = [@"Introspect" isEqualToString: NSStringFromSelector(aSel)];
   if ([activeInterface isKindOfClass: [DKInterface class]])
   {
     // If an interface was marked active, try to find the selector there first
@@ -397,12 +430,9 @@ DKInterface *_DKInterfaceIntrospectable;
   }
   if (nil == m)
   {
-    if (isIntrospect || (NO == doWait))
+    if (NO == doWait)
     {
-      // For the introspection selector, just lock the table because the
-      // introspection selector has been installed on init time. Also, when
-      // doWait == NO, we won't wait for the correct state but simply lock the
-      // table.
+      // Don't wait for the cache:
       [tableLock lock];
     }
     else if (doWait)
@@ -415,29 +445,15 @@ DKInterface *_DKInterfaceIntrospectable;
     m = NSMapGet(selectorToMethodMap, aSel);
     [tableLock unlock];
   }
-
-  // If we could not find a method for the selector, we want to trigger building
-  // the cache, but only if we are not looking for the introspection selector.
-  if (((nil == m) && (HAVE_CACHE != [tableLock condition]))
-    && (NO == isIntrospect))
-  {
-    [self _buildMethodCache];
-
-    // Retry, but this time, block until the introspection data is resolved.
-    m = [self _methodForSelector: aSel
-                    waitForCache: YES];
-  }
   return m;
 }
 
 - (void)forwardInvocation: (NSInvocation*)inv
 {
-  SEL selector = sel_getUid(sel_getName([inv selector]));
-
+  SEL selector = [inv selector];
   NSMethodSignature *signature = [inv methodSignature];
   NSString *interface = nil;
-  DKMethod *method = [self _methodForSelector: selector
-                                 waitForCache: YES];
+  DKMethod *method = [self DBusMethodForSelector: selector];
   DKMethodCall *call = nil;
 
   if (nil == method)
@@ -454,27 +470,18 @@ DKInterface *_DKInterfaceIntrospectable;
       }
       else
       {
-	method = [self _methodForSelector: newSel
-	                     waitForCache: YES];
+	method = [self DBusMethodForSelector: newSel];
       }
     }
   }
   if (nil == method)
   {
-    // Test whether this selector is already untyped:
-    SEL newSel = sel_getUid(sel_getName(selector));
-    if (sel_isEqual(newSel, selector))
-    {
-      // If so, we cannot do anything more:
-      [NSException raise: @"DKInvalidArgumentException"
-                  format: @"D-Bus object %@ for service %@ does not recognize %@",
-        path,
-        service,
-       NSStringFromSelector(selector)];
-    }
-    //else, we can start again with the new selector
-    [inv setSelector: newSel];
-    [self forwardInvocation: inv];
+    // If so, we cannot do anything more:
+    [NSException raise: @"DKInvalidArgumentException"
+                format: @"D-Bus object %@ for service %@ does not recognize %@",
+      path,
+      service,
+     NSStringFromSelector(selector)];
   }
 
   if (NO == [method isValidForMethodSignature: signature])
@@ -491,6 +498,7 @@ DKInterface *_DKInterfaceIntrospectable;
 
   //TODO: Implement asynchronous method calls using futures
   [call sendSynchronouslyAndWaitUntil: 0];
+  [call release];
 }
 
 - (BOOL)isKindOfClass: (Class)aClass
@@ -700,14 +708,16 @@ DKInterface *_DKInterfaceIntrospectable;
 
 - (void)_buildMethodCache
 {
+  // Set up an autorelease pool since we will create quite a few autoreleased
+  // objects on the way.
+  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
+
   // Get the introspection data:
   NSData *introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
 
-  // Set up parser and delegate (and an autorelease pool to cache autoreleased
-  // nodes).
+  // Set up parser and delegate:
   NSXMLParser *parser = [[NSXMLParser alloc] initWithData: introspectionData];
   DKIntrospectionParserDelegate *delegate = [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self];
-  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
 
   [parser setDelegate: delegate];
   [parser parse];
