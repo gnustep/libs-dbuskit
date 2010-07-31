@@ -31,10 +31,16 @@
 #import "../Headers/DKPort.h"
 #import "../Headers/NSConnection+DBus.h"
 
+#import <Foundation/NSArray.h>
+#import <Foundation/NSException.h>
+#import <Foundation/NSThread.h>
+
+#include <unistd.h>
+
 @interface DKProxy (Private)
 - (SEL)_unmangledSelector: (SEL)selector
                 interface: (NSString**)interface;
-- (void)_buildMethodCache;
+- (void)DBusBuildMethodCache;
 - (NSDictionary*)_interfaces;
 @end
 
@@ -48,6 +54,26 @@
 - (char*)GetNameOwner: (char*)name;
 - (BOOL)NameHasOwner: (NSString*)name;
 @end
+
+@implementation DKProxy (ArpWrapping)
+
+- (void)arpWrappedNameHasOwner: (NSString*)name
+{
+  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
+  NS_DURING
+  {
+    UKTrue([(id)self NameHasOwner: name]);
+  }
+  NS_HANDLER
+  {
+    UKFail();
+  }
+  NS_ENDHANDLER
+  [arp release];
+  [NSThread exit];
+}
+@end
+
 
 @implementation TestDKProxy
 - (void)testSelectorUnmangling
@@ -63,7 +89,9 @@
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
                                         sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   proxy = [conn rootProxy];
-  [proxy _buildMethodCache];
+
+  // Call a method to trigger cache generation:
+  [proxy NameHasOwner: @"org.freedesktop.DBus"];
 
   sel_registerName([mangledString UTF8String]);
   mangledSelector = NSSelectorFromString(mangledString);
@@ -99,7 +127,7 @@
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
                                         sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
-  [aProxy _buildMethodCache];
+  [aProxy DBusBuildMethodCache];
   interfaces = [aProxy _interfaces];
   UKNotNil(interfaces);
   UKTrue([interfaces count] > 0);
@@ -173,5 +201,37 @@
   UKTrue([returnValue length] > 0);
 }
 
+
+- (void)testThreadedMethodCalls
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  NSString *name = @"org.freedesktop.DBus";
+  NSMutableArray *threads = [NSMutableArray new];
+  NSUInteger count = 0;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
+  aProxy = [conn rootProxy];
+  /*
+   * NOTE: D-Bus does not seem to handle more than five concurrent calls very
+   * well and will sometimes start complaining about being OOM.
+   */
+  for (count = 0; count < 5; count++)
+  {
+    NSThread *aThread = [[NSThread alloc] initWithTarget: aProxy
+                                                selector: @selector(arpWrappedNameHasOwner:)
+                                                  object: name];
+    [threads addObject: aThread];
+    [aThread start];
+    [aThread release];
+  }
+  NSLog(@"Sleeping two second to allow threads to terminate:");
+  sleep(2);
+  for (count = 0;count < 5; count++)
+  {
+    UKTrue([(NSThread*)[threads objectAtIndex: count] isFinished]);
+  }
+}
 
 @end

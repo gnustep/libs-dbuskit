@@ -61,8 +61,12 @@
 enum
 {
   NO_TABLES,
-  NO_CACHE,
-  HAVE_CACHE
+  HAVE_TABLES,
+  HAVE_INTROSPECT,
+  WILL_BUILD_CACHE,
+  BUILDING_CACHE,
+  CACHE_BUILT,
+  CACHE_READY
 };
 
 @interface DKProxy (DKProxyInternal)
@@ -139,7 +143,9 @@ static void DKInitIntrospectionThread(void *data);
   ASSIGNCOPY(service, aService);
   ASSIGNCOPY(path, aPath);
   ASSIGN(endpoint, anEndpoint);
-  tableLock = [[NSConditionLock alloc] initWithCondition: NO_TABLES];
+  tableLock = [[NSLock alloc] init];
+  condition = [[NSCondition alloc] init];
+  state = NO_TABLES;
   [self _setupTables];
   [self _installIntrospectionMethod];
   return self;
@@ -159,7 +165,9 @@ static void DKInitIntrospectionThread(void *data);
     [coder decodeValueOfObjCType: @encode(id) at: &service];
     [coder decodeValueOfObjCType: @encode(id) at: &path];
   }
-  tableLock = [[NSConditionLock alloc] initWithCondition: NO_TABLES];
+  tableLock = [[NSLock alloc] init];
+  condition = [[NSCondition alloc] init];
+  state = NO_TABLES;
   [self _setupTables];
   [self _installIntrospectionMethod];
   return self;
@@ -229,11 +237,21 @@ static void DKInitIntrospectionThread(void *data);
  */
 - (void)DBusBuildMethodCache
 {
-  // If we are doing the cache generation in a separate thread, we need to
-  // retain ourselves to make sure we don't go away while the cache
-  // generation is in progress.
-  IF_ASYNC([self retain]);
-  ASYNC_IF_POSSIBLE(introspectionQueue, DKBuildMethodCacheForProxy, self);
+  // Make sure we don't try to build the cache multiple times:
+  [condition lock];
+  if (WILL_BUILD_CACHE == state)
+  {
+    [condition unlock];
+    // If we are doing the cache generation in a separate thread, we need to
+    // retain ourselves to make sure we don't go away while the cache
+    // generation is in progress.
+    IF_ASYNC([self retain]);
+    ASYNC_IF_POSSIBLE(introspectionQueue, DKBuildMethodCacheForProxy, self);
+  }
+  else
+  {
+    [condition unlock];
+  }
 }
 
 /**
@@ -270,20 +288,17 @@ static void DKInitIntrospectionThread(void *data);
    */
   if (nil == m)
   {
-    /*
-     * Get the present condition of the lock in a synchronized fashion. This
-     * will also cause the condition to be signaled, just in case anyone is
-     * still waiting for it.
-     */
-    NSInteger condition = 0;
-    [tableLock lock];
-    condition = [tableLock condition];
-    [tableLock unlockWithCondition: condition];
-
     /* If we don't have a cache yet, we trigger it's generation */
-    if (HAVE_CACHE != condition)
+    [condition lock];
+    if (HAVE_INTROSPECT >= state)
     {
+      state = WILL_BUILD_CACHE;
+      [condition unlock];
       [self DBusBuildMethodCache];
+    }
+    else
+    {
+      [condition unlock];
     }
 
     /* Retry, but this time, block until the introspection data is resolved. */
@@ -321,16 +336,18 @@ static void DKInitIntrospectionThread(void *data);
   {
     return nil;
   }
-
+  [tableLock lock];
   enumerator =[interfaces objectEnumerator];
 
   while (nil != (anIf = [enumerator nextObject]))
   {
     if ([string isEqualToString: [anIf mangledName]])
     {
+      [tableLock unlock];
       return [anIf name];
     }
   }
+  [tableLock unlock];
   return nil;
 }
 
@@ -419,7 +436,9 @@ static void DKInitIntrospectionThread(void *data);
     if (nil != interface)
     {
       // The interface was specified. Retrieve the corresponding method;
+      [tableLock lock];
       method = [(DKInterface*)[interfaces objectForKey: interface] methodForSelector: unmangledSel];
+      [tableLock unlock];
     }
     else
     {
@@ -457,6 +476,18 @@ static void DKInitIntrospectionThread(void *data);
                     waitForCache: (BOOL)doWait
 {
   DKMethod *m = nil;
+
+  [condition lock];
+  if (doWait)
+  {
+    // Wait until it is signaled that the cache has been built:
+    while (CACHE_READY != state)
+    {
+      [condition wait];
+    }
+  }
+
+  [tableLock lock];
   if ([activeInterface isKindOfClass: [DKInterface class]])
   {
     // If an interface was marked active, try to find the selector there first
@@ -465,21 +496,11 @@ static void DKInitIntrospectionThread(void *data);
   }
   if (nil == m)
   {
-    if (NO == doWait)
-    {
-      // Don't wait for the cache:
-      [tableLock lock];
-    }
-    else if (doWait)
-    {
-
-      // Else, we need to wait for the correct state to be signaled by the
-      // caching thread.
-      [tableLock lockWhenCondition: HAVE_CACHE];
-    }
     m = NSMapGet(selectorToMethodMap, aSel);
-    [tableLock unlock];
   }
+
+  [tableLock unlock];
+  [condition unlock];
   return m;
 }
 
@@ -501,7 +522,9 @@ static void DKInitIntrospectionThread(void *data);
       [inv setSelector: newSel];
       if (nil != interface)
       {
+	[tableLock lock];
 	method = [(DKInterface*)[interfaces objectForKey: interface] methodForSelector: newSel];
+        [tableLock unlock];
       }
       else
       {
@@ -573,7 +596,11 @@ static void DKInitIntrospectionThread(void *data);
 
 - (NSDictionary*)_interfaces
 {
-  return [NSDictionary dictionaryWithDictionary: interfaces];
+  NSDictionary *theDict = nil;
+  [tableLock lock];
+  theDict = [NSDictionary dictionaryWithDictionary: interfaces];
+  [tableLock unlock];
+  return theDict;
 }
 
 - (id) proxyParent
@@ -647,14 +674,21 @@ static void DKInitIntrospectionThread(void *data);
 
 - (void) _installIntrospectionMethod
 {
-  [self _addInterface: _DKInterfaceIntrospectable];
-  if ([tableLock tryLockWhenCondition: NO_CACHE])
+  [condition lock];
+  while (HAVE_TABLES != state)
   {
-    [self _installMethod: [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)]
-             inInterface: nil
-        forSelectorNamed: nil];
-    [tableLock unlockWithCondition: NO_CACHE];
+    [condition wait];
   }
+  [self _addInterface: _DKInterfaceIntrospectable];
+
+  [tableLock lock];
+  [self _installMethod: [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)]
+           inInterface: nil
+      forSelectorNamed: nil];
+  [tableLock unlock];
+  state = HAVE_INTROSPECT;
+  [condition broadcast];
+  [condition unlock];
 }
 
 - (void)_installAllMethodsFromInterface: (DKInterface*)theIf
@@ -676,15 +710,23 @@ static void DKInitIntrospectionThread(void *data);
 
 - (void) _installAllMethods
 {
-  NSEnumerator *ifEnum = [interfaces objectEnumerator];
+  NSEnumerator *ifEnum = nil;
   DKInterface *theIf = nil;
+  [condition lock];
+  while (CACHE_BUILT != state)
+  {
+    [condition wait];
+  }
   [tableLock lock];
+  ifEnum = [interfaces objectEnumerator];
   while (nil != (theIf = [ifEnum nextObject]))
   {
     [self _installAllMethodsFromInterface: theIf];
   }
-
-  [tableLock unlockWithCondition: HAVE_CACHE];
+  [tableLock unlock];
+  state = CACHE_READY;
+  [condition broadcast];
+  [condition unlock];
 
 }
 - (void)_setupTables
@@ -693,8 +735,18 @@ static void DKInitIntrospectionThread(void *data);
     || (nil == interfaces)
     || (nil == children))
   {
-    if ([tableLock tryLockWhenCondition: NO_TABLES])
+    if (NO_TABLES == state)
     {
+      [condition lock];
+      if (NO_TABLES != state)
+      {
+	[condition unlock];
+        return;
+      }
+      else
+      {
+	[tableLock lock];
+      }
       if (NULL == selectorToMethodMap)
       {
 	selectorToMethodMap = NSCreateMapTable(NSIntMapKeyCallBacks,
@@ -709,9 +761,11 @@ static void DKInitIntrospectionThread(void *data);
       {
 	children = [NSMutableArray new];
       }
-      [tableLock unlockWithCondition: NO_CACHE];
+      [tableLock unlock];
+      state = HAVE_TABLES;
+      [condition broadcast];
+      [condition unlock];
     }
-
   }
 }
 
@@ -748,22 +802,50 @@ static void DKInitIntrospectionThread(void *data);
 
 - (void)_buildMethodCache
 {
+  DKIntrospectionParserDelegate *delegate = [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self];
+  NSXMLParser *parser = nil;
+  NSData *introspectionData = nil;
+
+
+  [condition lock];
+  while (WILL_BUILD_CACHE != state)
+  {
+    [condition wait];
+  }
+  state = BUILDING_CACHE;
+  [condition unlock];
 
   // Get the introspection data:
-  NSData *introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
+  introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
 
-  // Set up parser and delegate:
-  NSXMLParser *parser = [[NSXMLParser alloc] initWithData: introspectionData];
-  DKIntrospectionParserDelegate *delegate = [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self];
+  [condition lock];
 
-  [parser setDelegate: delegate];
-  [parser parse];
+  if (BUILDING_CACHE == state)
+  {
+    // Set up parser and delegate:
+    parser = [[NSXMLParser alloc] initWithData: introspectionData];
+    [parser setDelegate: delegate];
+
+    // Generate the introspection tree:
+    [parser parse];
+
+    state = CACHE_BUILT;
+    [condition broadcast];
+  }
+
+  if (CACHE_BUILT == state)
+  {
+    [condition unlock];
+    [self _installAllMethods];
+  }
+  else
+  {
+    [condition unlock];
+  }
 
   // Cleanup
   [parser release];
   [delegate release];
-
-  [self _installAllMethods];
 }
 
 - (void) dealloc
@@ -776,6 +858,7 @@ static void DKInitIntrospectionThread(void *data);
   [activeInterface release];
   NSFreeMapTable(selectorToMethodMap);
   [tableLock release];
+  [condition release];
   [super dealloc];
 }
 
