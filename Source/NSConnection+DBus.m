@@ -35,7 +35,7 @@
 - (DKProxy*)_proxyAtPath: (NSString*)path;
 @end
 
-@implementation NSConnection (DBus)
+@implementation NSConnection (DBusKit)
 
 
 - (DKProxy*)proxyAtPath: (NSString*)path
@@ -48,5 +48,25 @@
   }
   return [(DKPort*)sp _proxyAtPath: path];
 }
+/*
++ (DKProxy*)     proxyAtPath: (NSString*)path
+forConnectionWithDBusService: (NSString*)serviceName
+                         bus: (DKDBusBusType)busType
+{
+  DKPortNameserver *ns = [DKPortNameServer sharedPortNameServerForBusType: busType];
+  DKPort *sp = [ns portForName: serviceName];
+  NSConnection *c = [self connectionWithReceivePort: [DKPort portForBusType: busType]
+                                           sendPort: sp];
+  return [c proxyAtPath: path];
+  return nil;
+}
 
++ (DKProxy*) rootProxyForConnectionWithDBusService: (NSString*)serviceName
+                                               bus: (DKDBusBusType)busType
+{
+  return [self   proxyAtPath: @"/"
+forConnectionWithDBusService: serviceName
+                         bus: busType];
+}
+*/
 @end

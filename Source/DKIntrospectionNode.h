@@ -24,7 +24,7 @@
 
 #import <Foundation/NSObject.h>
 @class DKProxy, NSString, NSXMLParser, NSMutableDictionary;
-@interface DKIntrospectionNode: NSObject
+@interface DKIntrospectionNode: NSObject <NSCopying>
 {
   NSString *name;
   NSMutableDictionary *annotations;

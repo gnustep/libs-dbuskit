@@ -25,12 +25,27 @@
 
 #import "DKArgument.h"
 
+#import <Foundation/NSArray.h>
 #import <Foundation/NSString.h>
+
 @implementation DKSignal
 
-- (void) addArgument: (DKArgument*)arg
-           direction: (NSString*)direction
+- (void)addArgument: (DKArgument*)arg
+          direction: (NSString*)direction
 {
   //TODO: Implement
+}
+
+- (void)setArguments: (NSMutableArray*)newArgs
+{
+  ASSIGN(args,newArgs);
+  [args makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKSignal *newNode = [super copyWithZone: zone];
+  [newNode setArguments: [[args mutableCopyWithZone: zone] autorelease]];
+  return newNode;
 }
 @end

@@ -545,6 +545,11 @@ DKDBusTypeForUnboxingObject(id object)
   return objCEquivalent;
 }
 
+- (void)setDBusType: (int)type
+{
+  DBusType = type;
+}
+
 - (int) DBusType
 {
   return DBusType;
@@ -570,7 +575,13 @@ DKDBusTypeForUnboxingObject(id object)
   return NO;
 }
 
-
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKArgument *newNode = [super copyWithZone: zone];
+  [newNode setObjCEquivalent: objCEquivalent];
+  [newNode setDBusType: DBusType];
+  return newNode;
+}
 
 
 - (BOOL) unboxValue: (id)value
@@ -1156,6 +1167,19 @@ DKDBusTypeForUnboxingObject(id object)
 - (NSArray*) children
 {
   return children;
+}
+
+- (void) setChildren: (NSMutableArray*)newChildren
+{
+  ASSIGN(children,newChildren);
+  [children makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKContainerTypeArgument *newNode = [super copyWithZone: zone];
+  [newNode setChildren: [[children mutableCopyWithZone: zone] autorelease]];
+  return newNode;
 }
 
 /*

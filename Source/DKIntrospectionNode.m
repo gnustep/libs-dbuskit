@@ -96,6 +96,22 @@
   return nil;
 }
 
+- (void)setAnnotations: (NSMutableDictionary*)newAnnotations
+{
+  ASSIGN(annotations,newAnnotations);
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKIntrospectionNode *newNode = nil;
+  NSMutableDictionary *newAnnotations = [[annotations mutableCopyWithZone: zone] autorelease];
+  NSString *newName = [[name copyWithZone: zone] autorelease];
+  newNode = [[DKIntrospectionNode alloc] initWithName: newName
+                                               parent: parent];
+  [newNode setAnnotations: newAnnotations];
+  return newNode;
+}
+
 - (void) dealloc
 {
   parent = nil;

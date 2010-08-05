@@ -24,6 +24,16 @@
 
 @class DKEndpoint;
 
+
+enum
+{
+  DKDBusSessionBus,
+  DKDBusSystemBus,
+  DKDBusBusTypeMax
+};
+
+typedef NSUInteger DKDBusBusType;
+
 /**
  * DKPort is used by the Distributed Objects system to communicate with
  * D-Bus. Unless you have special needs, don't create DKPort instances
@@ -45,10 +55,13 @@
   NSString *remote;
 }
 
++ (id) portForBusType: (DKDBusBusType)type;
+
 /**
  * Return a DKPort instance connected to the specified D-Bus peer.
  */
 - (id) initWithRemote: (NSString*)remote;
+
 @end
 
 @interface DKSessionBusPort: DKPort

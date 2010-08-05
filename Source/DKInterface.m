@@ -139,6 +139,28 @@
   return NSProtocolFromString([self mangledName]);
 }
 
+- (void)setMethods: (NSMutableDictionary*)newMethods
+{
+  ASSIGN(methods,newMethods);
+  [[methods allValues] makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (void)setSelectorMethodMapByCopyingMap: (NSMapTable*)newMap
+                                withZone: (NSZone*)zone
+{
+  NSFreeMapTable(selectorToMethodMap);
+  selectorToMethodMap = NSCopyMapTableWithZone(newMap, zone);
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKInterface *newNode = [super copyWithZone: zone];
+  [newNode setMethods: [[methods mutableCopyWithZone: zone] autorelease]];
+  [newNode setSelectorMethodMapByCopyingMap: selectorToMethodMap
+                                   withZone: zone];
+  return newNode;
+}
+
 - (void)dealloc
 {
   [methods release];

@@ -90,6 +90,7 @@ static NSLock *busLock;
          utilizingComponents: (NSArray*)components
                     fromPort: (NSPort*)receivePort;
 
+- (id)initWithBusType: (DKDBusBusType)type;
 @end
 
 
@@ -107,6 +108,14 @@ static NSLock *busLock;
 {
   return [[[self alloc] init] autorelease];
 }
+
++ (id)portForBusType: (DKDBusBusType)type
+{
+  return [[[self alloc] initWithBusType: type] autorelease];
+}
+
+
+
 
 - (id) initWithRemote: (NSString*)aRemote
            atEndpoint: (DKEndpoint*)anEndpoint
@@ -135,6 +144,20 @@ static NSLock *busLock;
 {
   return [self initWithRemote: aRemote
                    atEndpoint: nil];
+}
+
+- (id) initWithRemote: (NSString*)aRemote
+           forBusType: (DKDBusBusType)type
+{
+  DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: type] autorelease];
+  return [self initWithRemote: aRemote
+                   atEndpoint: ep];
+}
+
+- (id) initForBusType: (DKDBusBusType)type
+{
+  return [self initWithRemote: nil
+                   forBusType: type];
 }
 
 - (id) init

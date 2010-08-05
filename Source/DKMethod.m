@@ -632,6 +632,28 @@ enum
                        startingAtIndex: 0];
 }
 
+- (void)setOutArgs: (NSMutableArray*)newOut
+{
+  ASSIGN(outArgs, newOut);
+  [outArgs makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (void)setInArgs: (NSMutableArray*)newIn
+{
+  ASSIGN(inArgs, newIn);
+  [inArgs makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKMethod *newNode = [super copyWithZone: zone];
+  NSMutableArray *newIn = [[inArgs mutableCopyWithZone: zone] autorelease];
+  NSMutableArray *newOut = [[outArgs mutableCopyWithZone: zone] autorelease];
+  [newNode setOutArgs: newOut];
+  [newNode setInArgs: newIn];
+  return newNode;
+}
+
 - (void)dealloc
 {
   [inArgs release];

@@ -83,6 +83,28 @@
                             andPath: [self _path]];
 }
 
+- (void)setChildren: (NSMutableArray*)newChildren
+{
+  ASSIGN(children,newChildren);
+  [children makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (void)setInterfaces: (NSMutableDictionary*)newInterfaces
+{
+  ASSIGN(interfaces,newInterfaces);
+  [[interfaces allValues] makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  DKObjectPathNode *newNode = [super copyWithZone: zone];
+  NSMutableDictionary *newIfs = [[interfaces mutableCopyWithZone: zone] autorelease];
+  NSMutableArray *newChildren = [[children mutableCopyWithZone: zone] autorelease];
+  [newNode setChildren: newChildren];
+  [newNode setInterfaces: newIfs];
+  return newNode;
+}
+
 - (void)dealloc
 {
   [children release];
