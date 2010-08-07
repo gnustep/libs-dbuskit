@@ -33,6 +33,7 @@
 #import <Foundation/NSHashTable.h>
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
+#import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
 
 #include <stdint.h>
@@ -462,19 +463,54 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return returnDict;
 }
 
--   (void)addMatch: (NSString*)match
+-   (void)_addMatch: (NSString*)match
 forArgumentAtIndex: (NSUInteger)index
   toRuleDictionary: (NSMutableDictionary*)rules
 {
-  if (index > 64)
+  if (index < 64)
   {
-    if (nil == match)
+    if ((nil == match) || [match isEqual: [NSNull null]])
     {
       match = @"";
     }
     [rules setObject: match
               forKey: [NSString stringWithFormat: @"arg%lu", index]];
   }
+}
+
+- (void)_addMatchForSender: (DKProxy*)proxy
+          toRuleDictionary: (NSMutableDictionary*)dict
+{
+  [dict setObject: [proxy _service]
+           forKey: @"sender"];
+  [dict setObject: [proxy _path]
+           forKey: @"path"];
+}
+
+
+- (void)_addMatchForDestination: (DKProxy*)proxy
+               toRuleDictionary: (NSMutableDictionary*)dict
+{
+  NSString *uniqueName = [proxy _uniqueName];
+  if (nil != uniqueName)
+  {
+    [dict setObject: uniqueName
+             forKey: @"destination"];
+  }
+}
+
+- (NSString*)_ruleStringForRuleDictionary: (NSDictionary*)ruleDict
+{
+  NSEnumerator *keyEnum = [ruleDict keyEnumerator];
+  NSString *key = nil;
+  NSMutableString *string = [NSMutableString string];
+  while (nil != (key = [keyEnum nextObject]))
+  {
+    NSString *value = [[ruleDict objectForKey: key] stringByReplacingOccurrencesOfString: @"'"
+                                                                              withString: @"\\'"];
+    [string appendFormat: @"%@='%@'", key, value];
+  }
+  return string;
 }
 
 - (void)dealloc
