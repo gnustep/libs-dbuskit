@@ -159,7 +159,7 @@
     dbus_set_error_from_message(&error, reply);
     if (dbus_error_is_set(&error))
     {
-      NSString *exceptionName = @"DKDBusMethodReplyException";
+      NSString *exceptionName = @"DKDBusRemoteErrorException";
       NSString *exceptionReason = @"A remote object returned an error upon a method call.";
       errorName = [NSString stringWithUTF8String: error.name];
       errorMessage = [NSString stringWithUTF8String: error.message];
