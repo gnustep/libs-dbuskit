@@ -30,6 +30,14 @@
 - (DKEndpoint*)_endpoint;
 - (NSString*)_service;
 - (BOOL)_isLocal;
+- (NSString*)_uniqueName;
+@end
+
+/* FIXME: Once we've got a dbuskit_make_protocol tool, replace this by a proper,
+ * generated header for the org.freedesktop.DBus interface.
+ */
+@protocol DKDBusStub
+- (NSString*)GetNameOwner: (NSString*)name;
 @end
 
 /**

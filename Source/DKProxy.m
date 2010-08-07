@@ -51,7 +51,6 @@
 #import <Foundation/NSXMLParser.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
-
 /*
  * Definitions of the strings used for selector mangling.
  */
@@ -588,6 +587,41 @@ static void DKInitIntrospectionThread(void *data);
   return path;
 }
 
+- (NSString*)_uniqueName
+{
+  DKDBusBusType type = [endpoint DBusBusType];
+  DKDBus *bus = nil;
+  NSString *uniqueName = nil;
+  switch (type)
+  {
+    case DKDBusSessionBus:
+      bus = [DKDBus sessionBus];
+      break;
+    case DKDBusSystemBus:
+      bus = [DKDBus systemBus];
+      break;
+    default:
+      return nil;
+  }
+  NS_DURING
+  {
+    uniqueName = [(id<DKDBusStub>)bus GetNameOwner: service];
+  }
+  NS_HANDLER
+  {
+    if (NO == [[localException name] isEqualToString: @"DKDBusRemoteErrorException"])
+    {
+      // This is not simply the D-Bus error we'd might expect, we need to
+      // re-raise it.
+      [localException raise];
+    }
+    // Otherwise, continue, the name was simply not available. We return nil;
+  }
+  NS_ENDHANDLER
+  return uniqueName;
+}
+
+
 - (BOOL)_isLocal
 {
   // True only for outgoing proxies representing local objects.
@@ -893,3 +927,162 @@ static inline void DKBuildMethodCacheForProxy(void *p)
    */
   IF_ASYNC([(DKProxy*)p release]);
 }
+
+static NSRecursiveLock *busLock;
+static DKProxy *systemBus;
+static DKProxy *sessionBus;
+
+@implementation DKDBus
++ (void)initialize
+{
+  if (self == [DKDBus class])
+  {
+    busLock = [[NSRecursiveLock alloc] init];
+  }
+}
+
++ (id)sessionBus
+{
+  if (sessionBus == nil)
+  {
+    [busLock lock];
+    if (sessionBus == nil)
+    {
+      DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION] autorelease];
+      sessionBus = [[DKDBus alloc] initWithEndpoint: ep
+                                         andService: @"org.freedesktop.DBus"
+                                            andPath: @"/"];
+    }
+    [busLock unlock];
+  }
+  return sessionBus;
+}
+
++ (id)systemBus
+{
+  if (systemBus == nil)
+  {
+    [busLock lock];
+    if (systemBus == nil)
+    {
+      DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SYSTEM] autorelease];
+      systemBus = [[DKDBus alloc] initWithEndpoint: ep
+                                        andService: @"org.freedesktop.DBus"
+                                           andPath: @"/"];
+    }
+    [busLock unlock];
+  }
+  return systemBus;
+}
+
+
+- (id)initWithEndpoint: (DKEndpoint*)anEndpoint
+            andService: (NSString*)aService
+               andPath: (NSString*)aPath
+{
+  BOOL willBeSessionBus = NO;
+  BOOL willBeSystemBus = NO;
+  DBusConnection *testConnection = NULL;
+  DBusConnection *endpointConnection = NULL;
+
+  [busLock lock];
+  if (NO == [aService isEqualToString: @"org.freedesktop.DBus"])
+  {
+    [self release];
+    return nil;
+  }
+  if (NO == [aPath isEqualToString: @"/"])
+  {
+    [self release];
+    return nil;
+  }
+  if (anEndpoint == nil)
+  {
+    [self release];
+    return nil;
+  }
+  /*
+   * We determine for which bus we are being created by taking advantage of the
+   * fact that D-Bus will cache connections: If we already got a connection to
+   * the session bus, we will get the same one back.
+   */
+  endpointConnection = [anEndpoint DBusConnection];
+  testConnection = dbus_bus_get(DBUS_BUS_SESSION, NULL);
+  willBeSessionBus = (endpointConnection == testConnection);
+  if (willBeSessionBus && (nil != sessionBus))
+  {
+    dbus_connection_unref(testConnection);
+    [self release];
+    return sessionBus;
+  }
+  dbus_connection_unref(testConnection);
+
+  testConnection = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+
+  if (NO == willBeSessionBus)
+  {
+    willBeSystemBus = (endpointConnection == testConnection);
+    if (willBeSystemBus && (systemBus != nil))
+    {
+      dbus_connection_unref(testConnection);
+      [self release];
+      return systemBus;
+    }
+    dbus_connection_unref(testConnection);
+  }
+
+  // we should now be sure that we are being initialized for either the system
+  // or the session bus.
+  if (nil == (self = [super initWithEndpoint: anEndpoint
+                                  andService: aService
+                                     andPath: aPath]))
+  {
+    return nil;
+  }
+
+  /*
+   * If we got an object, we are legitimately creating a DKBus object. Thus, we
+   * assign the object to the appropriate global variable.
+   */
+  if (willBeSystemBus)
+  {
+    systemBus = self;
+  }
+  else if (willBeSessionBus)
+  {
+    sessionBus = self;
+  }
+
+  [busLock unlock];
+  return self;
+}
+
+- (void)release
+{
+  // No-Op.
+}
+
+- (id)autorelease
+{
+  return self;
+}
+
+- (id)retain
+{
+  return self;
+}
+
+- (NSUInteger)retainCount
+{
+  return UINT_MAX;
+}
+
+- (void)setPrimaryDBusInterface: (NSString*)interface
+{
+  /*
+   * No-Op. This is a shared object, we cannot let one caller change stuff the
+   * other callers won't know about.
+   */
+   NSWarnMLog(@"'-setPrimaryDBusInterface:' called for a shared DKDBus object.");
+}
+@end

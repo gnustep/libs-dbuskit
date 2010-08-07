@@ -37,7 +37,17 @@
 /**
  * Returns all methods in the interface
  */
-- (NSArray*)methods;
+- (NSDictionary*)methods;
+
+/**
+ * Returns all signals in the interface
+ */
+- (NSDictionary*)signals;
+
+/**
+ * Returns all properties in the interface
+ */
+- (NSDictionary*)properties;
 
 /**
  * Adds a method to the interface.
@@ -53,6 +63,11 @@
  * Adds a property to the interface.
  */
 - (void) addProperty: (DKProperty*)property;
+
+/**
+ * Removes a signal from the interface
+ */
+- (void)removeSignalNamed: (NSString*)signalName;
 
 /**
  * Install the method as responding to the selector into the interface specific

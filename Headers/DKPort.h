@@ -29,7 +29,8 @@ enum
 {
   DKDBusSessionBus,
   DKDBusSystemBus,
-  DKDBusBusTypeMax
+  DKDBusBusTypeOther,
+  DKDBusBusTypeMax,
 };
 
 typedef NSUInteger DKDBusBusType;

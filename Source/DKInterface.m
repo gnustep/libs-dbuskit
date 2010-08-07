@@ -61,14 +61,19 @@
   return self;
 }
 
-- (NSArray*)methods
+- (NSDictionary*)methods
 {
-  return [methods allValues];
+  return [[methods copy] autorelease];
 }
 
-- (NSArray*)signals
+- (NSDictionary*)signals
 {
-  return [signals allValues];
+  return [[signals copy] autorelease];
+}
+
+- (NSDictionary*)properties
+{
+  return [[properties copy] autorelease];
 }
 
 - (void) _addMember: (DKIntrospectionNode*)node
@@ -111,6 +116,11 @@
   //FIXME: Remove cast once a DKProperty class is there
   [self _addMember: (id)property
             toDict: properties];
+}
+
+- (void)removeSignalNamed: (NSString*)signalName
+{
+  [signals removeObjectForKey: signalName];
 }
 
 - (void) installMethod: (DKMethod*)method

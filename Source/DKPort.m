@@ -58,16 +58,6 @@ enum {
  PROXY_AT_PATH_REPLY = 255
 };
 
-
-/*
- * We maintain connections to the bus objects to obtain information about names
- * on the bus.
- */
-static DKProxy *systemBus;
-static DKProxy *sessionBus;
-static NSLock *busLock;
-
-
 @protocol DBus
 - (NSArray*)ListNames;
 - (NSArray*)ListActivatableNames;
@@ -95,14 +85,6 @@ static NSLock *busLock;
 
 
 @implementation DKPort
-
-+ (void)initialize
-{
-  if ([DKPort class] == self)
-  {
-    busLock = [[NSLock alloc] init];
-  }
-}
 
 + (NSPort*)port
 {
@@ -165,44 +147,8 @@ static NSLock *busLock;
   return [self initWithRemote: nil];
 }
 
-
-- (id<DBus>)getBusObjectAt: (DKProxy**)bus
-             withPortClass: (Class)portClass
+- (BOOL) hasValidRemoteOnBus: (id<DBus>)bus
 {
-  if ([remote isEqualToString: @"org.freedesktop.DBus"])
-  {
-    /*
-     * Don't do this if we are fetching the bus object itself, otherwise we'd
-     * loop infinitely.
-     */
-    return nil;
-  }
-
-  if (nil == *bus)
-  {
-    [busLock lock];
-    if (nil == *bus)
-    {
-      DKPort *sp = [[[portClass alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease];
-      NSConnection *c = [NSConnection connectionWithReceivePort: [portClass port]
-                                                       sendPort: sp];
-      *bus = (id)[c rootProxy];
-    }
-    [busLock unlock];
-  }
-  return (id<DBus>)*bus;
-}
-
-- (id<DBus>)getBusObject
-{
-  return [self getBusObjectAt: &sessionBus
-                withPortClass: [DKSessionBusPort class]];
-}
-
-- (BOOL) hasValidRemote
-{
-  id<DBus> bus = [self getBusObject];
-
   if ([remote isEqualToString: @"org.freedesktop.DBus"])
   {
     // It is save to assume that the bus object is available.
@@ -227,6 +173,10 @@ static NSLock *busLock;
 }
 
 
+- (BOOL) hasValidRemote
+{
+  return [self hasValidRemoteOnBus: (id<DBus>)[DKDBus sessionBus]];
+}
 
 /**
  * This is the main method used to dispatch stuff from the DO system to D-Bus.
@@ -461,9 +411,8 @@ static NSLock *busLock;
   return self;
 }
 
-- (void)getBusObject
+- (BOOL) hasValidRemote
 {
-  [self getBusObjectAt: &systemBus
-         withPortClass: [DKSystemBusPort class]];
+  return [self hasValidRemoteOnBus: (id<DBus>)[DKDBus systemBus]];
 }
 @end

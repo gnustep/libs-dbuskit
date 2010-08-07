@@ -36,6 +36,8 @@
 #import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#import "DBusKit/DKPort.h"
+
 /*
  * Integration functions:
  */
@@ -287,6 +289,16 @@ static NSRecursiveLock *activeConnectionLock;
 - (DBusConnection*)connection
 {
   return connection;
+}
+
+- (DKDBusBusType)DBusBusType
+{
+  NSNumber *typeNo = [info objectForKey: @"wellKnownBus"];
+  if (nil == typeNo)
+  {
+    return DKDBusBusTypeOther;
+  }
+  return [typeNo unsignedIntegerValue];
 }
 
 /**

@@ -16,6 +16,7 @@ VERSION = 0.1
 DBusKit_HEADER_FILES_DIR = ../Headers
 DBusKit_HEADER_FILES = \
 		  DBusKit.h \
+		  DKNotificationCenter.h \
 		  DKPort.h \
                   DKProxy.h \
                   NSConnection+DBus.h
@@ -31,6 +32,7 @@ DBusKit_OBJC_FILES = \
         DKMessage.m \
         DKMethod.m \
 	DKMethodCall.m \
+	DKNotificationCenter.m \
 	DKObjectPathNode.m \
 	DKOutgoingProxy.m \
 	DKPort.m \

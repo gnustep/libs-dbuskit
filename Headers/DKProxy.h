@@ -62,3 +62,23 @@
  */
 - (void)setPrimaryDBusInterface: (NSString*)anInteface;
 @end
+
+
+/**
+ * The DKDBus class exposes the D-Bus objects specifically (i.e. the
+ * "org.freedesktop.DBus" service). The instances returned by this class are
+ * shared objects: Calling -setPrimaryDBusInterface: on them has no effect.
+ */
+@interface DKDBus: DKProxy
+/**
+ * Returns a reference to the org.freedesktop.DBus service on the session
+ * message bus.
+ */
++(id)sessionBus;
+
+/**
+ * Returns a reference to the org.freedesktop.DBus service on the system
+ * message bus.
+ */
++(id)systemBus;
+@end

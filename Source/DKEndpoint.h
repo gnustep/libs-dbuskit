@@ -21,6 +21,7 @@
    */
 
 #import <Foundation/NSObject.h>
+#import "DBusKit/DKPort.h"
 #include <dbus/dbus.h>
 
 @class DKRunLoopContext, NSRunLoop, NSString, NSDictionary;
@@ -53,6 +54,12 @@
  * Returns the libdbus DBusConnection object.
  */
 - (DBusConnection*) DBusConnection;
+
+/**
+ * Returns the type of the well known bus for this endpoint, or
+ * DKDBusBusTypeOther does not connect to a well known bus.
+ */
+- (DKDBusBusType)DBusBusType;
 
 /**
  * Flush the connection, so that it will marshall all pending messages to the
