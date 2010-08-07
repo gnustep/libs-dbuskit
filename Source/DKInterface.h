@@ -24,12 +24,13 @@
 
 #import "DKIntrospectionNode.h"
 
-@class NSString, NSMutableDictionary, NSMapTable, DKMethod;
+@class NSString, NSMutableDictionary, NSMapTable, DKMethod, DKProperty, DKSignal;
 
 @interface DKInterface: DKIntrospectionNode
 {
   NSMutableDictionary *methods;
-  //TODO: Signals and properties
+  NSMutableDictionary *signals;
+  NSMutableDictionary *properties;
   NSMapTable *selectorToMethodMap;
 }
 
@@ -42,6 +43,16 @@
  * Adds a method to the interface.
  */
 - (void) addMethod: (DKMethod*)method;
+
+/**
+ * Adds a signal to the interface.
+ */
+- (void) addSignal: (DKSignal*)signal;
+
+/**
+ * Adds a property to the interface.
+ */
+- (void) addProperty: (DKProperty*)property;
 
 /**
  * Install the method as responding to the selector into the interface specific

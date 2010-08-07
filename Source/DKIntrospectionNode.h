@@ -57,6 +57,12 @@
  */
 - (DKProxy*) proxyParent;
 
+
+/**
+ * Returns the dictionary of all annotations for the node.
+ */
+- (NSDictionary*)annotations;
+
 /**
  * Records metadata for the node.
  */
@@ -67,4 +73,5 @@
  * Returns the value of the specified annotation key.
  */
 - (id) annotationValueForKey: (NSString*)key;
+
 @end

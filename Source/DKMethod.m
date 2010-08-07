@@ -647,10 +647,16 @@ enum
 - (id)copyWithZone: (NSZone*)zone
 {
   DKMethod *newNode = [super copyWithZone: zone];
-  NSMutableArray *newIn = [[inArgs mutableCopyWithZone: zone] autorelease];
-  NSMutableArray *newOut = [[outArgs mutableCopyWithZone: zone] autorelease];
+  NSMutableArray *newIn = nil;
+  NSMutableArray *newOut = nil;
+  newIn = [[NSMutableArray allocWithZone: zone] initWithArray: inArgs
+                                                    copyItems: YES];
+  newOut = [[NSMutableArray allocWithZone: zone] initWithArray: outArgs
+                                                     copyItems: YES];
   [newNode setOutArgs: newOut];
   [newNode setInArgs: newIn];
+  [newOut release];
+  [newIn release];
   return newNode;
 }
 

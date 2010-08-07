@@ -101,14 +101,25 @@
   ASSIGN(annotations,newAnnotations);
 }
 
+- (NSDictionary*)annotations
+{
+  return [[annotations copy] autorelease];
+}
+
 - (id)copyWithZone: (NSZone*)zone
 {
   DKIntrospectionNode *newNode = nil;
-  NSMutableDictionary *newAnnotations = [[annotations mutableCopyWithZone: zone] autorelease];
+  NSMutableDictionary *newAnnotations = nil;
   NSString *newName = [[name copyWithZone: zone] autorelease];
-  newNode = [[DKIntrospectionNode alloc] initWithName: newName
-                                               parent: parent];
+  /*
+   * Shallow copy is enough for annotations, they only contain immutable
+   * strings.
+   */
+  newAnnotations = [annotations mutableCopyWithZone: zone];
+  newNode = [[[self class] alloc] initWithName: newName
+                                        parent: parent];
   [newNode setAnnotations: newAnnotations];
+  [newAnnotations release];
   return newNode;
 }
 

@@ -98,10 +98,17 @@
 - (id)copyWithZone: (NSZone*)zone
 {
   DKObjectPathNode *newNode = [super copyWithZone: zone];
-  NSMutableDictionary *newIfs = [[interfaces mutableCopyWithZone: zone] autorelease];
-  NSMutableArray *newChildren = [[children mutableCopyWithZone: zone] autorelease];
+  NSMutableDictionary *newIfs = nil;
+  NSMutableArray *newChildren = nil;
+
+  newIfs = [[NSMutableDictionary allocWithZone: zone] initWithDictionary: interfaces
+                                                               copyItems: YES];
+  newChildren = [[NSMutableArray allocWithZone: zone] initWithArray: children
+                                                          copyItems: YES];
   [newNode setChildren: newChildren];
   [newNode setInterfaces: newIfs];
+  [newIfs release];
+  [newChildren release];
   return newNode;
 }
 

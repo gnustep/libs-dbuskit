@@ -45,7 +45,11 @@
 - (id)copyWithZone: (NSZone*)zone
 {
   DKSignal *newNode = [super copyWithZone: zone];
-  [newNode setArguments: [[args mutableCopyWithZone: zone] autorelease]];
+  NSMutableArray *newArgs = nil;
+  newArgs = [[NSMutableArray allocWithZone: zone] initWithArray: args
+                                                      copyItems: YES];
+  [newNode setArguments: newArgs];
+  [newArgs release];
   return newNode;
 }
 @end

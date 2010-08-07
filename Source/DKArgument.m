@@ -1178,7 +1178,11 @@ DKDBusTypeForUnboxingObject(id object)
 - (id)copyWithZone: (NSZone*)zone
 {
   DKContainerTypeArgument *newNode = [super copyWithZone: zone];
-  [newNode setChildren: [[children mutableCopyWithZone: zone] autorelease]];
+  NSMutableArray *newChildren = nil;
+  newChildren = [[NSMutableArray allocWithZone: zone] initWithArray: children
+                                                          copyItems: YES];
+  [newNode setChildren: newChildren];
+  [newChildren release];
   return newNode;
 }
 

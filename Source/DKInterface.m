@@ -33,6 +33,7 @@
 #undef INCLUDE_RUNTIME_H
 
 #import "DKMethod.h"
+#import "DKSignal.h"
 #import "DKInterface.h"
 
 
@@ -65,23 +66,51 @@
   return [methods allValues];
 }
 
+- (NSArray*)signals
+{
+  return [signals allValues];
+}
+
+- (void) _addMember: (DKIntrospectionNode*)node
+             toDict: (NSMutableDictionary*)dict
+{
+  NSString *nodeName = [node name];
+  if (0 != [nodeName length])
+  {
+    if (nil != [dict objectForKey: name])
+    {
+      NSWarnMLog(@"Not adding duplicate '%@' to interface '%@'.",
+        nodeName, name);
+      return;
+    }
+    [dict setObject: node
+             forKey: nodeName];
+  }
+}
+
 /**
  * Adds a method to the interface.
  */
-- (void) addMethod: (DKMethod*)method
+- (void)addMethod: (DKMethod*)method
 {
-  NSString *methodName = [method name];
-  if (0 != [methodName length])
-  {
-    if (nil != [methods objectForKey: name])
-    {
-      NSWarnMLog(@"Not adding duplicate method '%@' to interface '%@'.",
-        methodName, name);
-      return;
-    }
-    [methods setObject: method
-                forKey: methodName];
-  }
+  [self _addMember: method
+            toDict: methods];
+}
+
+/**
+ * Adds a signal to the interface.
+ */
+- (void)addSignal: (DKSignal*)signal
+{
+  [self _addMember: signal
+            toDict: signals];
+}
+
+- (void)addProperty: (DKProperty*)property
+{
+  //FIXME: Remove cast once a DKProperty class is there
+  [self _addMember: (id)property
+            toDict: properties];
 }
 
 - (void) installMethod: (DKMethod*)method
@@ -139,25 +168,103 @@
   return NSProtocolFromString([self mangledName]);
 }
 
-- (void)setMethods: (NSMutableDictionary*)newMethods
+- (void)_setDictionaryAt: (NSMutableDictionary**)dictAddr
+            toDictionary: (NSMutableDictionary*)newDict
 {
-  ASSIGN(methods,newMethods);
-  [[methods allValues] makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+  ASSIGN(*dictAddr, newDict);
+  [[*dictAddr allValues] makeObjectsPerformSelector: @selector(setParent:) withObject: self];
 }
 
-- (void)setSelectorMethodMapByCopyingMap: (NSMapTable*)newMap
-                                withZone: (NSZone*)zone
+- (void)setMethods: (NSMutableDictionary*)newMethods
 {
-  NSFreeMapTable(selectorToMethodMap);
-  selectorToMethodMap = NSCopyMapTableWithZone(newMap, zone);
+  [self _setDictionaryAt: &methods
+            toDictionary: newMethods];
+}
+
+- (void)setSignals: (NSMutableDictionary*)newSignals
+{
+  [self _setDictionaryAt: &signals
+            toDictionary: newSignals];
+}
+
+- (void)setProperties: (NSMutableDictionary*)newProperties
+{
+  [self _setDictionaryAt: &properties
+            toDictionary: newProperties];
+}
+
+/**
+ * Regenerate the map table from another one, e.g. when copying the object.
+ */
+- (void)regenerateSelectorMethodMapWithMap: (NSMapTable*)sourceMap
+                                   andZone: (NSZone*)zone
+{
+  /*
+   * Keep a reference to the old map, just in case somebody is actually making
+   * us regenerate our own mappings.
+   */
+  NSMapTable *oldMap = selectorToMethodMap;
+
+  /* Setup enumerator and associated variables. */
+  NSMapEnumerator theEnum = NSEnumerateMapTable(sourceMap);
+  SEL thisSel = 0;
+  DKMethod *thisMethod = nil;
+
+  if (NULL == zone)
+  {
+    zone = NSDefaultMallocZone();
+  }
+
+  /*
+   * Create a new map table, setting the capacity to the one we know from the
+   * sourceMap.
+   */
+  selectorToMethodMap = NSCreateMapTableWithZone(NSIntMapKeyCallBacks,
+    NSObjectMapValueCallBacks,
+    NSCountMapTable(sourceMap),
+    zone);
+
+  /*
+   * Enumerate the source map and add selector-method pairs with the matching
+   * methods from our own method table.
+   */
+  while (NSNextMapEnumeratorPair(&theEnum, (void**)&thisSel, (void**)&thisMethod))
+  {
+    DKMethod *newMethod = [methods objectForKey: [thisMethod name]];
+    if (newMethod)
+    {
+      NSMapInsert(selectorToMethodMap, (void*)thisSel, (void*)newMethod);
+    }
+  }
+  NSEndMapTableEnumeration(&theEnum);
+
+  /* Free the old map table, if any. */
+  if (NULL != oldMap)
+  {
+    NSFreeMapTable(oldMap);
+  }
 }
 
 - (id)copyWithZone: (NSZone*)zone
 {
   DKInterface *newNode = [super copyWithZone: zone];
-  [newNode setMethods: [[methods mutableCopyWithZone: zone] autorelease]];
-  [newNode setSelectorMethodMapByCopyingMap: selectorToMethodMap
-                                   withZone: zone];
+  NSMutableDictionary *newMethods = nil;
+  NSMutableDictionary *newSignals = nil;
+  NSMutableDictionary *newProperties = nil;
+  newMethods = [[NSMutableDictionary allocWithZone: zone] initWithDictionary: methods
+                                                                   copyItems: YES];
+  newSignals = [[NSMutableDictionary allocWithZone: zone] initWithDictionary: signals
+                                                                   copyItems: YES];
+  newProperties = [[NSMutableDictionary allocWithZone: zone] initWithDictionary: properties
+                                                                      copyItems: YES];
+  [newNode setMethods: newMethods];
+  [newNode regenerateSelectorMethodMapWithMap: selectorToMethodMap
+                                      andZone: zone];
+  [newNode setSignals: newSignals];
+  [newNode setProperties: newProperties];
+  [newMethods release];
+  [newSignals release];
+  [newProperties release];
   return newNode;
 }
 

@@ -97,7 +97,7 @@
 - (void)testReprarentInCopy
 {
   DKInterface *new = [_DKInterfaceIntrospectable copy];
-  DKMethod *method = [new methodForSelector: @selector(Introspect:)];
+  DKMethod *method = [new methodForSelector: @selector(Introspect)];
   UKNotNil(method);
   UKObjectsEqual(new, [method parent]);
 }
