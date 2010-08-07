@@ -93,4 +93,12 @@
   DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
   UKObjectsEqual(@"- (NSString*) Introspect;", [method methodDeclaration]);
 }
+
+- (void)testReprarentInCopy
+{
+  DKInterface *new = [_DKInterfaceIntrospectable copy];
+  DKMethod *method = [new methodForSelector: @selector(Introspect:)];
+  UKNotNil(method);
+  UKObjectsEqual(new, [method parent]);
+}
 @end
