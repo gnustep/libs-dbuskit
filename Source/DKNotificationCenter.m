@@ -34,74 +34,38 @@
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSNull.h>
+#import <Foundation/NSSet.h>
 #import <Foundation/NSString.h>
+
+#import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #include <stdint.h>
 #include <dbus/dbus.h>
 
-typedef struct _DKObservable DKObservable;
-typedef struct _DKObservation DKObservation;
-typedef struct _DKObservationTables DKObservationTables;
+@class DKObservation;
 
-/**
- * The DKObservable structure denotes specific signal/filter combinations that
- * can be the object of multiple observation activities.
- */
-struct _DKObservable
+@interface DKObservable: NSObject
 {
   /**
    * The rules that D-Bus is using to determine which signals to pass to
    * use.
    */
   NSDictionary *rules;
-
   /**
-   * Pointer to the linked list of observers.
+   * Set of all observation activities for the observable;
    */
-  DKObservation *observation;
+  NSCountedSet *observations;
+}
+- (id)initWithRules: (NSDictionary*)rules;
+- (void)addObservation: (DKObservation*)observation;
+@end
 
-  /**
-   * Pointer back to the observation tables that reference the strucutre.
-   */
-   DKObservationTables *tables;
-
-  /**
-   * Number of times this structure is used.
-   */
-   NSUInteger refCount;
-};
-
-/* Hash table callbacks: */
-static NSUInteger
-DKObservableHash(NSHashTable *t, const void *observable);
-
-static BOOL
-DKObservableIsEqual(NSHashTable *t, const void *first, const void *second);
-
-static void
-DKObservableRetain(NSHashTable *t, const void *observable);
-
-static void
-DKObservableRelease(NSHashTable *t, void *observable);
-
-
-static NSHashTableCallBacks DKObservableCallbacks = {DKObservableHash,
-  DKObservableIsEqual,
-  DKObservableRetain,
-  DKObservableRelease,
-  NULL};
-
-/**
- * The DKObservation structure is a doubly-linked list denoting the individual
- * Objective-C objects that are watching for D-Bus signals and encapsulates all
- * information necessary to dispatch the signal.
- */
-struct _DKObservation
+@interface DKObservation: NSObject
 {
   /**
    * The object that wants to watch the signal.
-   * FIXME: Make sure that observers are not picked up by the GC mechanism
-   * because we are onl meant to weakly reference them.
+   * Note: In a GC environment, this ivar will not point to the object itself,
+   * which hides it from the garbage collector.
    */
   id observer;
 
@@ -119,69 +83,76 @@ struct _DKObservation
    * A pointer back to the information about the observed signal.
    */
   DKObservable *observed;
+}
 
-  /**
-   * Keeps track of the number of times the observation structure has been
-   * added.
-   */
-  NSUInteger refCount;
+- (id)initWithObservable: (DKObservable*)observable
+                observer: (id)observer
+                selector: (SEL)selector;
+@end
 
-  /**
-   * The previous element in the linked list
-   */
+@implementation DKObservable
 
-  DKObservation *previous;
-
-  /**
-   * Next element in the linked list.
-   */
-  DKObservation *next;
-
-  /**
-   * Pad to 32/64 bytes depending on the platform. This should make
-   * sizeof(DKObservation) == (2 * sizeof(DKObservable))
-   */
-  void *padding;
-};
-
-/* Hash table callbacks: */
-static NSUInteger
-DKObservationHash(NSHashTable *t, const void *observable);
-
-static BOOL
-DKObservationIsEqual(NSHashTable *t, const void *first, const void *second);
-
-static void
-DKObservationRetain(NSHashTable *t, const void *observable);
-
-static void
-DKObservationRelease(NSHashTable *t, void *observable);
-
-static NSHashTableCallBacks DKObservationCallbacks = {DKObservationHash,
-  DKObservationIsEqual,
-  DKObservationRetain,
-  DKObservationRelease,
-  NULL};
-
-
-struct _DKObservationTables
+- (id)initWithRules: (NSDictionary*)someRules
 {
-  /** The zone from which to allocate memory. */
-  NSZone *zone;
-  /** Hash table all DKObservables */
-  NSHashTable *observables;
-  /**
-    * Map tables that relates observer objects to the observation actions they
-    * requested.
-    */
-  NSMapTable *observers;
-};
+  if (nil == (self = [super init]))
+  {
+    return nil;
+  }
+  ASSIGN(rules,someRules);
+  observations = [[NSCountedSet alloc] init];
+  return self;
+}
 
+- (void)addObservation: (DKObservation*)observation
+{
+  DKObservation *oldObservation = [observations member: observation];
+  if (nil != oldObservation)
+  {
+    [observations addObject: oldObservation];
+  }
+  else
+  {
+    [observations addObject: observation];
+  }
+}
 
-#define TABLES ((DKObservationTables*)dispatchTables)
-#define T_ZONE TABLES->zone
-#define T_OBSERVABLES TABLES->observables
-#define T_OBSERVERS TABLES->observers
+- (void)dealloc
+{
+  [rules release];
+  [observations release];
+  [super dealloc];
+}
+@end
+
+@implementation DKObservation
+
+- (id)initWithObservable: (DKObservable*)anObservable
+                observer: (id)anObserver
+                selector: (SEL)aSelector
+{
+  if (nil == (self = [super init]))
+  {
+    return nil;
+  }
+  ASSIGN(observed, anObservable);
+  observer = GS_GC_HIDE(anObserver);
+  selector = aSelector;
+  //TODO: IMP caching.
+  return self;
+}
+
+- (NSUInteger)hash
+{
+  return (((NSUInteger)(uintptr_t)observer ^ (NSUInteger)selector) ^ [observed hash]);
+}
+
+- (void)dealloc
+{
+  [observed release];
+  [super dealloc];
+}
+@end
+
 
 static DKNotificationCenter *systemCenter;
 static DKNotificationCenter *sessionCenter;
@@ -191,6 +162,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 @interface DKNotificationCenter (DKNotificationCenterPrivate)
 - (id)initWithBusType: (DKDBusBusType)type;
+- (DKSignal*)_signalForNotificationName: (NSString*)name;
 @end
 
 @implementation DKNotificationCenter
@@ -200,15 +172,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   {
     systemCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSystemBus];
     sessionCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSessionBus];
-  }
-  else
-  {
-    //FIXME: Remove the else-branch once DKObservationCallbacks is used.
-    void *foo = &DKObservationCallbacks;
-    if (foo != &DKObservationCallbacks)
-    {
-      //NoOp:
-    }
   }
 }
 
@@ -278,31 +241,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   signalInfo = [[NSMutableDictionary alloc] init];
   notificationNames = [[NSMutableDictionary alloc] init];
 
-  dispatchTables = malloc(sizeof(DKObservationTables));
-  if (NULL == dispatchTables)
-  {
-    [self release];
-    return nil;
-  }
-  memset(dispatchTables, '\0', sizeof(DKObservationTables));
-
-  /*
-   * Create a NSZone for the DKObservable and DKObservation structures,
-   * preallocating space for five pairs of them and continuing to allocate them
-   * on a granuarity of DKObservation.
-   */
-  T_ZONE = NSCreateZone(((5 * sizeof(DKObservation)) + (5 * sizeof(DKObservable))),
-   sizeof(DKObservation),
-   YES);
-  if (NULL == T_ZONE)
-  {
-    [self release];
-    return nil;
-  }
-  NSSetZoneName(T_ZONE, @"DBusKit signal observation zone");
-
-  T_OBSERVABLES = NSCreateHashTable(DKObservableCallbacks, 5);
-  T_OBSERVERS = NSCreateMapTable(NSNonRetainedObjectMapKeyCallBacks,
+  observables = [[NSMutableSet alloc] init];
+  observers = NSCreateMapTable(NSNonRetainedObjectMapKeyCallBacks,
     NSObjectMapValueCallBacks,
     5);
 
@@ -315,6 +255,18 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                name: (NSString*)notificationName
 	     object: (DKProxy*)sender
 {
+  DKSignal *signal = [self _signalForNotificationName: notificationName];
+  //NSMutableDictionary *ruleDict = [NSMutableDictionary new];
+  if ((nil != notificationName) && (nil == signal))
+  {
+    //TODO: fail silently or raise an exception?
+    NSWarnMLog(@"Cannot observe notification %@ (no corresponding D-Bus signal).",
+      notificationName);
+    return;
+  }
+  //ruleDict = [self _ruleDictionaryForSignal: signal];
+  //TODO: Finish
+  return;
 }
 
 -  (void)addObserver: (id)observer
@@ -372,8 +324,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 }
 
-- (DKSignal*)_stubSignalWithName: (NSString*)name
-                     inInterface: (NSString*)interfaceName
+- (DKSignal*)_signalWithName: (NSString*)name
+                 inInterface: (NSString*)interfaceName
 {
   DKInterface *theInterface = nil;
   DKSignal *signal = nil;
@@ -391,19 +343,52 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     [stubIf release];
   }
 
-  if (nil != [[theInterface signals] objectForKey: name])
+  if (nil != (signal = [[theInterface signals] objectForKey: name]))
   {
     [lock unlock];
     //Don't generate new stubs for signals we already have.
-    return nil;
+    return signal;
   }
-  [lock unlock];
   signal = [[[DKSignal alloc] initWithName: name
                                     parent: theInterface] autorelease];
   [signal setAnnotationValue: @"YES"
                       forKey: @"org.gnustep.dbuskit.signal.stub"];
+
+  [theInterface addSignal: signal];
+  [lock unlock];
   return signal;
 }
+
+- (DKSignal*)_signalForNotificationName: (NSString*)name
+{
+  DKSignal *signal = [notificationNames objectForKey: name];
+  if (nil != signal)
+  {
+    return signal;
+  }
+  else if (([name hasPrefix: @"DKSignal_"]) && ([name length] >= 9))
+  {
+    NSString *stripped = [name substringFromIndex: 9];
+    NSUInteger len = [stripped length];
+    NSRange sepRange = [stripped rangeOfString: @"_"];
+    NSString *ifName = nil;
+    NSString *signalName = nil;
+    // Don't continue if the separator was not found or appeared at the begining
+    // or end of the string:
+    if ((NSNotFound == sepRange.location)
+      || (len == (sepRange.location + 1))
+      || (0 == sepRange.location))
+    {
+      return nil;
+    }
+    ifName = [stripped substringToIndex: (sepRange.location - 1)];
+    signalName = [stripped substringFromIndex: (sepRange.location + 1)];
+    return [self _signalWithName: signalName
+                     inInterface: ifName];
+  }
+  return nil;
+}
+
 - (BOOL)_registerNotificationName: (NSString*)notificationName
                          asSignal: (DKSignal*)signal
 {
@@ -447,8 +432,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   signal = [[[signalInfo objectForKey: interface] signals] objectForKey: signalName];
   if (nil == signal)
   {
-    signal = [self _stubSignalWithName: signalName
-                           inInterface: interface];
+    signal = [self _signalWithName: signalName
+                       inInterface: interface];
   }
   if (nil == signal)
   {
@@ -557,7 +542,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return returnDict;
 }
 
--   (void)_addMatch: (NSString*)match
+-  (void)_addMatch: (NSString*)match
 forArgumentAtIndex: (NSUInteger)index
   toRuleDictionary: (NSMutableDictionary*)rules
 {
@@ -646,134 +631,4 @@ DKHandleSignal (DBusConnection *connection, DBusMessage *msg, void *userData)
   }
   NSLog(@"Handling signal!");
   return DBUS_HANDLER_RESULT_HANDLED;
-}
-
-
-static NSUInteger
-DKObservableHash(NSHashTable *t, const void *observable)
-{
-  DKObservable *o = (DKObservable*)observable;
-  return [o->rules hash];
-}
-
-static BOOL
-DKObservableIsEqual(NSHashTable *t, const void *first, const void *second)
-{
-  DKObservable *f = (DKObservable*)first;
-  DKObservable *s = (DKObservable*)second;
-  return [f->rules isEqualToDictionary: s->rules];
-}
-
-static void
-DKObservableRetain(NSHashTable *t, const void *observable)
-{
-  DKObservable *o = (DKObservable*)observable;
-  DKObservation *observation = o->observation;
-
-  o->refCount++;
-  [o->rules retain];
-
-  while (NULL != observation)
-  {
-    DKObservationRetain(NULL, observation);
-    observation = observation->next;
-  }
-}
-
-static void
-DKObservableRelease(NSHashTable *t, void *observable)
-{
-  DKObservable *o = (DKObservable*)observable;
-  DKObservation *observation = o->observation;
-  BOOL willFree = NO;
-  o->refCount--;
-
-  willFree = (0 == o->refCount);
-  [o->rules release];
-
-  while (NULL != observation)
-  {
-    DKObservationRelease(NULL, observation);
-    observation = observation->next;
-  }
-
-  if (willFree)
-  {
-    observation = o->observation;
-    while (NULL != observation)
-    {
-      observation->observed = NULL;
-      observation = observation->next;
-    }
-    NSZoneFree(o->tables->zone, observable);
-  }
-}
-
-static NSUInteger
-DKObservationHash(NSHashTable *t, const void *observation)
-{
-  /*
-   * We just generate the hash by XOR-ing the the relevant elements of the
-   * structure.
-   */
-  DKObservation *o = (DKObservation*)observation;
-  return (((uintptr_t)o->observer ^ (uintptr_t)o->selector) ^ DKObservableHash(NULL, o->observed));
-}
-
-static BOOL
-DKObservationIsEqual(NSHashTable *t, const void *first, const void *second)
-{
-  DKObservation *f = (DKObservation*)first;
-  DKObservation *s = (DKObservation*)second;
-  return (((f->observer == s->observer) && (f->selector == s->selector))
-    && DKObservableIsEqual(NULL, (const void*)f->observed, (const void*)s->observed));
-}
-
-static void
-DKObservationRetain(NSHashTable *t, const void *observation)
-{
-  DKObservation *o = (DKObservation*)observation;
-  o->refCount++;
-}
-
-static void
-DKObservationRelease(NSHashTable *t, void *observation)
-{
-  DKObservation *o = (DKObservation*)observation;
-  o->refCount--;
-  if (0 == o->refCount)
-  {
-    // Before we free ourselves, we adjust the links in the list:
-    DKObservation *myPrevious = o->previous;
-    DKObservation *myNext = o->next;
-
-    if ((NULL == myPrevious) && (NULL != o->observed))
-    {
-      // Beginning of the list. Adjust the head in the observable (if set). This
-      // also yields the correct result if we are the only element in the list
-      // (i.e. the list of active observations for an observable is set to
-      // NULL.)
-      o->observed->observation = myNext;
-    }
-    else
-    {
-      // This is also okay if we are the end of the list;
-      myPrevious->next = myNext;
-    }
-
-    if (NULL != myNext)
-    {
-      // This is also okay if we are at the beginning of the list
-      myNext->previous = myPrevious;
-    }
-
-    if (NULL != o->observed)
-    {
-      NSZoneFree(o->observed->tables->zone, observation);
-    }
-    else
-    {
-      free(observation);
-    }
-  }
 }

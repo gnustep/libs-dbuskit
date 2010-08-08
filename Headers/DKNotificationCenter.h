@@ -22,7 +22,8 @@
 
 #import <Foundation/NSObject.h>
 #import <DBusKit/DKPort.h>
-@class DKEndpoint, DKProxy, NSDictionary, NSRecursiveLock, NSMutableDictionary, NSNotification, NSString;
+@class DKEndpoint, DKProxy, NSDictionary, NSRecursiveLock, NSMutableDictionary,
+  NSNotification, NSMutableSet, NSString;
 
 @interface DKNotificationCenter: NSObject
 {
@@ -32,10 +33,16 @@
    */
   DKEndpoint *endpoint;
 
+
   /**
-   * The dispatch tables relating observers and signals observed.
+   * Set of all rules the notification center is going to match.
    */
-  void *dispatchTables;
+  NSMutableSet *observables;
+
+  /**
+   * Table relating observing objects to observation activities.
+   */
+  NSMapTable *observers;
 
   /**
    * The signalInfo dictionary holds DKSignal objects indexed by their interface
