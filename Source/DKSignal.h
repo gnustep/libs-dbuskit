@@ -30,6 +30,17 @@
   NSMutableArray *args;
 }
 
-- (void) addArgument: (DKArgument*)arg
-           direction: (NSString*)direction;
+- (void)addArgument: (DKArgument*)arg
+          direction: (NSString*)direction;
+
+/**
+ * Returns a custom notification name if one was set for the signal.
+ */
+- (NSString*)notificationName;
+
+/**
+ * Registers the signal with the instance of DKNotificationCenter that is
+ * responsible for the proxy that the signal descends from.
+ */
+- (void)registerWithNotificationCenter;
 @end

@@ -156,7 +156,7 @@
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
                                         sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
-  UKRaisesExceptionNamed([aProxy Hello], @"DKDBusMethodReplyException");
+  UKRaisesExceptionNamed([aProxy Hello], @"DKDBusRemoteErrorException");
 }
 
 - (void)testUnboxedMethodCall

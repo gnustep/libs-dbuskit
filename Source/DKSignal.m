@@ -26,14 +26,54 @@
 #import "DKArgument.h"
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSDebug.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
+
+#import "DBusKit/DKNotificationCenter.h"
+#import "DKProxy+Private.h"
+#import "DKEndpoint.h"
+
+@interface DKNotificationCenter (Private)
+- (void)_registerSignal: (DKSignal*)signal;
+@end
 
 @implementation DKSignal
 
-- (void)addArgument: (DKArgument*)arg
+- (id) initWithName: (NSString*)aName
+             parent: (id)aParent
+{
+  if (nil == (self = [super initWithName: aName
+                                  parent: aParent]))
+  {
+    return nil;
+  }
+  if (0 == [name length])
+  {
+    [self release];
+    return nil;
+  }
+  args = [NSMutableArray new];
+  return self;
+}
+
+- (void)addArgument: (DKArgument*)argument
           direction: (NSString*)direction
 {
-  //TODO: Implement
+  if (nil == argument)
+  {
+    NSDebugMLog(@"Ignoring nil argument");
+    return;
+  }
+
+  if ((direction == nil) || [direction isEqualToString: DKArgumentDirectionOut])
+  {
+    [args addObject: argument];
+  }
+  else
+  {
+    NSDebugMLog(@"Ignoring argument with invalid direction '%@'.", direction);
+  }
 }
 
 - (void)setArguments: (NSMutableArray*)newArgs
@@ -51,5 +91,33 @@
   [newNode setArguments: newArgs];
   [newArgs release];
   return newNode;
+}
+
+- (NSString*)notificationName
+{
+  return [annotations objectForKey: @"org.gnustep.openstep.notification"];
+}
+
+- (void)registerWithNotificationCenter: (DKNotificationCenter*)center
+{
+  [center _registerSignal: self];
+}
+
+- (void)registerWithNotificationCenter
+{
+  DKProxy *theProxy = [self proxyParent];
+  DKNotificationCenter *theCenter = nil;
+  if (nil == theProxy)
+  {
+    return;
+  }
+  theCenter = [DKNotificationCenter centerForBusType: [[theProxy _endpoint] DBusBusType]];
+  [self registerWithNotificationCenter: theCenter];
+}
+
+- (void)dealloc
+{
+  [args release];
+  [super dealloc];
 }
 @end

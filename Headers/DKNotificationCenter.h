@@ -22,7 +22,7 @@
 
 #import <Foundation/NSObject.h>
 #import <DBusKit/DKPort.h>
-@class DKEndpoint, DKProxy, NSDictionary, NSLock, NSMutableDictionary, NSNotification, NSString;
+@class DKEndpoint, DKProxy, NSDictionary, NSRecursiveLock, NSMutableDictionary, NSNotification, NSString;
 
 @interface DKNotificationCenter: NSObject
 {
@@ -45,9 +45,18 @@
   NSMutableDictionary *signalInfo;
 
   /**
+   * The notificationNames dictionary holds mappings between notification names
+   * and D-Bus signals. They will either be obtained by explicit registration
+   * (with -registerNotificationName:asSignal:inInterface:) or from an
+   * "org.gnustep.openstep.notification" annotation in the introspection data of
+   * the signal.
+   */
+  NSMutableDictionary *notificationNames;
+
+  /**
    * The lock protecting the table.
    */
-   NSLock *lock;
+   NSRecursiveLock *lock;
 }
 
 + (id)sessionBusCenter;

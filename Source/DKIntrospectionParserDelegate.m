@@ -176,7 +176,8 @@ didStartElement: (NSString*)aNode
     }
     else if ([@"signal" isEqualToString: aNode])
     {
-      //TODO: Implement signals
+      newNode = [[DKSignal alloc] initWithName: theName
+                                        parent: leaf];
     }
     else if ([@"property" isEqualToString: aNode])
     {
@@ -228,6 +229,10 @@ didStartElement: (NSString*)aNode
 {
   NSDebugMLog(@"Ended node: %@", aNode);
   xmlDepth--;
+  if ([@"signal" isEqualToString: aNode])
+  {
+    [(DKSignal*)[self leaf] registerWithNotificationCenter];
+  }
   [self popStack];
   if (0 == xmlDepth)
   {

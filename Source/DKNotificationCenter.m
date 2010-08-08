@@ -276,6 +276,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
   lock = [[NSLock alloc] init];
   signalInfo = [[NSMutableDictionary alloc] init];
+  notificationNames = [[NSMutableDictionary alloc] init];
 
   dispatchTables = malloc(sizeof(DKObservationTables));
   if (NULL == dispatchTables)
@@ -288,7 +289,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   /*
    * Create a NSZone for the DKObservable and DKObservation structures,
    * preallocating space for five pairs of them and continuing to allocate them
-   * on a granuarity of DKObservation because.
+   * on a granuarity of DKObservation.
    */
   T_ZONE = NSCreateZone(((5 * sizeof(DKObservation)) + (5 * sizeof(DKObservable))),
    sizeof(DKObservation),
@@ -370,17 +371,100 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 {
 
 }
+
+- (DKSignal*)_stubSignalWithName: (NSString*)name
+                     inInterface: (NSString*)interfaceName
+{
+  DKInterface *theInterface = nil;
+  DKSignal *signal = nil;
+  [lock lock];
+  theInterface = [signalInfo objectForKey: interfaceName];
+
+  // Add the interface if necessary:
+  if (theInterface == nil)
+  {
+    DKInterface *stubIf = [[DKInterface alloc] initWithName: interfaceName
+                                                     parent: nil];
+    [signalInfo setObject: stubIf
+                   forKey: interfaceName];
+    theInterface = stubIf;
+    [stubIf release];
+  }
+
+  if (nil != [[theInterface signals] objectForKey: name])
+  {
+    [lock unlock];
+    //Don't generate new stubs for signals we already have.
+    return nil;
+  }
+  [lock unlock];
+  signal = [[[DKSignal alloc] initWithName: name
+                                    parent: theInterface] autorelease];
+  [signal setAnnotationValue: @"YES"
+                      forKey: @"org.gnustep.dbuskit.signal.stub"];
+  return signal;
+}
+- (BOOL)_registerNotificationName: (NSString*)notificationName
+                         asSignal: (DKSignal*)signal
+{
+  if ((nil == notificationName) || (nil == signal));
+  {
+    return NO;
+  }
+
+  if (nil == [notificationNames objectForKey: notificationName])
+  {
+    [notificationNames setObject: signal
+                          forKey: notificationName];
+
+    NSDebugMLog(@"Registered signal '%@' (from interface '%@') with notification name '%@'.",
+      [signal name],
+      [[signal parent] name],
+      notificationName);
+    return YES;
+  }
+  else
+  {
+    NSDebugMLog(@"Cannot register signal '%@' (from interface '%@') with notification name '%@' (already registered).",
+      [signal name],
+      [[signal parent] name],
+      notificationName);
+  }
+  return NO;
+}
+
 - (BOOL)registerNotificationName: (NSString*)notificationName
                         asSignal: (NSString*)signalName
                      inInterface: (NSString*)interface
 {
-  return NO;
+  DKSignal *signal = nil;
+  BOOL success = NO;
+  if (notificationName == nil)
+  {
+    return NO;
+  }
+  [lock lock];
+  signal = [[[signalInfo objectForKey: interface] signals] objectForKey: signalName];
+  if (nil == signal)
+  {
+    signal = [self _stubSignalWithName: signalName
+                           inInterface: interface];
+  }
+  if (nil == signal)
+  {
+    return NO;
+  }
+  success = [self _registerNotificationName: notificationName
+                                   asSignal: signal];
+  [lock unlock];
+  return success;
 }
 
-- (void)registerSignal: (DKSignal*)aSignal
+- (void)_registerSignal: (DKSignal*)aSignal
 {
   NSString *interfaceName = [[aSignal parent] name];
   NSString *signalName = [aSignal name];
+  NSString *notificationName = [aSignal notificationName];
   DKInterface *theInterface = nil;
   DKSignal *theSignal = nil;
   [lock lock];
@@ -401,9 +485,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   theSignal = [[theInterface signals] objectForKey: signalName];
 
   // Check whether the notification center itself did add a stub for this signal.
-  if ([[theSignal annotationValueForKey: @"org.gnustep.DBusKit.StubSignal"] boolValue])
+  if ([[theSignal annotationValueForKey: @"org.gnustep.dbuskit.signal.stub"] boolValue])
   {
     [theInterface removeSignalNamed: signalName];
+    theSignal = nil;
   }
 
   // Add the signal if necessary
@@ -412,8 +497,17 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     theSignal = [aSignal copy];
     [theInterface addSignal: theSignal];
     [theSignal setParent: theInterface];
+    if (nil != notificationName)
+    {
+      [self _registerNotificationName: notificationName
+                             asSignal: theSignal];
+    }
+    NSDebugMLog(@"Registered signal '%@' (interface: '%@') in notification center.",
+      [theSignal name],
+      [theInterface name]);
     [theSignal release];
   }
+
   [lock unlock];
 }
 
@@ -517,6 +611,8 @@ forArgumentAtIndex: (NSUInteger)index
 {
   [endpoint release];
   [signalInfo release];
+  [notificationNames release];
+  // TODO: Free the dispatch tables!
   [lock release];
   [super dealloc];
 }
