@@ -41,13 +41,28 @@
 /**
  * Use this initializer to use a pre-existing DBusConnection. Please note that
  * this will increase the reference count of the connection. It will still need
- * to be unreferenced by calling code. Please note that encoding and decoding an
- * DKEndpoint encoded this way is impossible.
+ * to be unreferenced by calling code.
+ *
+ * Please note that encoding and decoding an DKEndpoint encoded this way is only
+ * possible if you also supply a proper info dictionary. This dictionary should
+ * contain either the address of the bus (under the "address"-key) or the type
+ * of the well-known bus (under the "wellKnownBus"-key).
  */
-- (id) _initWithConnection: (DBusConnection*)conn;
+- (id) initWithConnection: (DBusConnection*)conn
+                     info: (NSDictionary*)info;
 
-- (id) initWithConnectionTo: (NSString*)endpoint;
+/**
+ * Returns an endpoint connected to an arbitrary address. This is only useful
+ * for specific cases where you don't want to use one of the standard message
+ * busses. Use -initWithWellKnownBus: to get a connection for one of those.
+ */
+- (id) initWithConnectionTo: (NSString*)address;
 
+/**
+ * Returns an endpoint connected to one of the well-known message busses as per
+ * D-Bus documentation (i.e. DBUS_BUS_SYSTEM, DBUS_BUS_SESSION or
+ * DBUS_BUS_STARTER).
+ */
 - (id) initWithWellKnownBus: (DBusBusType)type;
 
 /**
@@ -81,12 +96,4 @@
  * Will reinstall timers and watchers for the current run loop.
  */
 - (void)scheduleInCurrentThread;
-@end
-
-@interface DKSystemBusEndpoint: DKEndpoint;
-- (id) init;
-@end
-
-@interface DKSessionBusEndpoint: DKEndpoint;
-- (id) init;
 @end

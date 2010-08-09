@@ -95,6 +95,7 @@ static NSRecursiveLock *activeConnectionLock;
 
 @interface DKEndpoint (DBusEndpointPrivate)
 - (void)cleanup;
+- (void)_mergeInfo: (NSDictionary*)info;
 @end
 
 /**
@@ -164,7 +165,8 @@ static NSRecursiveLock *activeConnectionLock;
       @"Could not allocate map table and lock for D-Bus connection management");
 }
 
-- (id) _initWithConnection: (DBusConnection*)conn
+- (id) initWithConnection: (DBusConnection*)conn
+                     info: (NSDictionary*)infoDict
 {
   DKEndpoint *oldConnection = nil;
   BOOL initSuccess = NO;
@@ -192,6 +194,7 @@ static NSRecursiveLock *activeConnectionLock;
       NSDebugMLog(@"Will reuse old connection");
       // Retain the old connection to make it stick around:
       [oldConnection retain];
+      [oldConnection _mergeInfo: infoDict];
     }
   }
   NS_HANDLER
@@ -283,6 +286,7 @@ static NSRecursiveLock *activeConnectionLock;
   NS_ENDHANDLER
 
   [activeConnectionLock unlock];
+  ASSIGN(info, infoDict);
   return self;
 }
 
@@ -291,15 +295,6 @@ static NSRecursiveLock *activeConnectionLock;
   return connection;
 }
 
-- (DKDBusBusType)DBusBusType
-{
-  NSNumber *typeNo = [info objectForKey: @"wellKnownBus"];
-  if (nil == typeNo)
-  {
-    return DKDBusBusTypeOther;
-  }
-  return [typeNo unsignedIntegerValue];
-}
 
 /**
  * For use with non-well-known buses, not exteremly useful, but generic.
@@ -313,9 +308,11 @@ static NSRecursiveLock *activeConnectionLock;
    * call dbus_connection_unref() and not dbus_connection_close() in -cleanup).
    */
   DBusConnection *conn = NULL;
+  NSDictionary *theInfo = [[NSDictionary alloc] initWithObjectsAndKeys: endpoint,
+    @"address", nil];
   dbus_error_init(&err);
 
-  dbus_connection_open([endpoint UTF8String], &err);
+  conn = dbus_connection_open([endpoint UTF8String], &err);
   if (NULL == conn)
   {
     NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
@@ -326,11 +323,13 @@ static NSRecursiveLock *activeConnectionLock;
   }
   dbus_error_free(&err);
 
-  self = [self _initWithConnection: conn];
+  self = [self initWithConnection: conn
+                             info: theInfo];
+  [theInfo release];
+
   // -_initWithConnection did increase the refcount, we release ownership of the
   // connection:
   dbus_connection_unref(conn);
-  info = [[NSDictionary alloc] initWithObjectsAndKeys: endpoint, @"address", nil];
   return self;
 }
 
@@ -338,7 +337,8 @@ static NSRecursiveLock *activeConnectionLock;
 {
   DBusError err;
   DBusConnection *conn = NULL;
-
+  NSDictionary *theInfo = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: type],
+    @"wellKnownBus", nil];
   dbus_error_init(&err);
   conn = dbus_bus_get(type, &err);
   if (NULL == conn)
@@ -360,13 +360,12 @@ static NSRecursiveLock *activeConnectionLock;
    */
   dbus_connection_set_exit_on_disconnect(conn, NO);
 
-  self = [self _initWithConnection: conn];
-  // -_initWithConnection did increase the refcount, we release ownership of the
+  self = [self initWithConnection: conn
+                             info: theInfo];
+  [theInfo release];
+  // -initWithConnection did increase the refcount, we release ownership of the
   // connection:
   dbus_connection_unref(conn);
-
-  info = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: type],
-    @"wellKnownBus", nil];
   return self;
 }
 
@@ -438,53 +437,6 @@ static NSRecursiveLock *activeConnectionLock;
    return newEndpoint;
 }
 
-- (void) cleanup
-{
-  if (connection != NULL)
-  {
-    // Make this endpoint unavailable to other threads:
-    [activeConnectionLock lock];
-    NS_DURING
-    {
-      if (connection != NULL)
-      {
-        NSMapRemove(activeConnections, connection);
-
-        dbus_connection_unref(connection);
-        connection = NULL;
-	[ctx release];
-      }
-    }
-    NS_HANDLER
-    {
-      [activeConnectionLock unlock];
-      [localException raise];
-    }
-    NS_ENDHANDLER
-    [activeConnectionLock unlock];
-  }
-
-}
-
-- (NSRunLoop*)runLoop
-{
-  return [ctx runLoop];
-}
-
-- (NSString*)runLoopMode
-{
-  return [ctx runLoopMode];
-}
-
-- (void) flush
-{
-  dbus_connection_flush(connection);
-}
-
-- (void)scheduleInCurrentThread
-{
-  [ctx reschedule];
-}
 /**
  * Override the default implementation, which would return a proxy.
  */
@@ -493,15 +445,10 @@ static NSRecursiveLock *activeConnectionLock;
   return self;
 }
 
-- (Class)classForPortCoder
-{
-  return [self class];
-}
-
 /**
  * Encodes the information about the endpoint. Unfortunately, we have no chance
- * of getting this right if somebody used the private intializer
- * -_initWithConnection:.
+ * of getting this right if somebody used the  -initWithConnection:info:
+ * initalizer without passing a proper info dictionary.
  */
 - (void) encodeWithCoder: (NSCoder*)coder
 {
@@ -555,6 +502,116 @@ static NSRecursiveLock *activeConnectionLock;
   }
 }
 
+/**
+  * The _mergeInfo: method merges the information from a newly created endpoint
+  * into the present one.
+  */
+- (void)_mergeInfo: (NSDictionary*)newInfo
+{
+  if (info == nil)
+  {
+    ASSIGN(info, newInfo);
+  }
+  else if (NO == [info isEqualToDictionary: newInfo])
+  {
+    NSMutableDictionary *merged = [NSMutableDictionary new];
+    NSString *address = [info objectForKey: @"address"];
+    NSString *newAddress = [newInfo objectForKey: @"address"];
+    NSNumber *busType = [info objectForKey: @"wellKnownBus"];
+    NSNumber *newBusType = [newInfo objectForKey: @"wellKnownBus"];
+
+    // We prefer the values from the new dictionary.
+    if (nil != newAddress)
+    {
+      [merged setObject: newAddress
+                 forKey: @"address"];
+    }
+    else if (nil != address)
+    {
+      [merged setObject: newAddress
+                 forKey: @"address"];
+    }
+    if (nil != newBusType)
+    {
+      [merged setObject: newBusType
+                 forKey: @"wellKnownBus"];
+    }
+    else if (nil != busType)
+    {
+      [merged setObject: busType
+                 forKey: @"wellKnownBus"];
+    }
+
+    // We know that info does already exists and that the new info dictionary
+    // will not be the previous one, so we don't need to use the ASSIGN() macro.
+    [info release];
+    info = [merged copy];
+    [merged release];
+  }
+}
+
+
+/* Methods to manipulate the behavior of the endpoint: */
+- (void)scheduleInCurrentThread
+{
+  [ctx reschedule];
+}
+
+- (void) flush
+{
+  dbus_connection_flush(connection);
+}
+
+- (void) cleanup
+{
+  if (connection != NULL)
+  {
+    // Make this endpoint unavailable to other threads:
+    [activeConnectionLock lock];
+    NS_DURING
+    {
+      if (connection != NULL)
+      {
+        NSMapRemove(activeConnections, connection);
+
+        dbus_connection_unref(connection);
+        connection = NULL;
+	[ctx release];
+      }
+    }
+    NS_HANDLER
+    {
+      [activeConnectionLock unlock];
+      [localException raise];
+    }
+    NS_ENDHANDLER
+    [activeConnectionLock unlock];
+  }
+
+}
+
+/* Methods to access information about the bus: */
+
+- (DKDBusBusType)DBusBusType
+{
+  NSNumber *typeNo = [info objectForKey: @"wellKnownBus"];
+  if (nil == typeNo)
+  {
+    return DKDBusBusTypeOther;
+  }
+  return [typeNo unsignedIntegerValue];
+}
+
+- (NSRunLoop*)runLoop
+{
+  return [ctx runLoop];
+}
+
+- (NSString*)runLoopMode
+{
+  return [ctx runLoopMode];
+}
+
 - (DBusConnection*)DBusConnection
 {
   return connection;
@@ -564,29 +621,6 @@ static NSRecursiveLock *activeConnectionLock;
   [self cleanup];
   [info release];
   [super dealloc];
-}
-@end
-
-
-@implementation DKSystemBusEndpoint
-- (id)init
-{
-  if (nil == (self = [super initWithWellKnownBus: DBUS_BUS_SYSTEM]))
-  {
-    return nil;
-  }
-  return self;
-}
-@end
-
-@implementation DKSessionBusEndpoint
-- (id)init
-{
-  if (nil == (self = [super initWithWellKnownBus: DBUS_BUS_SESSION]))
-  {
-    return nil;
-  }
-  return self;
 }
 @end
 

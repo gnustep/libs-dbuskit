@@ -324,7 +324,7 @@ typedef struct
   } while (0)
 
 
-static void
+static inline void
 DKInstallDefaultSelectorTypeMapping()
 {
   [selectorTypeMapLock lock];
@@ -342,7 +342,7 @@ DKInstallDefaultSelectorTypeMapping()
   [selectorTypeMapLock unlock];
 }
 
-static void
+static inline void
 DKRegisterSelectorTypePair(DKSelectorTypePair *pair)
 {
   NSHashTable *selTable = nil;
