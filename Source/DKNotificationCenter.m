@@ -40,6 +40,7 @@
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #include <stdint.h>
+#include <stdarg.h>
 #include <dbus/dbus.h>
 
 @class DKObservation;
@@ -50,13 +51,12 @@
    * The rules that D-Bus is using to determine which signals to pass to
    * use.
    */
-  NSDictionary *rules;
+  NSMutableDictionary *rules;
   /**
    * Set of all observation activities for the observable;
    */
   NSCountedSet *observations;
 }
-- (id)initWithRules: (NSDictionary*)rules;
 - (void)addObservation: (DKObservation*)observation;
 @end
 
@@ -92,13 +92,14 @@
 
 @implementation DKObservable
 
-- (id)initWithRules: (NSDictionary*)someRules
+- (id)init
 {
   if (nil == (self = [super init]))
   {
     return nil;
   }
-  ASSIGN(rules,someRules);
+  // We always observe signals:
+  rules = [NSMutableDictionary dictionaryWithObjectsAndKeys: @"signal", @"type", nil];
   observations = [[NSCountedSet alloc] init];
   return self;
 }
@@ -114,6 +115,120 @@
   {
     [observations addObject: observation];
   }
+}
+
+- (void)removeObservation: (DKObservation*)observation
+{
+  DKObservation *oldObservation = [observations member: observation];
+  if (nil != oldObservation)
+  {
+    [observations removeObject: oldObservation];
+  }
+}
+
+- (void)setValue: (NSString*)value
+          forKey: (NSString*)key
+{
+  if (nil == key)
+  {
+    return;
+  }
+  if (nil != value)
+  {
+    [rules setObject: value
+              forKey: key];
+  }
+  else
+  {
+    [rules removeObjectForKey: key];
+  }
+}
+
+- (id)valueForKey: (NSString*)key
+{
+  return [rules objectForKey: key];
+}
+
+- (void)filterInterface: (NSString*)interface
+{
+  [self setValue: interface
+          forKey: @"interface"];
+}
+
+- (void)filterSignalName: (NSString*)signalName
+{
+  [self setValue: signalName
+          forKey: @"member"];
+}
+
+- (void)filterSignal: (DKSignal*)signal
+{
+  [self filterSignalName: [signal name]];
+  [self filterInterface: [[signal parent] name]];
+}
+
+-  (void)filterValue: (NSString*)match
+  forArgumentAtIndex: (NSUInteger)index
+{
+  if (index < 64)
+  {
+    if ((nil == match) || [match isEqual: [NSNull null]])
+    {
+      match = @"";
+    }
+    [self setValue: match
+            forKey: [NSString stringWithFormat: @"arg%lu", index]];
+  }
+}
+
+- (void)filterSender: (DKProxy*)proxy
+{
+  [self setValue: [proxy _service]
+          forKey: @"sender"];
+  [self setValue: [proxy _path]
+          forKey: @"path"];
+}
+
+
+- (void)filterDestination: (DKProxy*)proxy
+{
+  NSString *uniqueName = [proxy _uniqueName];
+  [self setValue: uniqueName
+          forKey: @"destination"];
+}
+
+- (NSString*)ruleString
+{
+  NSEnumerator *keyEnum = [rules keyEnumerator];
+  NSString *key = nil;
+  NSMutableString *string = [NSMutableString string];
+  NSUInteger count = 0;
+  while (nil != (key = [keyEnum nextObject]))
+  {
+    NSString *value = [[rules objectForKey: key] stringByReplacingOccurrencesOfString: @"'"
+                                                                           withString: @"\\'"];
+    if (count != 0)
+    {
+      [string appendString: @","];
+    }
+    [string appendFormat: @"%@='%@'", key, value];
+    count++;
+  }
+  return string;
+}
+
+- (NSUInteger)hash
+{
+  return [rules hash];
+}
+
+- (NSDictionary*)rules
+{
+  return [[rules copy] autorelease];
+}
+- (BOOL)isEqual: (DKObservable*)other
+{
+  return [rules isEqualToDictionary: [other rules]];
 }
 
 - (void)dealloc
@@ -141,9 +256,32 @@
   return self;
 }
 
+- (id)observer
+{
+  return GS_GC_UNHIDE(observer);
+}
+
+- (SEL)selector
+{
+  return selector;
+}
+
+- (DKObservable*)observed
+{
+  return observed;
+}
+
 - (NSUInteger)hash
 {
   return (((NSUInteger)(uintptr_t)observer ^ (NSUInteger)selector) ^ [observed hash]);
+}
+
+- (BOOL)isEqual: (DKObservation*)other
+{
+  BOOL sameObserver = (observer == [other observer]);
+  BOOL sameSelector = sel_isEqual(selector, [other selector]);
+  BOOL sameObserved = [observed isEqual: [other observed]];
+  return ((sameObserver && sameSelector) && sameObserved);
 }
 
 - (void)dealloc
@@ -256,7 +394,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 	     object: (DKProxy*)sender
 {
   DKSignal *signal = [self _signalForNotificationName: notificationName];
-  //NSMutableDictionary *ruleDict = [NSMutableDictionary new];
+  DKObservable *observable = [[DKObservable alloc] init];
   if ((nil != notificationName) && (nil == signal))
   {
     //TODO: fail silently or raise an exception?
@@ -264,19 +402,101 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       notificationName);
     return;
   }
-  //ruleDict = [self _ruleDictionaryForSignal: signal];
-  //TODO: Finish
-  return;
+  [observable filterSignal: signal];
+  [observable filterSender: sender];
+  //TODO: Add and dispatch
+  [observable release];
+}
+
+- (DKObservable*)_observableForSignalName: (NSString*)signalName
+                                interface: (NSString*)interfaceName
+                                   sender: (DKProxy*)sender
+                              destination: (DKProxy*)destination
+{
+  DKObservable *observable = [[[DKObservable alloc] init] autorelease];
+  [observable filterSignalName: signalName];
+  [observable filterInterface: interfaceName];
+  [observable filterSender: sender];
+  [observable filterDestination: destination];
+  return observable;
 }
 
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
               signal: (NSString*)signalName
            interface: (NSString*)interfaceName
-              object: (DKProxy*)sender
-   filtersAndIndices: (NSString*)firstFilter, NSUInteger firstindex, ...
+              sender: (DKProxy*)sender
+         destination: (DKProxy*)destination
+              filter: (NSString*)filter
+	     atIndex: (NSUInteger)index
 {
+  DKObservable *observable = [self _observableForSignalName: signalName
+                                                  interface: interfaceName
+                                                     sender: sender
+                                                destination: destination];
+  if (filter != nil)
+  {
+    [observable filterValue: filter
+         forArgumentAtIndex: index];
+  }
+  //TODO: Add and dispatch
+}
+-  (void)addObserver: (id)observer
+            selector: (SEL)notifySelector
+              signal: (NSString*)signalName
+           interface: (NSString*)interfaceName
+              sender: (DKProxy*)sender
+         destination: (DKProxy*)destination
+{
+  [self addObserver: observer
+           selector: notifySelector
+             signal: signalName
+          interface: interfaceName
+             sender: sender
+        destination: destination
+             filter: nil
+             atIndex: 0];
+}
 
+-  (void)addObserver: (id)observer
+            selector: (SEL)notifySelector
+              signal: (NSString*)signalName
+           interface: (NSString*)interfaceName
+              sender: (DKProxy*)sender
+         destination: (DKProxy*)destination
+   filtersAndIndices: (NSString*)firstFilter, NSUInteger nullIndex, ...
+{
+  va_list filters;
+  uintptr_t filterOrIndex = 0;
+  NSUInteger count = 1;
+  NSString *thisFilter = nil;
+
+  DKObservable *observable = [self _observableForSignalName: signalName
+                                                  interface: interfaceName
+                                                     sender: sender
+                                                destination: destination];
+  [observable filterValue: firstFilter
+       forArgumentAtIndex: nullIndex];
+
+  va_start(filters, nullIndex);
+  while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
+  {
+    if (0 == count)
+    {
+      thisFilter = (NSString*)filterOrIndex;
+      count++;
+    }
+    else if (1 == count)
+    {
+      [observable filterValue: thisFilter
+           forArgumentAtIndex: (NSUInteger)filterOrIndex];
+      count = 0;
+    }
+  }
+  va_end(filters);
+
+  //TODO: Add and dispatch
+  [observable release];
 }
 - (void)removeObserver: (id)observer
 {
@@ -521,76 +741,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     (void*)self);
 }
 
-- (NSDictionary*)_ruleDictionaryForSignal: (DKSignal*)aSignal
-{
-  NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithObjectsAndKeys: @"signal", @"type", nil];
-  NSString *signalName = [aSignal name];
-  NSString *ifName = [[aSignal parent] name];
-  NSDictionary *returnDict = nil;
-  if (nil != signalName)
-  {
-    [dict setObject: signalName
-             forKey: @"member"];
-  }
-  if (nil != ifName)
-  {
-    [dict setObject: ifName
-             forKey: @"interface"];
-  }
-  returnDict = [[dict copy] autorelease];
-  [dict release];
-  return returnDict;
-}
-
--  (void)_addMatch: (NSString*)match
-forArgumentAtIndex: (NSUInteger)index
-  toRuleDictionary: (NSMutableDictionary*)rules
-{
-  if (index < 64)
-  {
-    if ((nil == match) || [match isEqual: [NSNull null]])
-    {
-      match = @"";
-    }
-    [rules setObject: match
-              forKey: [NSString stringWithFormat: @"arg%lu", index]];
-  }
-}
-
-- (void)_addMatchForSender: (DKProxy*)proxy
-          toRuleDictionary: (NSMutableDictionary*)dict
-{
-  [dict setObject: [proxy _service]
-           forKey: @"sender"];
-  [dict setObject: [proxy _path]
-           forKey: @"path"];
-}
-
-
-- (void)_addMatchForDestination: (DKProxy*)proxy
-               toRuleDictionary: (NSMutableDictionary*)dict
-{
-  NSString *uniqueName = [proxy _uniqueName];
-  if (nil != uniqueName)
-  {
-    [dict setObject: uniqueName
-             forKey: @"destination"];
-  }
-}
-
-- (NSString*)_ruleStringForRuleDictionary: (NSDictionary*)ruleDict
-{
-  NSEnumerator *keyEnum = [ruleDict keyEnumerator];
-  NSString *key = nil;
-  NSMutableString *string = [NSMutableString string];
-  while (nil != (key = [keyEnum nextObject]))
-  {
-    NSString *value = [[ruleDict objectForKey: key] stringByReplacingOccurrencesOfString: @"'"
-                                                                              withString: @"\\'"];
-    [string appendFormat: @"%@='%@'", key, value];
-  }
-  return string;
-}
 
 - (void)dealloc
 {
