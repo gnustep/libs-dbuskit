@@ -22,8 +22,8 @@
 
 #import <Foundation/NSObject.h>
 #import <DBusKit/DKPort.h>
-@class DKEndpoint, DKProxy, NSDictionary, NSRecursiveLock, NSMutableDictionary,
-  NSNotification, NSMutableSet, NSString;
+@class DKEndpoint, DKProxy, NSDictionary, NSHashTable, NSRecursiveLock,
+  NSMapTable, NSMutableDictionary, NSNotification, NSString;
 
 @interface DKNotificationCenter: NSObject
 {
@@ -37,7 +37,7 @@
   /**
    * Set of all rules the notification center is going to match.
    */
-  NSMutableSet *observables;
+  NSHashTable *observables;
 
   /**
    * Table relating observing objects to observation activities.

@@ -30,6 +30,7 @@
 
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSException.h>
 #import <Foundation/NSHashTable.h>
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
@@ -55,7 +56,7 @@
   /**
    * Set of all observation activities for the observable;
    */
-  NSCountedSet *observations;
+  NSHashTable *observations;
 }
 - (void)addObservation: (DKObservation*)observation;
 @end
@@ -100,18 +101,14 @@
   }
   // We always observe signals:
   rules = [NSMutableDictionary dictionaryWithObjectsAndKeys: @"signal", @"type", nil];
-  observations = [[NSCountedSet alloc] init];
+  observations = [NSHashTable hashTableWithWeakObjects];
   return self;
 }
 
 - (void)addObservation: (DKObservation*)observation
 {
   DKObservation *oldObservation = [observations member: observation];
-  if (nil != oldObservation)
-  {
-    [observations addObject: oldObservation];
-  }
-  else
+  if (nil == oldObservation)
   {
     [observations addObject: observation];
   }
@@ -301,6 +298,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 @interface DKNotificationCenter (DKNotificationCenterPrivate)
 - (id)initWithBusType: (DKDBusBusType)type;
 - (DKSignal*)_signalForNotificationName: (NSString*)name;
+- (void)_letObserver: (id)observer
+   observeObservable: (DKObservable*)observable
+        withSelector: (SEL)selector;
 @end
 
 @implementation DKNotificationCenter
@@ -379,10 +379,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   signalInfo = [[NSMutableDictionary alloc] init];
   notificationNames = [[NSMutableDictionary alloc] init];
 
-  observables = [[NSMutableSet alloc] init];
-  observers = NSCreateMapTable(NSNonRetainedObjectMapKeyCallBacks,
-    NSObjectMapValueCallBacks,
-    5);
+  observables = NSCreateHashTable(NSObjectHashCallBacks, 5);
+  observers = [NSMapTable mapTableWithWeakToStrongObjects];
 
   return self;
 }
@@ -404,7 +402,18 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   }
   [observable filterSignal: signal];
   [observable filterSender: sender];
-  //TODO: Add and dispatch
+  NS_DURING
+  {
+    [self _letObserver: observer
+     observeObservable: observable
+          withSelector: notifySelector];
+  }
+  NS_HANDLER
+  {
+    [observable release];
+    [localException raise];
+  }
+  NS_ENDHANDLER
   [observable release];
 }
 
@@ -439,7 +448,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     [observable filterValue: filter
          forArgumentAtIndex: index];
   }
-  //TODO: Add and dispatch
+  [self _letObserver: observer
+   observeObservable: observable
+        withSelector: notifySelector];
 }
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
@@ -495,9 +506,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   }
   va_end(filters);
 
-  //TODO: Add and dispatch
-  [observable release];
+  [self _letObserver: observer
+   observeObservable: observable
+        withSelector: notifySelector];
 }
+
 - (void)removeObserver: (id)observer
 {
 }
@@ -513,6 +526,31 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
              interface: (NSString*)interfaceName
                 object: (DKProxy*)sender
 {
+}
+
+- (void)_letObserver: (id)observer
+   observeObservable: (DKObservable*)observable
+        withSelector: (SEL)selector
+{
+  DKObservation *observation = [[DKObservation alloc] initWithObservable: observable
+                                                                observer: observer
+                                                                selector: selector];
+  DBusError err;
+  dbus_error_init(&err);
+  dbus_bus_add_match([endpoint DBusConnection],
+    [[observable ruleString] UTF8String],
+    &err);
+
+  if (dbus_error_is_set(&err))
+  {
+    [observation release];
+    [NSException raise: @"DKSignalMatchException"
+                format: @"Error when trying to add match for signal: %s. (%s)",
+      err.name, err.message];
+  }
+  NSHashInsertIfAbsent(observables, (const void*)observable);
+  [observable addObservation: observation];
+  NSMapInsertIfAbsent(observers, observer, observation);
 }
 
 - (void)postNotification: (NSNotification*)notification
