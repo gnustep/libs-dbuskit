@@ -720,15 +720,6 @@ static NSRecursiveLock *activeConnectionLock;
   callbackInProgress = NO;
 }
 
-/*
- * FIXME: This can go away whether we are sure that DKWatchRemove is always
- * called with the context object as an argument.
- */
-- (DKRunLoopContext*)context
-{
-  return ctx;
-}
-
 - (void)dealloc
 {
   [super dealloc];
@@ -816,18 +807,8 @@ static NSRecursiveLock *activeConnectionLock;
   NSEndMapTableEnumeration(&timerEnum);
 }
 
-/*
- * FIXME: This can go away whether we are sure that DKWatchRemove is always
- * called with the context object as an argument.
- */
-- (DKRunLoopContext*)context
-{
-  return self;
-}
-
 - (void)dealloc
 {
-  //TODO: Further Cleanup.
   NSFreeMapTable(watchers);
   NSFreeMapTable(timers);
   [lock release];
@@ -1013,11 +994,10 @@ DKWatchAdd(DBusWatch *watch, void *data)
 static void
 DKWatchRemove(DBusWatch *watch, void *data)
 {
+  CTX(data);
   NSCAssert(watch, @"Missing watch data during D-Bus event handling.");
   NSDebugMLog(@"Removed watch");
-  // FIXME: data should contain our context object, but libdbus seems to pass
-  // the DKWatcher object here: Investigate why that is and fix it properly.
-  [[(DKWatcher*)data context] removeWatch: watch];
+  [ctx removeWatch: watch];
 }
 
 static void
