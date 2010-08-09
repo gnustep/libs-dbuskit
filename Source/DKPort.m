@@ -80,7 +80,7 @@ enum {
          utilizingComponents: (NSArray*)components
                     fromPort: (NSPort*)receivePort;
 
-- (id)initWithBusType: (DKDBusBusType)type;
+- (id)initForBusType: (DKDBusBusType)type;
 @end
 
 
@@ -88,16 +88,23 @@ enum {
 
 + (NSPort*)port
 {
-  return [[[self alloc] init] autorelease];
+  return [self sessionBusPort];
 }
 
 + (id)portForBusType: (DKDBusBusType)type
 {
-  return [[[self alloc] initWithBusType: type] autorelease];
+  return [[[self alloc] initForBusType: type] autorelease];
 }
 
++ (id)sessionBusPort
+{
+  return [self portForBusType: DKDBusSessionBus];
+}
 
-
++ (id)systemBusPort
+{
+  return [self portForBusType: DKDBusSystemBus];
+}
 
 - (id) initWithRemote: (NSString*)aRemote
            atEndpoint: (DKEndpoint*)anEndpoint
@@ -129,7 +136,7 @@ enum {
 }
 
 - (id) initWithRemote: (NSString*)aRemote
-           forBusType: (DKDBusBusType)type
+                onBus: (DKDBusBusType)type
 {
   DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: type] autorelease];
   return [self initWithRemote: aRemote
@@ -139,7 +146,7 @@ enum {
 - (id) initForBusType: (DKDBusBusType)type
 {
   return [self initWithRemote: nil
-                   forBusType: type];
+                        onBus: type];
 }
 
 - (id) init
@@ -175,7 +182,7 @@ enum {
 
 - (BOOL) hasValidRemote
 {
-  return [self hasValidRemoteOnBus: (id<DBus>)[DKDBus sessionBus]];
+  return [self hasValidRemoteOnBus: (id<DBus>)[DKDBus busWithBusType: [endpoint DBusBusType]]];
 }
 
 /**
@@ -377,42 +384,5 @@ enum {
   [pm release];
   [proxyCoder release];
   return YES;
-}
-@end
-
-
-@implementation DKSessionBusPort
-- (id)initWithRemote: (NSString*)aRemote
-{
-  DKEndpoint *ep = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION];
-  if (nil == (self = [self initWithRemote: aRemote
-                               atEndpoint: ep]))
-  {
-    [ep release];
-    return nil;
-  }
-  [ep release];
-  return self;
-}
-@end
-
-
-@implementation DKSystemBusPort
-- (id)initWithRemote: (NSString*)aRemote
-{
-  DKEndpoint *ep = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SYSTEM];
-  if (nil == (self = [self initWithRemote: aRemote
-                               atEndpoint: ep]))
-  {
-    [ep release];
-    return nil;
-  }
-  [ep release];
-  return self;
-}
-
-- (BOOL) hasValidRemote
-{
-  return [self hasValidRemoteOnBus: (id<DBus>)[DKDBus systemBus]];
 }
 @end

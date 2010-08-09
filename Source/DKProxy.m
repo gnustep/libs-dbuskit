@@ -590,19 +590,9 @@ static void DKInitIntrospectionThread(void *data);
 - (NSString*)_uniqueName
 {
   DKDBusBusType type = [endpoint DBusBusType];
-  DKDBus *bus = nil;
+  DKDBus *bus = [DKDBus busWithBusType: type];
   NSString *uniqueName = nil;
-  switch (type)
-  {
-    case DKDBusSessionBus:
-      bus = [DKDBus sessionBus];
-      break;
-    case DKDBusSystemBus:
-      bus = [DKDBus systemBus];
-      break;
-    default:
-      return nil;
-  }
+
   NS_DURING
   {
     uniqueName = [(id<DKDBusStub>)bus GetNameOwner: service];
@@ -975,6 +965,19 @@ static DKProxy *sessionBus;
   return systemBus;
 }
 
++ (id)busWithBusType: (DKDBusBusType)type
+{
+  switch (type)
+  {
+    case DKDBusSessionBus:
+      return [self sessionBus];
+    case DKDBusSystemBus:
+      return [self systemBus];
+    default:
+      return nil;
+  }
+  return nil;
+}
 
 - (id)initWithEndpoint: (DKEndpoint*)anEndpoint
             andService: (NSString*)aService

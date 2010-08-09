@@ -22,6 +22,7 @@
    */
 
 #import <Foundation/NSProxy.h>
+#import <DBusKit/DKPort.h>
 
 @class DKEndpoint, DKInterface, NSCondition, NSLock, NSString, NSMapTable, NSMutableArray, NSMutableDictionary;
 @protocol NSCoding;
@@ -70,6 +71,13 @@
  * shared objects: Calling -setPrimaryDBusInterface: on them has no effect.
  */
 @interface DKDBus: DKProxy
+
+/**
+ * Returns a reference to the org.freedesktop.DBus service on the bus specified
+ * by type.
+ */
++(id)busWithBusType: (DKDBusBusType)type;
+
 /**
  * Returns a reference to the org.freedesktop.DBus service on the session
  * message bus.

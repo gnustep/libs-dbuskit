@@ -39,10 +39,7 @@ typedef NSUInteger DKDBusBusType;
  * DKPort is used by the Distributed Objects system to communicate with
  * D-Bus. Unless you have special needs, don't create DKPort instances
  * yourself, but use the interfaces provided by NSConnection instead.
- *
- * This is a class cluster that will return subclass instances connected to
- * specific busses or peers, depending on the way it is initialized. The default
- * +port message will return a port connected to the session bus.
+ * The default +port message will return a port connected to the session bus.
  */
 @interface DKPort: NSPort
 {
@@ -56,21 +53,28 @@ typedef NSUInteger DKDBusBusType;
   NSString *remote;
 }
 
-+ (id) portForBusType: (DKDBusBusType)type;
+/**
+ * Returns a port to the specified message bus without any specified remote
+ * side.
+ */
++ (id)portForBusType: (DKDBusBusType)type;
+
+/** Returns a port to the session message bus. */
++ (id)sessionBusPort;
+
+/** Returns a port to the system message bus. */
++ (id)systemBusPort;
 
 /**
- * Return a DKPort instance connected to the specified D-Bus peer.
+ * Return a DKPort instance connected to the specified D-Bus peer on the session
+ * message bus.
  */
-- (id) initWithRemote: (NSString*)remote;
+- (id)initWithRemote: (NSString*)remote;
 
-@end
-
-@interface DKSessionBusPort: DKPort
-{
-}
-@end
-
-@interface DKSystemBusPort: DKPort
-{
-}
+/**
+ * Return a DKPort instance connected to the specified D-Bus peer on the
+ * specified message bus.
+ */
+- (id)initWithRemote: (NSString*)remote
+               onBus: (DKDBusBusType)bus;
 @end
