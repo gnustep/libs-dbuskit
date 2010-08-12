@@ -561,11 +561,26 @@ enum
 - (NSString*)methodDeclaration
 {
   NSMutableString *declaration = [NSMutableString stringWithString: @"- "];
+  NSArray *components = nil;
   NSString *returnType = nil;
   NSUInteger outCount = [outArgs count];
+  NSUInteger inCount = [inArgs count];
+  NSUInteger inIndex = 0;
   NSEnumerator *argEnum = nil;
   DKArgument *arg = nil;
-  NSUInteger count = 0;
+
+  if (0 == inCount)
+  {
+    components = [NSArray arrayWithObject: [self selectorString]];
+  }
+  else
+  {
+    components = [[self selectorString] componentsSeparatedByString: @":"];
+  }
+
+  NSAssert2(([components count] == (inCount + 1)), @"Invalid selector '%@' for method '%@'.",
+    [self selectorString],
+    name);
 
   if (0 == outCount)
   {
@@ -585,30 +600,48 @@ enum
   }
   else
   {
-    returnType = [NSString stringWithFormat: @"%@*",
-      NSStringFromClass([(DKArgument*)[outArgs objectAtIndex: 0] objCEquivalent])];
+    Class retClass = [(DKArgument*)[outArgs objectAtIndex: 0] objCEquivalent];
+    if (Nil == retClass)
+    {
+      returnType = @"id";
+    }
+    else
+    {
+      returnType = [NSString stringWithFormat: @"%@*", NSStringFromClass(retClass)];
+    }
   }
 
-  [declaration appendFormat: @"(%@) %@", returnType, name];
+  [declaration appendFormat: @"(%@)", returnType];
 
-  argEnum = [inArgs objectEnumerator];
-  while (nil != (arg = [argEnum nextObject]))
+  if (0 == inCount)
   {
-    NSString *argType = @"id";
-    NSString *argName = [arg name];
-    Class theClass = [arg objCEquivalent];
-    if (theClass != Nil)
+    // If we have no arguments, we add the selector string here, because we will
+    // not run the loop in this case.
+    [declaration appendFormat: @"%@ ", [components objectAtIndex: 0]];
+  }
+  else
+  {
+    argEnum = [inArgs objectEnumerator];
+    while (nil != (arg = [argEnum nextObject]))
     {
-      argType = [NSStringFromClass(theClass) stringByAppendingString: @"*"];
-    }
+      NSString *argType = @"id";
+      NSString *argName = [arg name];
+      Class theClass = [arg objCEquivalent];
+      if (theClass != Nil)
+      {
+        argType = [NSStringFromClass(theClass) stringByAppendingString: @"*"];
+      }
 
-    if (nil == argName)
-    {
-      argName = [[NSString alloc] initWithFormat: @"argument%ld", count];
+      if (nil == argName)
+      {
+        argName = [NSString stringWithFormat: @"argument%ld", inIndex];
+      }
+      [declaration appendFormat:@"%@: (%@)%@ ",
+        [components objectAtIndex: inIndex],
+        argType,
+        argName];
+      inIndex++;
     }
-    [declaration appendFormat:@": (%@)%@ ", argType, argName];
-    [argName release];
-    count++;
   }
   if ([self isDeprecated])
   {
@@ -616,20 +649,56 @@ enum
   }
   else
   {
-    [declaration replaceCharactersInRange: NSMakeRange(([declaration length]), 0)
+    [declaration replaceCharactersInRange: NSMakeRange(([declaration length] - 1), 1)
                                withString: @";"];
   }
   return declaration;
 }
 
+- (NSString*)annotationValueForKey: (NSString*)key
+{
+  NSString *value = [super annotationValueForKey: key];
+  // Perform validation whether we can use this selector string for the method,
+  // viz. determine whether it has the right number of colons (':').
+  if ([@"org.gnustep.objc.selector" isEqualToString: key])
+  {
+    const char* selectorString = [value UTF8String];
+    NSUInteger len = [value length];
+    NSUInteger i = 0;
+    NSUInteger expectedCount = [inArgs count];
+    NSUInteger actualCount = 0;
+    for (i = 0; i < len; i++)
+    {
+      if (':' == selectorString[i])
+      {
+	actualCount++;
+      }
+      if (actualCount > expectedCount)
+      {
+	return nil;
+      }
+    }
+    if (actualCount != expectedCount)
+    {
+      return nil;
+    }
+  }
+
+  return value;
+}
 - (NSString*)selectorString
 {
-  // TODO: Look aside whether a custom selector is specified somewhere
-  // This means appending the correct number of colons
-  NSUInteger newLength = [name length] + [inArgs count];
-  return [name stringByPaddingToLength: newLength
-                            withString: @":"
-                       startingAtIndex: 0];
+  NSString *selectorString = [self annotationValueForKey: @"org.gnustep.objc.selector"];
+  if (nil == selectorString)
+  {
+    // We generate a selector string from the method name by appending the
+    // correct number of colons
+    NSUInteger newLength = [name length] + [inArgs count];
+    selectorString = [name stringByPaddingToLength: newLength
+                                        withString: @":"
+                                   startingAtIndex: 0];
+  }
+  return selectorString;
 }
 
 - (void)setOutArgs: (NSMutableArray*)newOut

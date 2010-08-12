@@ -77,6 +77,12 @@
                name: (NSString*)notificationName
 	     object: (DKProxy*)sender;
 
+- (void)addObserver: (id)observer
+           selector: (SEL)notifySelector
+               name: (NSString*)notificationName
+	     sender: (DKProxy*)sender
+        destination: (DKProxy*)destination;
+
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
               signal: (NSString*)signalName
@@ -108,9 +114,35 @@
                 object: (DKProxy*)sender;
 
 - (void)removeObserver: (id)observer
+                  name: (NSString*)notificationName
+   	        sender: (DKProxy*)sender
+           destination: (DKProxy*)destination;
+
+- (void)removeObserver: (id)observer
                 signal: (NSString*)signalName
              interface: (NSString*)interfaceName
                 object: (DKProxy*)sender;
+
+- (void)removeObserver: (id)observer
+                signal: (NSString*)signalName
+             interface: (NSString*)interfaceName
+   	        sender: (DKProxy*)sender
+           destination: (DKProxy*)destination;
+
+-  (void)removeObserver: (id)observer
+                 signal: (NSString*)signalName
+              interface: (NSString*)interfaceName
+                 sender: (DKProxy*)sender
+            destination: (DKProxy*)destination
+                 filter: (NSString*)filter
+                atIndex: (NSUInteger) index;
+
+-  (void)removeObserver: (id)observer
+                 signal: (NSString*)signalName
+              interface: (NSString*)interfaceName
+                 sender: (DKProxy*)sender
+            destination: (DKProxy*)destination
+      filtersAndIndices: (NSString*)firstFilter, NSUInteger firstindex, ...;
 
 - (void)postNotification: (NSNotification*)notification;
 

@@ -28,11 +28,15 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSException.h>
+#import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
 
 #import "DBusKit/DKNotificationCenter.h"
 #import "DKProxy+Private.h"
 #import "DKEndpoint.h"
+
+#include <dbus/dbus.h>
 
 @interface DKNotificationCenter (Private)
 - (void)_registerSignal: (DKSignal*)signal;
@@ -98,6 +102,11 @@
   return [annotations objectForKey: @"org.gnustep.openstep.notification"];
 }
 
+- (BOOL)isStub
+{
+  return [[annotations objectForKey: @"org.gnustep.dbuskit.signal.stub"] boolValue];
+}
+
 - (void)registerWithNotificationCenter: (DKNotificationCenter*)center
 {
   [center _registerSignal: self];
@@ -113,6 +122,41 @@
   }
   theCenter = [DKNotificationCenter centerForBusType: [[theProxy _endpoint] DBusBusType]];
   [self registerWithNotificationCenter: theCenter];
+}
+
+- (NSDictionary*)userInfoFromIterator: (DBusMessageIter*)iter
+{
+  NSUInteger numArgs = [args count];
+  NSMutableDictionary *userInfo = [NSMutableDictionary new];
+  NSUInteger index = 0;
+  while (index < (numArgs))
+  {
+    NSString *key = [NSString stringWithFormat: @"arg%lu", index];
+    DKArgument *arg = (DKArgument*)[args objectAtIndex: index];
+    NSString *annotatedKey = [arg annotationValueForKey: @"org.gnustep.openstep.notification.key"];
+
+    id value = [arg unmarshalledObjectFromIterator: iter];
+    if (nil == value)
+    {
+      value = [NSNull null];
+    }
+    [userInfo setObject: value
+                 forKey: key];
+
+    if (nil != annotatedKey)
+    {
+      [userInfo setObject: value
+                   forKey: annotatedKey];
+    }
+    index++;
+    if ((NO == (BOOL)dbus_message_iter_next(iter)) && (index < numArgs))
+    {
+      [NSException raise: @"DKSignalUnmarshallingException"
+                  format: @"D-Bus message too short when unmarshalling arguments for signal '%@'.",
+        name];
+    }
+  }
+  return userInfo;
 }
 
 - (void)dealloc

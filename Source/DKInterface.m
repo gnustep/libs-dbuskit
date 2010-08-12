@@ -54,7 +54,8 @@
   }
 
   methods = [NSMutableDictionary new];
-
+  properties = [NSMutableDictionary new];
+  signals = [NSMutableDictionary new];
   selectorToMethodMap = NSCreateMapTable(NSIntMapKeyCallBacks,
     NSObjectMapValueCallBacks,
     10);
@@ -145,7 +146,51 @@
   }
 }
 
-- (DKMethod*) methodForSelector: (SEL)selector
+- (void)installMethod: (DKMethod*)aMethod
+{
+  const char* selectorString = [[aMethod selectorString] UTF8String];
+  SEL untypedSelector = 0;
+
+  if (NULL == selectorString)
+  {
+    NSWarnMLog(@"Cannot register selector with empty name for method %@");
+    return;
+  }
+
+  untypedSelector = sel_registerName(selectorString);
+  [self installMethod: aMethod
+          forSelector: untypedSelector];
+  NSDebugMLog(@"Registered %s as %p.",
+    selectorString,
+    untypedSelector);
+}
+
+- (void)installMethods
+{
+  NSEnumerator *methodEnum = [methods objectEnumerator];
+  DKMethod *method = nil;
+  SEL installationSelector = @selector(installMethod:);
+  IMP installMethod = [self methodForSelector: installationSelector];
+  while (nil != (method = [methodEnum nextObject]))
+  {
+    installMethod(self, installationSelector, method);
+  }
+}
+
+- (void)registerSignals
+{
+  NSEnumerator *signalEnum = [signals objectEnumerator];
+  DKSignal *signal = nil;
+  SEL registrationSelector = @selector(registerWithNotificationCenter);
+  IMP registerSignal = class_getMethodImplementation([DKSignal class],
+    registrationSelector);
+  while (nil != (signal = [signalEnum nextObject]))
+  {
+    registerSignal(signal, registrationSelector);
+  }
+}
+
+- (DKMethod*) DBusMethodForSelector: (SEL)selector
 {
   selector = sel_getUid(sel_getName(selector));
   return NSMapGet(selectorToMethodMap, selector);
@@ -156,9 +201,19 @@
   return [name stringByReplacingOccurrencesOfString: @"." withString: @"_"];
 }
 
+- (NSString*)protocolName
+{
+  NSString *protocolName = [annotations objectForKey: @"org.gnustep.objc.protocol"];
+  if (nil == protocolName)
+  {
+    protocolName = [self mangledName];
+  }
+  return protocolName;
+}
+
 - (NSString*)protocolDeclaration
 {
-  NSMutableString *declaration = [NSMutableString stringWithFormat: @"@protocol %@\n\n", [self mangledName]];
+  NSMutableString *declaration = [NSMutableString stringWithFormat: @"@protocol %@\n\n", [self protocolName]];
   NSEnumerator *methodEnum = [methods objectEnumerator];
   DKMethod *method = nil;
 
@@ -173,34 +228,28 @@
 
 - (Protocol*)protocol
 {
-  // TODO: Look aside if another protocol was named to correspond to this
-  // interface.
-  return NSProtocolFromString([self mangledName]);
-}
-
-- (void)_setDictionaryAt: (NSMutableDictionary**)dictAddr
-            toDictionary: (NSMutableDictionary*)newDict
-{
-  ASSIGN(*dictAddr, newDict);
-  [[*dictAddr allValues] makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+  return NSProtocolFromString([self protocolName]);
 }
 
 - (void)setMethods: (NSMutableDictionary*)newMethods
 {
-  [self _setDictionaryAt: &methods
-            toDictionary: newMethods];
+  ASSIGN(methods,newMethods);
+  [[methods allValues] makeObjectsPerformSelector: @selector(setParent:)
+                                       withObject: self];
 }
 
 - (void)setSignals: (NSMutableDictionary*)newSignals
 {
-  [self _setDictionaryAt: &signals
-            toDictionary: newSignals];
+  ASSIGN(signals,newSignals);
+  [[signals allValues] makeObjectsPerformSelector: @selector(setParent:)
+                                       withObject: self];
 }
 
 - (void)setProperties: (NSMutableDictionary*)newProperties
 {
-  [self _setDictionaryAt: &properties
-            toDictionary: newProperties];
+  ASSIGN(properties,newProperties);
+  [[properties allValues] makeObjectsPerformSelector: @selector(setParent:)
+                                          withObject: self];
 }
 
 /**
@@ -281,6 +330,8 @@
 - (void)dealloc
 {
   [methods release];
+  [signals release];
+  [properties release];
   NSFreeMapTable(selectorToMethodMap);
   [super dealloc];
 }

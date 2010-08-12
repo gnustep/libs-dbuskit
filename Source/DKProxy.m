@@ -75,9 +75,6 @@ enum
                    waitForCache: (BOOL)doWait;
 - (void)_buildMethodCache;
 - (void)_installIntrospectionMethod;
-- (void)_installMethod: (DKMethod*)aMethod
-           inInterface: (DKInterface*)anInterface
-      forSelectorNamed: (NSString*)selName;
 
 /* Define introspect on ourselves. */
 - (NSString*)Introspect;
@@ -436,7 +433,7 @@ static void DKInitIntrospectionThread(void *data);
     {
       // The interface was specified. Retrieve the corresponding method;
       [tableLock lock];
-      method = [(DKInterface*)[interfaces objectForKey: interface] methodForSelector: unmangledSel];
+      method = [(DKInterface*)[interfaces objectForKey: interface] DBusMethodForSelector: unmangledSel];
       [tableLock unlock];
     }
     else
@@ -475,7 +472,11 @@ static void DKInitIntrospectionThread(void *data);
                     waitForCache: (BOOL)doWait
 {
   DKMethod *m = nil;
-
+  // Cache the implementation pointer for method retrieval.
+  SEL retrievalSelector = @selector(DBusMethodForSelector:);
+  IMP retrieveDBusMethod = class_getMethodImplementation([DKInterface class],
+    retrievalSelector);
+  NSAssert(retrieveDBusMethod, @"No method retrieval implementation in DKInterface.");
   [condition lock];
   if (doWait)
   {
@@ -491,11 +492,16 @@ static void DKInitIntrospectionThread(void *data);
   {
     // If an interface was marked active, try to find the selector there first
     // (the interface will perform its own locking).
-    m = [activeInterface methodForSelector: aSel];
+    m = retrieveDBusMethod(activeInterface, retrievalSelector, aSel);
   }
   if (nil == m)
   {
-    m = NSMapGet(selectorToMethodMap, aSel);
+    NSEnumerator *ifEnum = [interfaces objectEnumerator];
+    DKInterface *thisIf = nil;
+    while ((nil == m) && (nil != (thisIf = [ifEnum nextObject])))
+    {
+      m = retrieveDBusMethod(thisIf, retrievalSelector, aSel);
+    }
   }
 
   [tableLock unlock];
@@ -522,7 +528,7 @@ static void DKInitIntrospectionThread(void *data);
       if (nil != interface)
       {
 	[tableLock lock];
-	method = [(DKInterface*)[interfaces objectForKey: interface] methodForSelector: newSel];
+	method = [(DKInterface*)[interfaces objectForKey: interface] DBusMethodForSelector: newSel];
         [tableLock unlock];
       }
       else
@@ -639,63 +645,6 @@ static void DKInitIntrospectionThread(void *data);
   return (sameService && sameEndpoint);
 }
 
-- (void)_installMethod: (DKMethod*)aMethod
-           inInterface: (DKInterface*)anInterface
-           forSelector: (SEL)aSel
-{
-  // NOTE: The caller is responsible for obtaining the tableLock
-  if ((0 == aSel) || (nil == aMethod))
-  {
-    NSWarnMLog(@"Not inserting invalid selector/method pair.");
-    return;
-  }
-  if (NULL != NSMapInsertIfAbsent(selectorToMethodMap, aSel, aMethod))
-  {
-    NSDebugMLog(@"Overloaded selector %@ for method %@",
-      NSStringFromSelector(aSel),
-      aMethod);
-  }
-
-  [anInterface installMethod: aMethod
-                 forSelector: aSel];
-  // NOTE: The caller is responsible for unlocking the tables.
-}
-
-- (void)_installMethod: (DKMethod*)aMethod
-           inInterface: (DKInterface*)theIf
-      forSelectorNamed: (NSString*)selName
-{
-  // NOTE: The caller is responsible for obtaining the tableLock
-
-  const char* selectorString;
-  SEL untypedSelector = 0;
-
-  if (nil == selName)
-  {
-    selectorString = [[aMethod selectorString] UTF8String];
-  }
-  else
-  {
-    selectorString = [selName UTF8String];
-  }
-
-  if (NULL == selectorString)
-  {
-    NSWarnMLog(@"Cannot register selector with empty name for method %@");
-    return;
-  }
-
-  untypedSelector = sel_registerName(selectorString);
-  [self _installMethod: aMethod
-           inInterface: theIf
-	   forSelector: untypedSelector];
-  NSDebugMLog(@"Registered %s as %p (untyped)",
-    selectorString,
-    untypedSelector);
-
-  // NOTE: The caller is responsible for unlocking the tables.
-}
-
 - (void) _installIntrospectionMethod
 {
   [condition lock];
@@ -705,34 +654,12 @@ static void DKInitIntrospectionThread(void *data);
   }
   [self _addInterface: _DKInterfaceIntrospectable];
 
-  [tableLock lock];
-  [self _installMethod: [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)]
-           inInterface: nil
-      forSelectorNamed: nil];
-  [tableLock unlock];
   state = HAVE_INTROSPECT;
   [condition broadcast];
   [condition unlock];
 }
 
-- (void)_installAllMethodsFromInterface: (DKInterface*)theIf
-{
-  NSEnumerator *methEnum = [[theIf methods] objectEnumerator];
-  DKMethod *theMethod = nil;
-  //NOTE: The caller is responsible for obtaining the table lock.
-  while (nil != (theMethod = [methEnum nextObject]))
-  {
-    // TODO: Look aside whether there is a custom selector name set somewhere.
-    NSString *theSelName = [theMethod selectorString];
-    [self _installMethod: theMethod
-             inInterface: theIf
-        forSelectorNamed: theSelName];
-  }
-  // NOTE: The caller is responsible for unlocking the tables.
-}
-
-
-- (void) _installAllMethods
+- (void) _installAllInterfaces
 {
   NSEnumerator *ifEnum = nil;
   DKInterface *theIf = nil;
@@ -745,9 +672,11 @@ static void DKInitIntrospectionThread(void *data);
   ifEnum = [interfaces objectEnumerator];
   while (nil != (theIf = [ifEnum nextObject]))
   {
-    [self _installAllMethodsFromInterface: theIf];
+    [theIf installMethods];
+    [theIf registerSignals];
   }
   [tableLock unlock];
+
   state = CACHE_READY;
   [condition broadcast];
   [condition unlock];
@@ -755,9 +684,7 @@ static void DKInitIntrospectionThread(void *data);
 }
 - (void)_setupTables
 {
-  if ((NULL == selectorToMethodMap)
-    || (nil == interfaces)
-    || (nil == children))
+  if ((nil == interfaces) || (nil == children))
   {
     if (NO_TABLES == state)
     {
@@ -770,12 +697,6 @@ static void DKInitIntrospectionThread(void *data);
       else
       {
 	[tableLock lock];
-      }
-      if (NULL == selectorToMethodMap)
-      {
-	selectorToMethodMap = NSCreateMapTable(NSIntMapKeyCallBacks,
-	  NSObjectMapValueCallBacks,
-	  10);
       }
       if (nil == interfaces)
       {
@@ -860,7 +781,7 @@ static void DKInitIntrospectionThread(void *data);
   if (CACHE_BUILT == state)
   {
     [condition unlock];
-    [self _installAllMethods];
+    [self _installAllInterfaces];
   }
   else
   {
@@ -880,7 +801,6 @@ static void DKInitIntrospectionThread(void *data);
   [interfaces release];
   [children release];
   [activeInterface release];
-  NSFreeMapTable(selectorToMethodMap);
   [tableLock release];
   [condition release];
   [super dealloc];

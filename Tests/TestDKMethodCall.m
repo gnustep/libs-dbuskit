@@ -56,7 +56,7 @@
   [inv setTarget: aProxy];
   [inv setSelector: @selector(Introspect)];
   call = [[DKMethodCall alloc] initWithProxy: aProxy
-                                      method: [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)]
+                                      method: [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)]
                                   invocation: inv];
   UKNotNil(call);
   [call sendSynchronouslyAndWaitUntil: 0];

@@ -33,6 +33,8 @@
 - (void)addArgument: (DKArgument*)arg
           direction: (NSString*)direction;
 
+- (void)setArguments: (NSMutableArray*)arguments;
+
 /**
  * Returns a custom notification name if one was set for the signal.
  */
@@ -43,4 +45,19 @@
  * responsible for the proxy that the signal descends from.
  */
 - (void)registerWithNotificationCenter;
+
+/**
+ * Returns the values of the signals arguments in an dictionary. By default,
+ * those values will have an keys like arg0, arg1, ..., argN. If an
+ * org.gnustep.openstep.notification.key annotation is available for the
+ * arguments of this signal, the values will additionally be available for the
+ * key specified.
+ */
+- (NSDictionary*)userInfoFromIterator: (DBusMessageIter*)iter;
+
+/**
+ * Returns YES if the signal is a stub signal created by the notification
+ * center.
+ */
+- (BOOL)isStub;
 @end

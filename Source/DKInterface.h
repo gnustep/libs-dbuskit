@@ -78,9 +78,20 @@
            forSelector: (SEL)selector;
 
 /**
+ * Add all methods present in the interface to the dispatch table, utilizing
+ * their default selector names.
+ */
+- (void)installMethods;
+
+/**
+ * Registers all signals in the interface for use with DKNotificationCenter.
+ */
+- (void)registerSignals;
+
+/**
  * Returns the method installed for this selector.
  */
-- (DKMethod*) methodForSelector: (SEL)selector;
+- (DKMethod*) DBusMethodForSelector: (SEL)selector;
 
 /**
  * Returns the description of all methods in the interface as a protocol
@@ -98,4 +109,11 @@
  * Returns the interface name with all dots replaced by underscores.
  */
 - (NSString*)mangledName;
+
+/**
+ * Returns the name of the Objective-C protocol corresponding to the interface.
+ * This will utilize the org.gnustep.objc.protocol annotation key if available
+ * and return the -mangledName otherwise.
+ */
+- (NSString*)protocolName;
 @end

@@ -54,7 +54,7 @@
 
 - (void)testBuiltInIntrospectSignatureBoxed
 {
-  DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
+  DKMethod *method = [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)];
   NSMethodSignature *sig = [method methodSignature];
   NSUInteger argCount = [sig numberOfArguments];
   UKTrue((0 == strcmp([sig methodReturnType], @encode(id))));
@@ -71,7 +71,7 @@
 }
 - (void)testBuiltInIntrospectSignatureNotBoxed
 {
-  DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
+  DKMethod *method = [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)];
   NSMethodSignature *sig = [method methodSignatureBoxed: NO];
   NSUInteger argCount = [sig numberOfArguments];
   UKTrue((0 == strcmp([sig methodReturnType], @encode(char*))));
@@ -90,14 +90,14 @@
 - (void)testEmitMethodDeclaration
 {
 
-  DKMethod *method = [_DKInterfaceIntrospectable methodForSelector: @selector(Introspect)];
-  UKObjectsEqual(@"- (NSString*) Introspect;", [method methodDeclaration]);
+  DKMethod *method = [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)];
+  UKObjectsEqual(@"- (NSString*)Introspect;", [method methodDeclaration]);
 }
 
 - (void)testReprarentInCopy
 {
   DKInterface *new = [_DKInterfaceIntrospectable copy];
-  DKMethod *method = [new methodForSelector: @selector(Introspect)];
+  DKMethod *method = [new DBusMethodForSelector: @selector(Introspect)];
   UKNotNil(method);
   UKObjectsEqual(new, [method parent]);
 }

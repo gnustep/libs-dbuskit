@@ -32,7 +32,6 @@
   DKEndpoint *endpoint;
   NSString *service;
   NSString *path;
-  NSMapTable *selectorToMethodMap;
   NSMutableDictionary *interfaces;
   NSMutableArray *children;
   DKInterface *activeInterface;

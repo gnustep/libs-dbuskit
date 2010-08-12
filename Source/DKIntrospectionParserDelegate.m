@@ -65,7 +65,12 @@
 
 - (id)leaf
 {
-  return [stack objectAtIndex: ([stack count] - 1)];
+  id object = [stack objectAtIndex: ([stack count] - 1)];
+  if ([[NSNull null] isEqual: object])
+  {
+    return nil;
+  }
+  return object;
 }
 
 - (void)popStack
@@ -178,6 +183,7 @@ didStartElement: (NSString*)aNode
     {
       newNode = [[DKSignal alloc] initWithName: theName
                                         parent: leaf];
+      [ifLeaf addSignal: (DKSignal*)newNode];
     }
     else if ([@"property" isEqualToString: aNode])
     {
@@ -229,10 +235,6 @@ didStartElement: (NSString*)aNode
 {
   NSDebugMLog(@"Ended node: %@", aNode);
   xmlDepth--;
-  if ([@"signal" isEqualToString: aNode])
-  {
-    [(DKSignal*)[self leaf] registerWithNotificationCenter];
-  }
   [self popStack];
   if (0 == xmlDepth)
   {

@@ -177,8 +177,8 @@
         errorMessage, errorName,
 	invocation, @"invocation", nil];
       errorException = [NSException exceptionWithName: exceptionName
-                                                reason: exceptionReason
-                                              userInfo: infoDict];
+                                               reason: exceptionReason
+                                             userInfo: infoDict];
       [infoDict release];
     }
     else

@@ -22,6 +22,7 @@
 
 #import "DBusKit/DKNotificationCenter.h"
 #import "DBusKit/DKPort.h"
+#import "DKArgument.h"
 #import "DKInterface.h"
 #import "DKSignal.h"
 #import "DKProxy+Private.h"
@@ -57,6 +58,11 @@
    * Set of all observation activities for the observable;
    */
   NSHashTable *observations;
+
+  /**
+   * The bus-type that should be used when making queries to the D-Bus object.
+   */
+   DKDBusBusType type;
 }
 - (void)addObservation: (DKObservation*)observation;
 @end
@@ -93,15 +99,18 @@
 
 @implementation DKObservable
 
-- (id)init
+- (id)initWithBusType: (DKDBusBusType)aType;
 {
+  NSPointerFunctionsOptions weakObjectOptions = (NSPointerFunctionsObjectPersonality | NSPointerFunctionsZeroingWeakMemory);
   if (nil == (self = [super init]))
   {
     return nil;
   }
   // We always observe signals:
-  rules = [NSMutableDictionary dictionaryWithObjectsAndKeys: @"signal", @"type", nil];
-  observations = [NSHashTable hashTableWithWeakObjects];
+  type = aType;
+  rules = [[NSMutableDictionary alloc] initWithObjectsAndKeys: @"signal", @"type", nil];
+  observations = [[NSHashTable alloc] initWithOptions: weakObjectOptions
+                                             capacity: 5];
   return self;
 }
 
@@ -123,8 +132,8 @@
   }
 }
 
-- (void)setValue: (NSString*)value
-          forKey: (NSString*)key
+- (void)setRule: (NSString*)value
+         forKey: (NSString*)key
 {
   if (nil == key)
   {
@@ -141,21 +150,21 @@
   }
 }
 
-- (id)valueForKey: (NSString*)key
+- (id)ruleForKey: (NSString*)key
 {
   return [rules objectForKey: key];
 }
 
 - (void)filterInterface: (NSString*)interface
 {
-  [self setValue: interface
-          forKey: @"interface"];
+  [self setRule: interface
+         forKey: @"interface"];
 }
 
 - (void)filterSignalName: (NSString*)signalName
 {
-  [self setValue: signalName
-          forKey: @"member"];
+  [self setRule: signalName
+         forKey: @"member"];
 }
 
 - (void)filterSignal: (DKSignal*)signal
@@ -173,25 +182,25 @@
     {
       match = @"";
     }
-    [self setValue: match
-            forKey: [NSString stringWithFormat: @"arg%lu", index]];
+    [self setRule: match
+           forKey: [NSString stringWithFormat: @"arg%lu", index]];
   }
 }
 
 - (void)filterSender: (DKProxy*)proxy
 {
-  [self setValue: [proxy _service]
-          forKey: @"sender"];
-  [self setValue: [proxy _path]
-          forKey: @"path"];
+  [self setRule: [proxy _service]
+         forKey: @"sender"];
+  [self setRule: [proxy _path]
+         forKey: @"path"];
 }
 
 
 - (void)filterDestination: (DKProxy*)proxy
 {
   NSString *uniqueName = [proxy _uniqueName];
-  [self setValue: uniqueName
-          forKey: @"destination"];
+  [self setRule: uniqueName
+         forKey: @"destination"];
 }
 
 - (NSString*)ruleString
@@ -226,6 +235,58 @@
 - (BOOL)isEqual: (DKObservable*)other
 {
   return [rules isEqualToDictionary: [other rules]];
+}
+
+- (NSHashTable*)observations
+{
+  return observations;
+}
+
+/**
+ * Determine whether a given notification's userInfo dictionary will be matched
+ * by the receiver.
+ */
+- (BOOL)matchesUserInfo: (NSDictionary*)dict
+{
+  NSEnumerator *keyEnum = [rules keyEnumerator];
+  NSString *thisKey = nil;
+  while (nil != (thisKey = [keyEnum nextObject]))
+  {
+    NSString *thisRule = [rules objectForKey: thisKey];
+    if (([@"sender" isEqualToString: thisKey]) && (nil != thisRule))
+    {
+      /*
+       * The sender in the userInfo will be a unique name, but the match name
+       * might have been another name registered for the service. We thus need
+       * to get the owner of the name from the bus.
+       */
+      thisRule = [[DKDBus busWithBusType: type] GetNameOwner: thisRule];
+    }
+
+    if (nil != thisRule)
+    {
+      id thisValue = [dict objectForKey: thisKey];
+
+      // For proxies we want to match the object paths:
+      if ([thisValue isKindOfClass: [DKProxy class]])
+      {
+	thisValue = [(DKProxy*)thisValue _path];
+      }
+
+      // We only match string values.
+      if (NO == [thisValue isKindOfClass: [NSString class]])
+      {
+	return NO;
+      }
+
+      // Complete matches only
+      if (NO == [thisRule isEqualToString: (NSString*)thisValue])
+      {
+	return NO;
+      }
+    }
+  }
+  return YES;
 }
 
 - (void)dealloc
@@ -297,10 +358,26 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 @interface DKNotificationCenter (DKNotificationCenterPrivate)
 - (id)initWithBusType: (DKDBusBusType)type;
+
 - (DKSignal*)_signalForNotificationName: (NSString*)name;
+
 - (void)_letObserver: (id)observer
    observeObservable: (DKObservable*)observable
         withSelector: (SEL)selector;
+
+- (void)_removeObserver: (id)observer
+          forObservable: (DKObservable*)observable;
+
+- (DKObservable*)_observableForSignalName: (NSString*)signalName
+                                interface: (NSString*)interfaceName
+                                   sender: (DKProxy*)sender
+                              destination: (DKProxy*)destination
+                                   filter: (NSString*)filter
+	                          atIndex: (NSUInteger)index;
+
+- (void)_installHandler;
+
+- (void)_removeHandler;
 @end
 
 @implementation DKNotificationCenter
@@ -359,40 +436,39 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 - (id)initWithBusType: (DKDBusBusType)type
 {
-  DKEndpoint *ep = nil;
-
   if (nil == (self = [super init]))
   {
     return nil;
   }
-  ep = [[DKEndpoint alloc] initWithWellKnownBus: (DBusBusType)type];
+  endpoint = [[DKEndpoint alloc] initWithWellKnownBus: (DBusBusType)type];
 
-  if (nil == ep)
+  if (nil == endpoint)
   {
     [self release];
     return nil;
   }
-  ASSIGN(endpoint,ep);
-  [ep release];
 
   lock = [[NSLock alloc] init];
   signalInfo = [[NSMutableDictionary alloc] init];
   notificationNames = [[NSMutableDictionary alloc] init];
 
   observables = NSCreateHashTable(NSObjectHashCallBacks, 5);
-  observers = [NSMapTable mapTableWithWeakToStrongObjects];
+  observers = [[NSMapTable alloc] initWithKeyOptions: (NSPointerFunctionsObjectPersonality | NSPointerFunctionsZeroingWeakMemory)
+                                        valueOptions: NSPointerFunctionsObjectPersonality
+				            capacity: 5];
 
   return self;
 }
 
-
+// -addObserver:... methods on different granularities
 - (void)addObserver: (id)observer
            selector: (SEL)notifySelector
                name: (NSString*)notificationName
-	     object: (DKProxy*)sender
+	     sender: (DKProxy*)sender
+	destination: (DKProxy*)destination
 {
   DKSignal *signal = [self _signalForNotificationName: notificationName];
-  DKObservable *observable = [[DKObservable alloc] init];
+  DKObservable *observable = nil;
   if ((nil != notificationName) && (nil == signal))
   {
     //TODO: fail silently or raise an exception?
@@ -400,35 +476,30 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       notificationName);
     return;
   }
-  [observable filterSignal: signal];
-  [observable filterSender: sender];
-  NS_DURING
-  {
-    [self _letObserver: observer
-     observeObservable: observable
-          withSelector: notifySelector];
-  }
-  NS_HANDLER
-  {
-    [observable release];
-    [localException raise];
-  }
-  NS_ENDHANDLER
-  [observable release];
+
+  observable = [self _observableForSignalName: [signal name]
+                                    interface: [[signal parent] name]
+                                       sender: sender
+                                  destination: destination
+				       filter: nil
+				      atIndex: 0];
+  [self _letObserver: observer
+   observeObservable: observable
+        withSelector: notifySelector];
 }
 
-- (DKObservable*)_observableForSignalName: (NSString*)signalName
-                                interface: (NSString*)interfaceName
-                                   sender: (DKProxy*)sender
-                              destination: (DKProxy*)destination
+- (void)addObserver: (id)observer
+           selector: (SEL)notifySelector
+               name: (NSString*)notificationName
+	     object: (DKProxy*)sender
 {
-  DKObservable *observable = [[[DKObservable alloc] init] autorelease];
-  [observable filterSignalName: signalName];
-  [observable filterInterface: interfaceName];
-  [observable filterSender: sender];
-  [observable filterDestination: destination];
-  return observable;
+  [self addObserver: observer
+           selector: notifySelector
+               name: notificationName
+             sender: sender
+        destination: nil];
 }
+
 
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
@@ -442,12 +513,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   DKObservable *observable = [self _observableForSignalName: signalName
                                                   interface: interfaceName
                                                      sender: sender
-                                                destination: destination];
-  if (filter != nil)
-  {
-    [observable filterValue: filter
-         forArgumentAtIndex: index];
-  }
+                                                destination: destination
+                                                     filter: filter
+						    atIndex: index];
   [self _letObserver: observer
    observeObservable: observable
         withSelector: notifySelector];
@@ -485,10 +553,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   DKObservable *observable = [self _observableForSignalName: signalName
                                                   interface: interfaceName
                                                      sender: sender
-                                                destination: destination];
-  [observable filterValue: firstFilter
-       forArgumentAtIndex: nullIndex];
-
+                                                destination: destination
+						     filter: firstFilter
+                                                    atIndex: nullIndex];
   va_start(filters, nullIndex);
   while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
   {
@@ -511,14 +578,99 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
         withSelector: notifySelector];
 }
 
+// Observation removal methods on different levels of granularity:
+
 - (void)removeObserver: (id)observer
 {
+  NSHashTable *observationTable = nil;
+  NSHashTable *enumTable = nil;
+  NSHashEnumerator obsEnum;
+  DKObservation *thisObservation = nil;
+  [lock lock];
+
+  observationTable = (NSHashTable*)NSMapGet(observers, (void*)observer);
+  if (nil == observationTable)
+  {
+    [lock unlock];
+    return;
+  }
+  // We copy the table be cause we will modify it subsequently:
+  enumTable = NSCopyHashTableWithZone(observationTable, NULL);
+  [lock unlock];
+  obsEnum = NSEnumerateHashTable(enumTable);
+  while (nil != (thisObservation = NSNextHashEnumeratorItem(&obsEnum)))
+  {
+    [self _removeObserver: observer
+            forObservable: [thisObservation observed]];
+    // On removal of the last observation, _removeObserver:forObservable: will
+    // remove the entry from the observers table.
+  }
+  NSEndHashTableEnumeration(&obsEnum);
+  NSFreeHashTable(enumTable);
+}
+
+- (void)removeObserver: (id)observer
+                  name: (NSString*)notificationName
+                sender: (DKProxy*)sender
+           destination: (DKProxy*)destination
+{
+  DKSignal *signal = [self _signalForNotificationName: notificationName];
+  if ((nil != notificationName) && (nil == signal))
+  {
+    //TODO: fail silently or raise an exception?
+    NSWarnMLog(@"Cannot remove notification %@ (no corresponding D-Bus signal).",
+      notificationName);
+    return;
+  }
+  [self removeObserver: observer
+                signal: [signal name]
+             interface: [[signal parent] name]
+                sender: sender
+           destination: destination];
 }
 
 - (void)removeObserver: (id)observer
                   name: (NSString*)notificationName
                 object: (DKProxy*)sender
 {
+  [self removeObserver: observer
+                  name: notificationName
+                sender: sender
+           destination: nil];
+}
+
+- (void)removeObserver: (id)observer
+                signal: (NSString*)signalName
+             interface: (NSString*)interfaceName
+                sender: (DKProxy*)sender
+           destination: (DKProxy*)destination
+{
+  DKObservable *observable = [self _observableForSignalName: signalName
+                                                  interface: interfaceName
+                                                     sender: sender
+                                                destination: destination
+						     filter: nil
+						    atIndex: 0];
+  [self _removeObserver: observer
+          forObservable: observable];
+}
+
+- (void)removeObserver: (id)observer
+                signal: (NSString*)signalName
+             interface: (NSString*)interfaceName
+                sender: (DKProxy*)sender
+           destination: (DKProxy*)destination
+	        filter: (NSString*)filter
+    	       atIndex: (NSUInteger)index
+{
+  DKObservable *observable = [self _observableForSignalName: signalName
+                                                  interface: interfaceName
+                                                     sender: sender
+                                                destination: destination
+						     filter: filter
+						    atIndex: index];
+  [self _removeObserver: observer
+          forObservable: observable];
 }
 
 - (void)removeObserver: (id)observer
@@ -526,6 +678,71 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
              interface: (NSString*)interfaceName
                 object: (DKProxy*)sender
 {
+  [self removeObserver: observer
+                signal: signalName
+             interface: interfaceName
+                sender: sender
+           destination: nil];
+}
+-  (void)removeObserver: (id)observer
+                 signal: (NSString*)signalName
+              interface: (NSString*)interfaceName
+                 sender: (DKProxy*)sender
+            destination: (DKProxy*)destination
+      filtersAndIndices: (NSString*)firstFilter, NSUInteger nullIndex, ...
+{
+  va_list filters;
+  uintptr_t filterOrIndex = 0;
+  NSUInteger count = 1;
+  NSString *thisFilter = nil;
+
+  DKObservable *observable = [self _observableForSignalName: signalName
+                                                  interface: interfaceName
+                                                     sender: sender
+                                                destination: destination
+						     filter: firstFilter
+                                                    atIndex: nullIndex];
+  va_start(filters, nullIndex);
+  while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
+  {
+    if (0 == count)
+    {
+      thisFilter = (NSString*)filterOrIndex;
+      count++;
+    }
+    else if (1 == count)
+    {
+      [observable filterValue: thisFilter
+           forArgumentAtIndex: (NSUInteger)filterOrIndex];
+      count = 0;
+    }
+  }
+  va_end(filters);
+
+  [self _removeObserver: observer
+          forObservable: observable];
+}
+
+// Observation management methods doing the actual work:
+
+- (DKObservable*)_observableForSignalName: (NSString*)signalName
+                                interface: (NSString*)interfaceName
+                                   sender: (DKProxy*)sender
+                              destination: (DKProxy*)destination
+                                   filter: (NSString*)filter
+	                          atIndex: (NSUInteger)index
+{
+  DKObservable *observable = [[[DKObservable alloc] initWithBusType: [endpoint DBusBusType]] autorelease];
+  [observable filterSignalName: signalName];
+  [observable filterInterface: interfaceName];
+  [observable filterSender: sender];
+  [observable filterDestination: destination];
+  if (filter != nil)
+  {
+    [observable filterValue: filter
+         forArgumentAtIndex: index];
+  }
+  return observable;
 }
 
 - (void)_letObserver: (id)observer
@@ -535,6 +752,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   DKObservation *observation = [[DKObservation alloc] initWithObservable: observable
                                                                 observer: observer
                                                                 selector: selector];
+  DKObservable *oldObservable = nil;
+  NSHashTable *observationTable = nil;
+  BOOL firstObservation = NO;
   DBusError err;
   dbus_error_init(&err);
   dbus_bus_add_match([endpoint DBusConnection],
@@ -548,11 +768,192 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                 format: @"Error when trying to add match for signal: %s. (%s)",
       err.name, err.message];
   }
-  NSHashInsertIfAbsent(observables, (const void*)observable);
-  [observable addObservation: observation];
-  NSMapInsertIfAbsent(observers, observer, observation);
+  [lock lock];
+  NS_DURING
+  {
+    firstObservation = (0 == NSCountHashTable(observables));
+    if (firstObservation)
+    {
+      [self _installHandler];
+    }
+
+    oldObservable = NSHashInsertIfAbsent(observables, (const void*)observable);
+
+    if (nil != oldObservable)
+    {
+      // Use the prexisting observable if possible:
+      observable = oldObservable;
+    }
+    [observable addObservation: observation];
+  }
+  NS_HANDLER
+  {
+    if (firstObservation)
+    {
+      [self _removeHandler];
+    }
+    [lock unlock];
+    [observation release];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  // The observation has been retained by the observable, we can release our
+  // reference to it.
+  [observation release];
+
+  NS_DURING
+  {
+    observationTable = NSMapGet(observers, (void*)observer);
+
+    /*
+     * If a hash table for observations by this object doesn't exist, create one:
+     */
+    if (nil == observationTable)
+    {
+      observationTable = NSCreateHashTable(NSObjectHashCallBacks ,5);
+      NS_DURING
+      {
+        NSMapInsert(observers, observer, observationTable);
+      }
+      NS_HANDLER
+      {
+        NSFreeHashTable(observationTable);
+        [localException raise];
+      }
+      NS_ENDHANDLER
+      NSFreeHashTable(observationTable);
+    }
+    NSHashInsertIfAbsent(observationTable, observation);
+  }
+  NS_HANDLER
+  {
+    //Roll back:
+    [observable removeObservation: observation];
+    if (firstObservation)
+    {
+      NSHashRemove(observables, observable);
+      [self _removeHandler];
+    }
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [lock unlock];
 }
 
+- (void)_removeObserver: (id)observer
+          forObservable: (DKObservable*)observable
+{
+  NSHashTable *observationsInObserver = nil; // = A
+  DKObservable *theObservable = nil;
+  NSHashTable *observationsInObservable = nil; // = B
+  NSHashTable *intersectTable = nil; // = C
+  BOOL lastObservationInObservable = NO;
+  DBusError err;
+
+  [lock lock];
+
+  /*
+   * First stage of cleanup: Remove references to the observation from the
+   * per-observer (A) and per-observable (B) tables.
+   */
+  NS_DURING
+  {
+    observationsInObserver = NSMapGet(observers, observer);
+    theObservable = NSHashGet(observables, observable);
+    if ((nil == theObservable) || (nil == observationsInObserver))
+    {
+      // This observable does not seem to be monitored, just returned.
+      [lock unlock];
+      return;
+    }
+
+
+    observationsInObservable = [theObservable observations];
+    intersectTable = NSCopyHashTableWithZone(observationsInObservable, NULL);
+
+    // Compute the intersection of A and B. (C = {x|(x in A) and (x in B)})
+    [intersectTable intersectHashTable: observationsInObserver];
+
+    // Subtract the members of C from A and from B respectively.
+    [observationsInObserver minusHashTable: intersectTable];
+    [observationsInObservable minusHashTable: intersectTable];
+
+    // Dispose of the hash table.
+    NSFreeHashTable(intersectTable);
+    intersectTable = nil;
+  }
+  NS_HANDLER
+  {
+    if (nil != intersectTable)
+    {
+      NSFreeHashTable(intersectTable);
+    }
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  /*
+   * Second stage of cleanup: If we left one of the tables empty, remove it and
+   * its key from the observables and observers tables.
+   */
+  NS_DURING
+  {
+    lastObservationInObservable = (0 == NSCountHashTable(observationsInObservable));
+    if (lastObservationInObservable)
+    {
+      NSHashRemove(observables, theObservable);
+    }
+
+    if (0 == NSCountHashTable(observationsInObserver))
+    {
+      NSMapRemove(observers, observer);
+    }
+  }
+  NS_HANDLER
+  {
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  /*
+   * Third stage of cleanup: If we removed all observations for the observable,
+   * also remove the match rule.
+   */
+  if (lastObservationInObservable)
+  {
+    dbus_error_init(&err);
+
+      // remove the match rule from D-Bus.
+      dbus_bus_remove_match([endpoint DBusConnection],
+        [[observable ruleString] UTF8String],
+        &err);
+
+      if (dbus_error_is_set(&err))
+      {
+        [lock unlock];
+        [NSException raise: @"DKSignalMatchException"
+                    format: @"Error when trying to remove match for signal: %s. (%s)",
+          err.name, err.message];
+      }
+  }
+
+  /*
+   * Fourth stage of cleanup: If we have no observables left, also remove the
+   * D-Bus message handler until we have further signals to watch.
+   */
+  if (0 == NSCountHashTable(observables))
+  {
+    [self _removeHandler];
+  }
+  [lock unlock];
+}
+
+
+// Notification posting methods:
 - (void)postNotification: (NSNotification*)notification
 {
 
@@ -728,7 +1129,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   theSignal = [[theInterface signals] objectForKey: signalName];
 
   // Check whether the notification center itself did add a stub for this signal.
-  if ([[theSignal annotationValueForKey: @"org.gnustep.dbuskit.signal.stub"] boolValue])
+  if ([theSignal isStub])
   {
     [theInterface removeSignalNamed: signalName];
     theSignal = nil;
@@ -779,6 +1180,98 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     (void*)self);
 }
 
+- (BOOL)_handleMessage: (DBusMessage*)msg
+{
+  const char *cSignal = dbus_message_get_member(msg);
+  NSString *signal = nil;
+  const char *cInterface = dbus_message_get_interface(msg);
+  NSString *interface = nil;
+  const char *cSender = dbus_message_get_member(msg);
+  NSString *sender = nil;
+  const char *cPath = dbus_message_get_path(msg);
+  NSString *path = nil;
+  const char *cDestination = dbus_message_get_destination(msg);
+  NSString *destination = nil;
+  const char *signature = dbus_message_get_signature(msg);
+  DBusMessageIter iter;
+  NSMutableDictionary *userInfo = nil;
+  DKProxy *senderProxy = nil;
+  DKSignal *theSignal = nil;
+
+  if (NULL != cSignal)
+  {
+    signal = [NSString stringWithUTF8String: cSignal];
+  }
+  if (NULL != cInterface)
+  {
+    interface = [NSString stringWithUTF8String: cInterface];
+  }
+  if (NULL != cSender)
+  {
+    sender = [NSString stringWithUTF8String: cSender];
+  }
+  if (NULL != cPath)
+  {
+    path = [NSString stringWithUTF8String: cPath];
+  }
+  if (NULL != cDestination)
+  {
+    destination = [NSString stringWithUTF8String: cDestination];
+  }
+
+  /*
+   * Copy the signal allows us to set the sender as its parent (circumventing
+   * the interface at this time. This is needed because the arguments might need
+   * to construct object paths and such.
+   */
+  theSignal = [[[self _signalWithName: signal
+                          inInterface: interface] copy] autorelease];
+
+  senderProxy = [DKProxy proxyWithEndpoint: endpoint
+                                andService: sender
+                                   andPath: path];
+  [theSignal setParent: senderProxy];
+
+  userInfo = [[NSMutableDictionary alloc] initWithObjectsAndKeys: signal, @"signal",
+    interface, @"interface",
+    sender, @"sender",
+    path, @"path",
+    destination, @"destination",
+    nil];
+
+  NSLog(@"Handling signal %@ in interface %@ from %@ (%@) to %@. Signature: %s",
+    signal,
+    interface,
+    sender,
+    path,
+    destination,
+    signature);
+
+  if (([theSignal isStub]) && (NULL != signature))
+  {
+    if ('\0' != signature[0])
+    {
+      DBusSignatureIter iter;
+      NSMutableArray *args = [NSMutableArray array];
+      dbus_signature_iter_init(&iter, signature);
+      do
+      {
+        char *sig = dbus_signature_iter_get_signature(&iter);
+	DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: sig
+	                                                       name: nil
+	                                                     parent: theSignal];
+	[args addObject: arg];
+      } while (dbus_signature_iter_next(&iter));
+      [theSignal setArguments: args];
+    }
+  }
+
+
+  dbus_message_iter_init(msg, &iter);
+  [userInfo addEntriesFromDictionary: [theSignal userInfoFromIterator: &iter]];
+  NSLog(@"UserInfo: %@", userInfo);
+  return YES;
+}
 
 - (void)dealloc
 {
@@ -811,12 +1304,17 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 @end
 
 static DBusHandlerResult
-DKHandleSignal (DBusConnection *connection, DBusMessage *msg, void *userData)
+DKHandleSignal (DBusConnection *connection, DBusMessage *msg, void *center)
 {
+  BOOL centerDidHandle = NO;
   if (DBUS_MESSAGE_TYPE_SIGNAL != dbus_message_get_type(msg))
   {
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
   }
-  NSLog(@"Handling signal!");
-  return DBUS_HANDLER_RESULT_HANDLED;
+  centerDidHandle = [(DKNotificationCenter*)center _handleMessage: msg];
+  if (centerDidHandle)
+  {
+    return DBUS_HANDLER_RESULT_HANDLED;
+  }
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
