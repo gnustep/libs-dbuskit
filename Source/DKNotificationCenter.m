@@ -50,6 +50,11 @@
 
 @class DKObservation;
 
+/**
+ * DKObservable encapsulates information about a specific signal configuration
+ * that is being observed by an object. It contains a match rule for userInfo
+ * dictionaries created from signals and managed the observers for the signal.
+ */
 @interface DKObservable: NSObject
 {
   /**
@@ -70,6 +75,11 @@
 - (void)addObservation: (DKObservation*)observation;
 @end
 
+/**
+ * DKObservation modells the fact that an <ivar>observer</ivar> is watching for
+ * a specific <ivar>observable</ivar> and wants to be notified by calling the
+ * <ivar>selector</ivar> specified.
+ */
 @interface DKObservation: NSObject
 {
   /**
@@ -90,10 +100,16 @@
   DKObservable *observed;
 }
 
+/**
+ * Creates an observation for the given observable.
+ */
 - (id)initWithObservable: (DKObservable*)observable
                 observer: (id)observer
                 selector: (SEL)selector;
 
+/**
+ * Schedules the delivery of the notification on the current run loop.
+ */
 - (void)notifyWithNotification: (NSNotification*)notification;
 @end
 
@@ -114,19 +130,28 @@
   return self;
 }
 
+/**
+ * Adds a DKObservation (i.e. observer/selector-pair.) to the observable.
+ * Whenever a signal matching the observable is received, the corresponding
+ * notification will be delivered to the observation.
+ */
 - (void)addObservation: (DKObservation*)observation
 {
+  DKObservation *oldObservation = nil;
   if (nil == observation)
   {
     return;
   }
-  DKObservation *oldObservation = [observations member: observation];
+  oldObservation = [observations member: observation];
   if (nil == oldObservation)
   {
     [observations addObject: observation];
   }
 }
 
+/**
+ * Removes the observation from the table.
+ */
 - (void)removeObservation: (DKObservation*)observation
 {
   DKObservation *oldObservation = [observations member: observation];
@@ -136,6 +161,9 @@
   }
 }
 
+/**
+ * Deliver <var>notification</var> to all registered observers.
+ */
 - (void)notifyWithNotification: (NSNotification*)notification
 {
   NSHashEnumerator obsEnum = NSEnumerateHashTable(observations);
@@ -146,6 +174,10 @@
   }
   NSEndHashTableEnumeration(&obsEnum);
 }
+
+/**
+ * Sets a key in the rule dictionary.
+ */
 - (void)setRule: (NSString*)value
          forKey: (NSString*)key
 {
@@ -164,29 +196,48 @@
   }
 }
 
+/**
+ * Retrieves a specific rule.
+ */
 - (id)ruleForKey: (NSString*)key
 {
   return [rules objectForKey: key];
 }
 
+/**
+ * Adds a filter rule for a D-Bus interface (e.g.
+ * <code>org.freedesktop.DBus</code>.
+ */
 - (void)filterInterface: (NSString*)interface
 {
   [self setRule: interface
          forKey: @"interface"];
 }
 
+/**
+ * Adds a filter rule of a D-Bus signal name (e.g.
+ * <code>NameOwnerChanged</code>.
+ */
 - (void)filterSignalName: (NSString*)signalName
 {
   [self setRule: signalName
          forKey: @"member"];
 }
 
+/**
+ * Adds a filter rule matching <var>signal</var>.
+ */
 - (void)filterSignal: (DKSignal*)signal
 {
   [self filterSignalName: [signal name]];
   [self filterInterface: [[signal parent] name]];
 }
 
+/**
+ * Adds a filter rule for the string argument at <var>index</var>. The
+ * observable will only match if <var>match</var> is equal to the value of the
+ * argument.
+ */
 -  (void)filterValue: (NSString*)match
   forArgumentAtIndex: (NSUInteger)index
 {
@@ -201,6 +252,10 @@
   }
 }
 
+/**
+ * Adds a filter rule matching on the <var>proxy</var> object emitting the
+ * signal.
+ */
 - (void)filterSender: (DKProxy*)proxy
 {
   // FIXME: We need to put the unique name here to avoid reentrancy when handling
@@ -212,7 +267,10 @@
          forKey: @"path"];
 }
 
-
+/**
+ * Adds a filter rule for the destination <var>proxy</var> the signal is
+ * intended for.
+ */
 - (void)filterDestination: (DKProxy*)proxy
 {
   NSString *uniqueName = [proxy _uniqueName];
@@ -220,6 +278,9 @@
          forKey: @"destination"];
 }
 
+/**
+ * Generates a string suitable for use as a match rule in dbus_bus_add_match().
+ */
 - (NSString*)ruleString
 {
   NSEnumerator *keyEnum = [rules keyEnumerator];
@@ -240,20 +301,35 @@
   return string;
 }
 
+/**
+ * The observable is hashed by its <ivar>rules</ivar> dictionary.
+ */
 - (NSUInteger)hash
 {
   return [rules hash];
 }
 
+/**
+ * Return the rules dictionary for the observable.
+ */
 - (NSDictionary*)rules
 {
   return [[rules copy] autorelease];
 }
+
+/**
+ * Two observables are considered equal if they have the same set of
+ * <ivar>rules</ivar>.
+ */
 - (BOOL)isEqual: (DKObservable*)other
 {
   return [rules isEqualToDictionary: [other rules]];
 }
 
+/**
+ * Returns a reference to the hash table of all observations in progress for
+ * this observable.
+ */
 - (NSHashTable*)observations
 {
   return observations;
@@ -353,15 +429,14 @@
 
 - (NSUInteger)hash
 {
-  return (((NSUInteger)(uintptr_t)observer ^ (NSUInteger)selector) ^ [observed hash]);
+  return ((NSUInteger)(uintptr_t)observer ^ [observed hash]);
 }
 
 - (BOOL)isEqual: (DKObservation*)other
 {
   BOOL sameObserver = (observer == [other observer]);
-  BOOL sameSelector = sel_isEqual(selector, [other selector]);
   BOOL sameObserved = [observed isEqual: [other observed]];
-  return ((sameObserver && sameSelector) && sameObserved);
+  return (sameObserver && sameObserved);
 }
 
 - (void)notifyWithNotification: (NSNotification*)notification
@@ -386,6 +461,12 @@
 static DKNotificationCenter *systemCenter;
 static DKNotificationCenter *sessionCenter;
 
+/**
+ * The result handling function called by libdbus. It is important to keep in
+ * mind that we cannot do any D-Bus related stuff in the code path originating
+ * from this function, because libdbus doesn't handle reentrancy very
+ * gracefully.
+ */
 static DBusHandlerResult
 DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
@@ -760,6 +841,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 // Observation management methods doing the actual work:
 
+/**
+ * Create an observable matching the information specified.
+ */
 - (DKObservable*)_observableForSignalName: (NSString*)signalName
                                 interface: (NSString*)interfaceName
                                    sender: (DKProxy*)sender
@@ -780,6 +864,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return observable;
 }
 
+/**
+ * Return an array of all observables that will match for <var>userInfo</var>.
+ */
 - (NSArray*)_observablesMatchingUserInfo: (NSDictionary*)userInfo
 {
   NSHashEnumerator obsEnum;
@@ -814,6 +901,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return array;
 }
 
+/**
+ * Installs the necessary entries for observables and observations in the
+ * respective tables and adds the D-Bus match rule if necessary.
+ */
 - (void)_letObserver: (id)observer
    observeObservable: (DKObservable*)observable
         withSelector: (SEL)selector
@@ -826,17 +917,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   BOOL firstObservation = NO;
   DBusError err;
   dbus_error_init(&err);
-  dbus_bus_add_match([endpoint DBusConnection],
-    [[observable ruleString] UTF8String],
-    &err);
-
-  if (dbus_error_is_set(&err))
-  {
-    [observation release];
-    [NSException raise: @"DKSignalMatchException"
-                format: @"Error when trying to add match for signal: %s. (%s)",
-      err.name, err.message];
-  }
   [lock lock];
   NS_DURING
   {
@@ -853,7 +933,21 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       // Use the prexisting observable if possible:
       observable = oldObservable;
     }
-    [observable addObservation: observation];
+    else
+    {
+      dbus_bus_add_match([endpoint DBusConnection],
+        [[observable ruleString] UTF8String],
+        &err);
+
+      if (dbus_error_is_set(&err))
+      {
+        NSHashRemove(observables, observable);
+	[NSException raise: @"DKSignalMatchException"
+                    format: @"Error when trying to add match for signal: %s. (%s)",
+         err.name, err.message];
+      }
+    }
+      [observable addObservation: observation];
   }
   NS_HANDLER
   {
@@ -911,6 +1005,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   [lock unlock];
 }
 
+/**
+ * Removes the observer/observable combination from all tables it appears in.
+ * Also removes match rules and handlers if necessary.
+ */
 - (void)_removeObserver: (id)observer
           forObservable: (DKObservable*)observable
 {
@@ -1052,6 +1150,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 }
 
+
+/**
+ * Tries to find a preexisting signal specification and creates a stub signal if
+ * none exists.
+ */
 - (DKSignal*)_signalWithName: (NSString*)name
                  inInterface: (NSString*)interfaceName
 {
@@ -1087,6 +1190,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return signal;
 }
 
+/**
+ * Retrieves the signal for the notification. If the signal did not yet exist,
+ * it might be created as a stub signal.
+ */
 - (DKSignal*)_signalForNotificationName: (NSString*)name
 {
   DKSignal *signal = nil;
@@ -1122,6 +1229,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return nil;
 }
 
+/**
+ * Retrieves the notification name for the signal. This is either the name
+ * specified in an annotation or the default name.
+ */
 - (NSString*)_notificationNameForSignal: (DKSignal*)signal
 {
   NSString *name = nil;
@@ -1137,6 +1248,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     [[signal parent] name], [signal name]];
 }
 
+/**
+ * Registers the <var>signal</var> under the <var>notificationName</var>.
+ */
 - (BOOL)_registerNotificationName: (NSString*)notificationName
                          asSignal: (DKSignal*)signal
 {
@@ -1215,6 +1329,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return success;
 }
 
+/**
+ * Register a signal with its default name.
+ */
 - (void)_registerSignal: (DKSignal*)aSignal
 {
   NSString *interfaceName = [[aSignal parent] name];
@@ -1291,6 +1408,14 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     (void*)self);
 }
 
+/**
+ * Handles a message caught by the handler. If the signal is not yet known to
+ * the center, this will generate arguments from the D-Bus signature. This
+ * method also deserializes the message into an userInfo dictionary for use in
+ * the notification. This is necessary to determine whether the message matches
+ * one or more of the registered observables. If so, a notification will be
+ * generated and dispatched to all observers.
+ */
 - (BOOL)_handleMessage: (DBusMessage*)msg
 {
   const char *cSignal = dbus_message_get_member(msg);
@@ -1413,6 +1538,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   [lock release];
   [super dealloc];
 }
+
+// Singelton pattern:
+
 - (NSUInteger)retainCount
 {
   return UINT_MAX;
