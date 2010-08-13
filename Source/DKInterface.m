@@ -38,6 +38,11 @@
 
 
 @implementation DKInterface
+/**
+ * Initializes the interface. Since interfaces need to be named, returns
+ * <code>nil</code> when <var>aName</var> is <code>nil</code> or an empty
+ * string.
+ */
 - (id) initWithName: (NSString*)aName
              parent: (id)aParent
 {
@@ -119,9 +124,16 @@
             toDict: properties];
 }
 
+/**
+ * Removes the signal specified. Needed by DKNotificationCenter to replace stub
+ * signals with the real introspected specification.
+ */
 - (void)removeSignalNamed: (NSString*)signalName
 {
-  [signals removeObjectForKey: signalName];
+  if (nil != signalName)
+  {
+    [signals removeObjectForKey: signalName];
+  }
 }
 
 - (void) installMethod: (DKMethod*)method
@@ -146,6 +158,7 @@
   }
 }
 
+/** Installs the method with its default selector. */
 - (void)installMethod: (DKMethod*)aMethod
 {
   const char* selectorString = [[aMethod selectorString] UTF8String];

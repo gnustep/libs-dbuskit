@@ -394,6 +394,9 @@ static void DKInitIntrospectionThread(void *data);
   return unmangledSelector;
 }
 
+/**
+ * Overrides the implementation in NSProxy.
+ */
 - (BOOL)respondsToSelector: (SEL)aSelector
 {
   if (class_respondsToSelector([DKProxy class], aSelector))
@@ -481,6 +484,12 @@ static void DKInitIntrospectionThread(void *data);
   return nil;
 }
 
+/**
+ * Retrieves the D-Bus method for the selector. The <var>doWait</var> flag is
+ * used to determine whether the method should wait for the cache to be built.
+ * This is, however, not expedient if we are looking up the introspection
+ * selector that is used to build the cache.
+ */
 - (DKMethod*) _methodForSelector: (SEL)aSel
                     waitForCache: (BOOL)doWait
 {
@@ -672,6 +681,9 @@ static void DKInitIntrospectionThread(void *data);
   [condition unlock];
 }
 
+/**
+ * Causes all interfaces to generate their dispatch tables.
+ */
 - (void) _installAllInterfaces
 {
   NSEnumerator *ifEnum = nil;
@@ -695,6 +707,7 @@ static void DKInitIntrospectionThread(void *data);
   [condition unlock];
 
 }
+
 - (void)_setupTables
 {
   if ((nil == interfaces) || (nil == children))

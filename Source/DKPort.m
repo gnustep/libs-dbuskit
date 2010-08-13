@@ -154,6 +154,9 @@ enum {
   return [self initWithRemote: nil];
 }
 
+/**
+ * Determines whether the service that the ports connects to is valid.
+ */
 - (BOOL) hasValidRemoteOnBus: (id<DBus>)bus
 {
   if ([remote isEqualToString: @"org.freedesktop.DBus"])
@@ -187,6 +190,8 @@ enum {
 
 /**
  * This is the main method used to dispatch stuff from the DO system to D-Bus.
+ * Primarily we want to respond to ROOTPROXY_REQUEST, because everyting else
+ * will be handled from DKProxy.
  */
 - (BOOL)sendBeforeDate: (NSDate *)limitDate
                  msgid: (NSInteger)msgid
