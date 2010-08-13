@@ -35,7 +35,10 @@
 #import <Foundation/NSHashTable.h>
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
+#import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSNotification.h>
 #import <Foundation/NSNull.h>
+#import <Foundation/NSRunLoop.h>
 #import <Foundation/NSSet.h>
 #import <Foundation/NSString.h>
 
@@ -82,11 +85,6 @@
   SEL selector;
 
   /**
-   * Pointer to the method implementation for the callback.
-   */
-  IMP method;
-
-  /**
    * A pointer back to the information about the observed signal.
    */
   DKObservable *observed;
@@ -95,6 +93,8 @@
 - (id)initWithObservable: (DKObservable*)observable
                 observer: (id)observer
                 selector: (SEL)selector;
+
+- (void)notifyWithNotification: (NSNotification*)notification;
 @end
 
 @implementation DKObservable
@@ -116,6 +116,10 @@
 
 - (void)addObservation: (DKObservation*)observation
 {
+  if (nil == observation)
+  {
+    return;
+  }
   DKObservation *oldObservation = [observations member: observation];
   if (nil == oldObservation)
   {
@@ -132,6 +136,16 @@
   }
 }
 
+- (void)notifyWithNotification: (NSNotification*)notification
+{
+  NSHashEnumerator obsEnum = NSEnumerateHashTable(observations);
+  DKObservation *thisObservation = nil;
+  while (nil != (thisObservation = NSNextHashEnumeratorItem(&obsEnum)))
+  {
+    [thisObservation notifyWithNotification: notification];
+  }
+  NSEndHashTableEnumeration(&obsEnum);
+}
 - (void)setRule: (NSString*)value
          forKey: (NSString*)key
 {
@@ -189,7 +203,10 @@
 
 - (void)filterSender: (DKProxy*)proxy
 {
-  [self setRule: [proxy _service]
+  // FIXME: We need to put the unique name here to avoid reentrancy when handling
+  // signals. In the future, we probably watch for NameOwnerChanged for the name
+  // specified in the proxy in order to update the unique name here.
+  [self setRule: [proxy _uniqueName]
          forKey: @"sender"];
   [self setRule: [proxy _path]
          forKey: @"path"];
@@ -253,14 +270,10 @@
   while (nil != (thisKey = [keyEnum nextObject]))
   {
     NSString *thisRule = [rules objectForKey: thisKey];
-    if (([@"sender" isEqualToString: thisKey]) && (nil != thisRule))
+    if ([@"type" isEqualToString: thisKey])
     {
-      /*
-       * The sender in the userInfo will be a unique name, but the match name
-       * might have been another name registered for the service. We thus need
-       * to get the owner of the name from the bus.
-       */
-      thisRule = [[DKDBus busWithBusType: type] GetNameOwner: thisRule];
+      // We ignore the type, it's alway 'signal'.
+      continue;
     }
 
     if (nil != thisRule)
@@ -268,7 +281,7 @@
       id thisValue = [dict objectForKey: thisKey];
 
       // For proxies we want to match the object paths:
-      if ([thisValue isKindOfClass: [DKProxy class]])
+      if ([thisValue conformsToProtocol: @protocol(DKObjectPathNode)])
       {
 	thisValue = [(DKProxy*)thisValue _path];
       }
@@ -307,10 +320,19 @@
   {
     return nil;
   }
-  ASSIGN(observed, anObservable);
+  // The observable retains the observation in its observation-table.
+  observed = anObservable;
   observer = GS_GC_HIDE(anObserver);
   selector = aSelector;
-  //TODO: IMP caching.
+
+  // Make sure the necessary components are there and that the selector takes a
+  // sane number of arguments.
+  if (((anObserver == nil) || (selector == 0))
+    || (3 != [[anObserver methodSignatureForSelector: selector] numberOfArguments]))
+  {
+    [self release];
+    return nil;
+  }
   return self;
 }
 
@@ -342,9 +364,20 @@
   return ((sameObserver && sameSelector) && sameObserved);
 }
 
+- (void)notifyWithNotification: (NSNotification*)notification
+{
+  // We are still in the code path coming from libdbus' message handling
+  // callback and need to avoid the reentrancy. We do this by scheduling
+  // delivery of the notification on the run loop.
+  [[NSRunLoop currentRunLoop] performSelector: selector
+                                      target: GS_GC_UNHIDE(observer)
+				    argument: notification
+				       order: UINT_MAX
+				       modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
+}
+
 - (void)dealloc
 {
-  [observed release];
   [super dealloc];
 }
 @end
@@ -448,10 +481,12 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     return nil;
   }
 
-  lock = [[NSLock alloc] init];
+  lock = [[NSRecursiveLock alloc] init];
   signalInfo = [[NSMutableDictionary alloc] init];
   notificationNames = [[NSMutableDictionary alloc] init];
-
+  notificationNamesBySignal = [[NSMapTable alloc]initWithKeyOptions: NSPointerFunctionsObjectPersonality
+                                                       valueOptions: NSPointerFunctionsObjectPersonality
+                                                           capacity: 5];
   observables = NSCreateHashTable(NSObjectHashCallBacks, 5);
   observers = [[NSMapTable alloc] initWithKeyOptions: (NSPointerFunctionsObjectPersonality | NSPointerFunctionsZeroingWeakMemory)
                                         valueOptions: NSPointerFunctionsObjectPersonality
@@ -745,6 +780,40 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return observable;
 }
 
+- (NSArray*)_observablesMatchingUserInfo: (NSDictionary*)userInfo
+{
+  NSHashEnumerator obsEnum;
+  DKObservable *thisObservable = nil;
+  NSMutableArray *array = nil;
+  [lock lock];
+  NS_DURING
+  {
+    obsEnum = NSEnumerateHashTable(observables);
+    while (nil != (thisObservable = NSNextHashEnumeratorItem(&obsEnum)))
+    {
+      if ([thisObservable matchesUserInfo: userInfo])
+      {
+	if (nil == array)
+	{
+	  array = [NSMutableArray array];
+	}
+	[array addObject: thisObservable];
+      }
+    }
+  }
+  NS_HANDLER
+  {
+    NSEndHashTableEnumeration(&obsEnum);
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  NSEndHashTableEnumeration(&obsEnum);
+  [lock unlock];
+  return array;
+}
+
 - (void)_letObserver: (id)observer
    observeObservable: (DKObservable*)observable
         withSelector: (SEL)selector
@@ -1020,7 +1089,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 - (DKSignal*)_signalForNotificationName: (NSString*)name
 {
-  DKSignal *signal = [notificationNames objectForKey: name];
+  DKSignal *signal = nil;
+  [lock lock];
+  signal = [notificationNames objectForKey: name];
   if (nil != signal)
   {
     return signal;
@@ -1038,14 +1109,32 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       || (len == (sepRange.location + 1))
       || (0 == sepRange.location))
     {
+      [lock unlock];
       return nil;
     }
     ifName = [stripped substringToIndex: (sepRange.location - 1)];
     signalName = [stripped substringFromIndex: (sepRange.location + 1)];
+    [lock unlock];
     return [self _signalWithName: signalName
                      inInterface: ifName];
   }
+  [lock unlock];
   return nil;
+}
+
+- (NSString*)_notificationNameForSignal: (DKSignal*)signal
+{
+  NSString *name = nil;
+  [lock lock];
+  name = NSMapGet(notificationNamesBySignal, signal);
+  if (nil != name)
+  {
+    [lock unlock];
+    return name;
+  }
+  [lock unlock];
+  return [NSString stringWithFormat: @"DKSignal_%@_%@",
+    [[signal parent] name], [signal name]];
 }
 
 - (BOOL)_registerNotificationName: (NSString*)notificationName
@@ -1055,25 +1144,47 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   {
     return NO;
   }
-
-  if (nil == [notificationNames objectForKey: notificationName])
+  [lock lock];
+  NS_DURING
   {
-    [notificationNames setObject: signal
-                          forKey: notificationName];
+    if (nil == [notificationNames objectForKey: notificationName])
+    {
+      [notificationNames setObject: signal
+                            forKey: notificationName];
 
-    NSDebugMLog(@"Registered signal '%@' (from interface '%@') with notification name '%@'.",
-      [signal name],
-      [[signal parent] name],
-      notificationName);
-    return YES;
+      NSDebugMLog(@"Registered signal '%@' (from interface '%@') with notification name '%@'.",
+        [signal name],
+        [[signal parent] name],
+        notificationName);
+      NS_DURING
+      {
+        NSMapInsertIfAbsent(notificationNamesBySignal, signal, notificationName);
+      }
+      NS_HANDLER
+      {
+	//Roll-back:
+	[notificationNames removeObjectForKey: notificationName];
+	[localException raise];
+      }
+      NS_ENDHANDLER
+      [lock unlock];
+      return YES;
+    }
+    else
+    {
+      NSDebugMLog(@"Cannot register signal '%@' (from interface '%@') with notification name '%@' (already registered).",
+        [signal name],
+        [[signal parent] name],
+        notificationName);
+    }
   }
-  else
+  NS_HANDLER
   {
-    NSDebugMLog(@"Cannot register signal '%@' (from interface '%@') with notification name '%@' (already registered).",
-      [signal name],
-      [[signal parent] name],
-      notificationName);
+    [lock unlock];
+    [localException raise];
   }
+  NS_ENDHANDLER
+  [lock unlock];
   return NO;
 }
 
@@ -1186,17 +1297,13 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   NSString *signal = nil;
   const char *cInterface = dbus_message_get_interface(msg);
   NSString *interface = nil;
-  const char *cSender = dbus_message_get_member(msg);
+  const char *cSender = dbus_message_get_sender(msg);
   NSString *sender = nil;
   const char *cPath = dbus_message_get_path(msg);
   NSString *path = nil;
   const char *cDestination = dbus_message_get_destination(msg);
   NSString *destination = nil;
   const char *signature = dbus_message_get_signature(msg);
-  DBusMessageIter iter;
-  NSMutableDictionary *userInfo = nil;
-  DKProxy *senderProxy = nil;
-  DKSignal *theSignal = nil;
 
   if (NULL != cSignal)
   {
@@ -1219,57 +1326,79 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     destination = [NSString stringWithUTF8String: cDestination];
   }
 
-  /*
-   * Copy the signal allows us to set the sender as its parent (circumventing
-   * the interface at this time. This is needed because the arguments might need
-   * to construct object paths and such.
-   */
-  theSignal = [[[self _signalWithName: signal
-                          inInterface: interface] copy] autorelease];
-
-  senderProxy = [DKProxy proxyWithEndpoint: endpoint
-                                andService: sender
-                                   andPath: path];
-  [theSignal setParent: senderProxy];
-
-  userInfo = [[NSMutableDictionary alloc] initWithObjectsAndKeys: signal, @"signal",
-    interface, @"interface",
-    sender, @"sender",
-    path, @"path",
-    destination, @"destination",
-    nil];
-
-  NSLog(@"Handling signal %@ in interface %@ from %@ (%@) to %@. Signature: %s",
-    signal,
-    interface,
-    sender,
-    path,
-    destination,
-    signature);
-
-  if (([theSignal isStub]) && (NULL != signature))
+  [lock lock];
+  NS_DURING
   {
-    if ('\0' != signature[0])
+    DBusMessageIter iter;
+    NSMutableDictionary *userInfo = nil;
+    NSArray *matchingObservables = nil;
+    NSNotification *notification = nil;
+
+    /*
+     * Copying the signal allows us to set the sender as its parent (circumventing
+     * the interface at this time. This is needed because the arguments might need
+     * to construct object paths and such. We also need to reference the
+     * original signal because we need it to look up the notification name.
+     */
+    DKSignal *origSignal = [self _signalWithName: signal
+                                     inInterface: interface];
+    DKSignal *theSignal = [[origSignal copy] autorelease];
+
+    /* Construct a proxy for the object emitting the signal: */
+    DKProxy *senderProxy = [DKProxy proxyWithEndpoint: endpoint
+                                           andService: sender
+                                              andPath: path];
+    [theSignal setParent: senderProxy];
+
+    userInfo = [[NSMutableDictionary alloc] initWithObjectsAndKeys: signal, @"member",
+      interface, @"interface",
+      sender, @"sender",
+      path, @"path",
+      destination, @"destination",
+      nil];
+
+    if (([theSignal isStub]) && (NULL != signature))
     {
-      DBusSignatureIter iter;
-      NSMutableArray *args = [NSMutableArray array];
-      dbus_signature_iter_init(&iter, signature);
-      do
+      if ('\0' != signature[0])
       {
-        char *sig = dbus_signature_iter_get_signature(&iter);
-	DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: sig
-	                                                       name: nil
-	                                                     parent: theSignal];
-	[args addObject: arg];
-      } while (dbus_signature_iter_next(&iter));
-      [theSignal setArguments: args];
+        DBusSignatureIter iter;
+        NSMutableArray *args = [NSMutableArray array];
+        dbus_signature_iter_init(&iter, signature);
+        do
+        {
+          char *sig = dbus_signature_iter_get_signature(&iter);
+  	  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: sig
+	                                                         name: nil
+	                                                       parent: theSignal];
+	  [args addObject: arg];
+        } while (dbus_signature_iter_next(&iter));
+        [theSignal setArguments: args];
+      }
     }
+
+    dbus_message_iter_init(msg, &iter);
+    [userInfo addEntriesFromDictionary: [theSignal userInfoFromIterator: &iter]];
+
+    matchingObservables = [self _observablesMatchingUserInfo: userInfo];
+    if (nil == matchingObservables)
+    {
+      NSDebugMLog(@"Signal %@ is not being observed by the notification center.", signal);
+      [lock unlock];
+      return NO;
+    }
+    notification = [NSNotification notificationWithName: [self _notificationNameForSignal: origSignal]
+                                                 object: senderProxy
+					       userInfo: userInfo];
+    [matchingObservables makeObjectsPerformSelector: @selector(notifyWithNotification:)
+                                         withObject: notification];
   }
-
-
-  dbus_message_iter_init(msg, &iter);
-  [userInfo addEntriesFromDictionary: [theSignal userInfoFromIterator: &iter]];
-  NSLog(@"UserInfo: %@", userInfo);
+  NS_HANDLER
+  {
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [lock unlock];
   return YES;
 }
 
@@ -1278,7 +1407,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   [endpoint release];
   [signalInfo release];
   [notificationNames release];
-  // TODO: Free the dispatch tables!
+  NSFreeMapTable(notificationNamesBySignal);
+  NSFreeMapTable(observers);
+  NSFreeHashTable(observables);
   [lock release];
   [super dealloc];
 }

@@ -394,6 +394,19 @@ static void DKInitIntrospectionThread(void *data);
   return unmangledSelector;
 }
 
+- (BOOL)respondsToSelector: (SEL)aSelector
+{
+  if (class_respondsToSelector([DKProxy class], aSelector))
+  {
+    return YES;
+  }
+  if ([self DBusMethodForSelector: aSelector])
+  {
+    return YES;
+  }
+  return NO;
+}
+
 - (NSMethodSignature*)methodSignatureForSelector: (SEL)aSelector
 {
   /*
@@ -760,8 +773,24 @@ static void DKInitIntrospectionThread(void *data);
   state = BUILDING_CACHE;
   [condition unlock];
 
-  // Get the introspection data:
-  introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
+  // Get the introspection data, reset ourselves
+  NS_DURING
+  {
+    introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
+  }
+  NS_HANDLER
+  {
+    [condition lock];
+    if (CACHE_READY != state)
+    {
+      state = HAVE_INTROSPECT;
+    }
+    [delegate release];
+    [condition broadcast];
+    [condition unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
 
   [condition lock];
 

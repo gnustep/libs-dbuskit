@@ -1030,8 +1030,6 @@ DKWakeUp(void *data)
                         argument: nil
                            order: 0
                            modes: [NSArray arrayWithObject: [ctx runLoopMode]]];
-  [[ctx runLoop] runMode: [ctx runLoopMode]
-              beforeDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
 }
 
 static void

@@ -27,6 +27,10 @@
 @class DKEndpoint, DKInterface, NSCondition, NSLock, NSString, NSMapTable, NSMutableArray, NSMutableDictionary;
 @protocol NSCoding;
 
+/**
+ * The DKProxy class is used to send messages to D-Bus objects. Usually, you
+ * don't create them yourself but by using the DKPort and NSConnection classes.
+ */
 @interface DKProxy: NSProxy <NSCoding>
 {
   DKEndpoint *endpoint;
@@ -60,7 +64,7 @@
  * usually call methods from a specific interface, you can designate the
  * interface as the primary one by calling -setPrimaryDBusInterface:.
  */
-- (void)setPrimaryDBusInterface: (NSString*)anInteface;
+- (void)setPrimaryDBusInterface: (NSString*)anInterface;
 @end
 
 
