@@ -252,29 +252,77 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
  * Private Container argument subclasses:
  */
 
+/**
+ * Encapsulates containers that are structs.
+ */
 @interface DKStructTypeArgument: DKContainerTypeArgument
 @end
 
+/**
+ * Encapsulates containers that are arrays.
+ */
 @interface DKArrayTypeArgument: DKContainerTypeArgument
+/**
+ * D-Bus considers dictionaries as arrays of dict-entries. (e.g. "a{si}" is an
+ * a dictionary with string keys and integer values). You can use -isDictionary
+ * to find out whether the array is a dictionary.
+ */
 - (BOOL) isDictionary;
+
+/**
+ * Called by DKDictEntryTypeArgument to turn an DKArrayTypeArgument into an
+ * DKDictionaryTypeArgument.
+ */
 - (void) setIsDictionary: (BOOL)isDict;
 @end
 
-/* D-Bus marshalls dictionaries as arrays of key/value pairs. */
+/**
+ * Because D-Bus marshalls dictionaries as arrays of key/value pairs,
+ * DKDictionaryTypeArgument is a subclass of DKArrayTypeArgument.
+ */
 @interface DKDictionaryTypeArgument: DKArrayTypeArgument
 @end
 
+/**
+ * Encapsulates variant arguments.
+ */
 @interface DKVariantTypeArgument: DKContainerTypeArgument
+/**
+ * Returns an DKArgument instance that can be used to marshall/unmarshall
+ * <var>object</var>.
+ */
 - (DKArgument*) DKArgumentWithObject: (id)object;
 @end
 
-/* It seems sensible to regard dict entries as struct types. */
+/**
+ * DKDIctEntryTypeArgument encapsulates dictionary entries, which don't really
+ * appear on the Objective-C side of things. If you really want to do so, it
+ * seems sensible to regard them as struct types.
+ */
 @interface DKDictEntryTypeArgument: DKStructTypeArgument
+/**
+ * Returns the argument type at key position. This is guranteed not to be a
+ * container type.
+ */
 - (DKArgument*) keyArgument;
+
+/**
+ * Returns the argument type used for values.
+ */
 - (DKArgument*) valueArgument;
+
+/**
+ * Unmarshalls one key and value from <var>iter</var> and places them at the
+ * addresses specified.
+ */
 - (void) unmarshallFromIterator: (DBusMessageIter*)iter
                           value: (id*)value
                             key: (id*)key;
+
+/**
+ * Marshalls <var>key</var> and <var>object</var> and appends them to
+ * <var>iter</var>.
+ */
 - (void) marshallObject: (id)object
                  forKey: (id)key
            intoIterator: (DBusMessageIter*)iter;
@@ -490,6 +538,10 @@ DKDBusTypeForUnboxingObject(id object)
   DKRegisterSelectorTypePair(&pair);
 }
 
+/**
+ * Initializes the argument with the next single argument from
+ * <var>iterator</var>. This method will not advance the iterator.
+ */
 - (id) initWithIterator: (DBusSignatureIter*)iterator
                    name: (NSString*)_name
                  parent: (id)_parent
@@ -515,6 +567,7 @@ DKDBusTypeForUnboxingObject(id object)
   return self;
 }
 
+/* Public initializer, see publich header for documentation. */
 - (id)initWithDBusSignature: (const char*)DBusTypeString
                        name: (NSString*)_name
                      parent: (id)_parent
@@ -976,7 +1029,11 @@ DKDBusTypeForUnboxingObject(id object)
 
 
 @implementation DKContainerTypeArgument
-
+/**
+ * Initializes the container type argument with the first complete signature
+ * from <var>iterator</var>. Returns <var>nil</var> if the signature does not
+ * describe a container argument.
+ */
 - (id)initWithIterator: (DBusSignatureIter*)iterator
                   name: (NSString*)_name
                 parent: (id)_parent
@@ -1098,11 +1155,11 @@ DKDBusTypeForUnboxingObject(id object)
   return self;
 }
 
-/*
- * All container types are boxed.
- */
 - (char*) unboxedObjCTypeChar
 {
+  /*
+   * All container types are boxed.
+   */
   return @encode(id);
 }
 
@@ -1169,6 +1226,10 @@ DKDBusTypeForUnboxingObject(id object)
   return children;
 }
 
+/**
+ * Replaces the children with the new mutable array. Used when copying the
+ * argument.
+ */
 - (void) setChildren: (NSMutableArray*)newChildren
 {
   ASSIGN(children,newChildren);
@@ -1214,6 +1275,9 @@ DKDBusTypeForUnboxingObject(id object)
 
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
+  /*
+   * For the general case, we cannot determine how to unmarshall the argument.
+   */
   [self subclassResponsibility: _cmd];
   return nil;
 }
@@ -1308,12 +1372,18 @@ DKDBusTypeForUnboxingObject(id object)
 #endif
 }
 
+/**
+ * Array type arguments only have one child that describes the type of all its
+ * elements.
+ */
 - (DKArgument*)elementTypeArgument
 {
   return [children objectAtIndex: 0];
 }
 
-
+/**
+ * Helper method to make sure that the iterator is a usable state.
+ */
 - (void) assertSaneIterator: (DBusMessageIter*)iter
 {
   int childType = DBUS_TYPE_INVALID;
@@ -1611,13 +1681,18 @@ DKDBusTypeForUnboxingObject(id object)
 
 @implementation DKVariantTypeArgument
 
+/**
+ * Helper method to determine the sub-signature of array elements or dictionary
+ * keys/values. This can only be a proper signature if all elements are of the
+ * same type. Otherwise, the variant type will be returned.
+ */
 - (NSString*)validSubSignatureOrVariantForEnumerator: (NSEnumerator*)theEnum
 {
   id element = [theEnum nextObject];
   NSString *thisSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
   NSString *nextSig = thisSig;
 
-  // For homogenous collection, we can the proper signature, for non-homogenous
+  // For homogenous collection, we can get the proper signature, for non-homogenous
   // ones, we need to pass down the variant type.
   BOOL isHomogenous = YES;
   while ((nil != (element = [theEnum nextObject]))

@@ -73,6 +73,11 @@
   return nil;
 }
 
+- (NSDictionary*)_interfaces
+{
+  return [[interfaces copy] autorelease];
+}
+
 - (DKProxy*)proxy
 {
   DKProxy *rootProxy = [self proxyParent];

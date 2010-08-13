@@ -27,8 +27,7 @@
 
 /**
  * DKIntrospectionParserDelegate is the parser delegate used by an
- * NSXMLParser to build an introspection graph for an object. The introspection
- * data can be retrieved by means of the -interfaces and -childNodes methods.
+ * NSXMLParser to build an introspection graph for an object.
  */
 @interface DKIntrospectionParserDelegate: NSObject
 {

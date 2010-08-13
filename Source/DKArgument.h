@@ -33,7 +33,8 @@ extern NSString *DKArgumentDirectionOut;
 
 
 /**
- *  DKArgument encapsulates D-Bus argument information
+ *  DKArgument encapsulates D-Bus argument information and handles
+ *  serializing/unserializing to/from D-Bus to Objective-C.
  */
 @interface DKArgument: DKIntrospectionNode
 {
@@ -49,6 +50,11 @@ extern NSString *DKArgumentDirectionOut;
 + (void)registerUnboxingSelector: (SEL)selector
                      forDBusType: (int)type;
 
+/**
+ * Initializes the argument with the single complete D-Bus type signature
+ * described by <var>characters</var>. Returns <code>nil</code> if the signature
+ * is malformed or does contain more than one complete signature.
+ */
 - (id) initWithDBusSignature: (const char*)characters
                         name: (NSString*)name
                       parent: (id)parent;

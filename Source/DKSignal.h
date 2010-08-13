@@ -25,14 +25,27 @@
 #import "DKIntrospectionNode.h"
 #include <dbus/dbus.h>
 @class NSString, NSMutableArray, DKArgument;
+
+/**
+ * DKSignal encapsulates information about D-Bus signals, allowing their
+ * arguments to be deserialized into a dictionary that can be used as the
+ * userInfo dictionary of a NSNotification.
+ */
 @interface DKSignal: DKIntrospectionNode
 {
   NSMutableArray *args;
 }
 
+/**
+ * Add an argument to the signal specification. It is invalid to specify
+ * <code>DKArgumentDirectionIn</code> as a value for <var>direction</var>.
+ */
 - (void)addArgument: (DKArgument*)arg
           direction: (NSString*)direction;
 
+/**
+ * Replace the arguments of the signal with the new array.
+ */
 - (void)setArguments: (NSMutableArray*)arguments;
 
 /**

@@ -28,7 +28,7 @@
 @class DKEndpoint;
 
 /**
- * DKMessage is a superclass for specific types of D-Bus messages that  can be
+ * DKMessage is a superclass for specific types of D-Bus messages that can be
  * sent via D-Bus. Usually, you do not allocate instances of this class but use
  * the provided subclasses.
  */

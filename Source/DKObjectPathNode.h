@@ -31,16 +31,35 @@
  * <code>DKObjectPathNode</code>.
  */
 @protocol DKObjectPathNode
+/**
+ * Adds the interface to the node.
+ */
 - (void)_addInterface: (DKInterface*)interface;
-
+/**
+ * Adds the child node to the node.
+ */
 - (void)_addChildNode: (DKObjectPathNode*)node;
 
+/**
+ * Constructs the path that the node is located in the graph.
+ */
 - (NSString*)_path;
+
+/**
+ * Returns the dictionary of all interfaces supported by the node.
+ */
+- (NSDictionary*)_interfaces;
 @end;
 
+/**
+ * DKObjectPathNode is a lightweight class to represent child nodes in a D-Bus
+ * object graph. Full DKProxy instances can be obtained with the -proxy method.
+ */
 @interface DKObjectPathNode: DKIntrospectionNode <DKObjectPathNode>
 {
+  /** Contains all nodes descending from the present one. */
   NSMutableArray *children;
+  /** Contains all interfaces supported by the present node. */
   NSMutableDictionary *interfaces;
 }
 

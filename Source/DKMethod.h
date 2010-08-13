@@ -25,6 +25,12 @@
 #import "DKIntrospectionNode.h"
 #include <dbus/dbus.h>
 @class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
+
+/**
+ * DKMethod provides the infrastructure for using D-Bus methods from
+ * Objective-C. It can be used to deserialize a DBusMessage into an NSInvocation
+ * or vice versa.
+ */
 @interface DKMethod: DKIntrospectionNode
 {
   NSMutableArray *inArgs;

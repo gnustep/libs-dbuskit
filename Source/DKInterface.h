@@ -26,6 +26,11 @@
 
 @class NSString, NSMutableDictionary, NSMapTable, DKMethod, DKProperty, DKSignal;
 
+/**
+ * DKInterface encapsulates information about D-Bus interfaces. Interfaces
+ * members are methods, signals and properties. DKInterface also maintains a
+ * lookup table mapping Objective-C selectors to D-Bus methods.
+ */
 @interface DKInterface: DKIntrospectionNode
 {
   NSMutableDictionary *methods;

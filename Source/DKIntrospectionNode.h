@@ -24,6 +24,10 @@
 
 #import <Foundation/NSObject.h>
 @class DKProxy, NSString, NSXMLParser, NSMutableDictionary;
+/**
+ * DKIntrospectionNode is the common superclass of all elements that make up the
+ * introspection graph for a D-Bus entity.
+ */
 @interface DKIntrospectionNode: NSObject <NSCopying>
 {
   NSString *name;

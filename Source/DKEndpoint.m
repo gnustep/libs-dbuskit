@@ -552,16 +552,30 @@ static NSRecursiveLock *activeConnectionLock;
 
 
 /* Methods to manipulate the behavior of the endpoint: */
+
+/**
+ * Use this method to make the run loop context reschedule all its timers and
+ * watchers in the current runloop. Since D-Bus is in thread-safe mode, this
+ * will only cause defined behavior.
+ */
 - (void)scheduleInCurrentThread
 {
   [ctx reschedule];
 }
 
+/**
+ * Flushes all pending messages from the connection.
+ */
 - (void) flush
 {
   dbus_connection_flush(connection);
 }
 
+/**
+ * Removes the reference that this endpoint holds to its D-Bus connection and
+ * unregisteres the endpoint so that it wont be reused any more. Will be called
+ * prior to deallocation.
+ */
 - (void) cleanup
 {
   if (connection != NULL)
@@ -625,6 +639,9 @@ static NSRecursiveLock *activeConnectionLock;
 @end
 
 @implementation DKWatcher
+/**
+ * Tells the run loop to monitor the events that D-Bus wants to monitor.
+ */
 - (void)monitorForEvents
 {
   NSUInteger events = dbus_watch_get_flags(watch);
@@ -645,6 +662,9 @@ static NSRecursiveLock *activeConnectionLock;
     }
 }
 
+/**
+ * Tells the run loop to stop monitoring the events that D-Bus wants to monitor.
+ */
 - (void)unmonitorForEvents
 {
   NSUInteger events = dbus_watch_get_flags(watch);
@@ -682,6 +702,10 @@ static NSRecursiveLock *activeConnectionLock;
   return self;
 }
 
+
+/**
+ * Reschedule monitoring the file descriptor in the current run loop.
+ */
 - (void)reschedule
 {
   while (callbackInProgress)
@@ -692,6 +716,9 @@ static NSRecursiveLock *activeConnectionLock;
   [self monitorForEvents];
 }
 
+/**
+ * Delegate method for event delivery by the run loop.
+ */
 - (void)receivedEvent: (void*)data
                  type: (RunLoopEventType)type
                 extra: (void*)extra
@@ -775,6 +802,10 @@ static NSRecursiveLock *activeConnectionLock;
   }
 }
 
+/**
+ * Reschedule all timers and watchers in the current run loop. This will
+ * potentially add the timers and watchers to more than one run loop.
+ */
 - (void)reschedule
 {
   NSMapEnumerator watchEnum = NSEnumerateMapTable(watchers);
@@ -816,6 +847,9 @@ static NSRecursiveLock *activeConnectionLock;
   [super dealloc];
 }
 
+/**
+ * Lets libdbus add a timeout.
+ */
 - (BOOL)addTimeout: (DBusTimeout*)timeout
       withInterval: (int)milliSeconds
 {
@@ -847,6 +881,9 @@ static NSRecursiveLock *activeConnectionLock;
   }
 }
 
+/**
+ * Lets libdbus remove a timeout it doesn't need anymore.
+ */
 - (void)removeTimeout: (DBusTimeout*)timeout
 {
   NSTimer *timer = nil;
@@ -859,6 +896,9 @@ static NSRecursiveLock *activeConnectionLock;
   }
 }
 
+/**
+ * Callback method for timers.
+ */
 - (void)handleTimeout: (NSTimer*)timer
 {
   DBusTimeout *timeout = (DBusTimeout*)[(NSValue*)[timer userInfo] pointerValue];
@@ -871,7 +911,9 @@ static NSRecursiveLock *activeConnectionLock;
    */
 }
 
-
+/**
+ * Called by libdbus to drain the message queue.
+ */
 - (void)dispatchForConnection: (NSValue*)value
 {
   DBusConnection *conn = (DBusConnection*)[value pointerValue];
@@ -880,7 +922,7 @@ static NSRecursiveLock *activeConnectionLock;
   if ((value != nil) && (conn != connection))
   {
     // This should not happen and could be a sign of some corruption.
-    NSWarnMLog(@"Called to dispatch for non-local conncetion durng D-Bus event handling.");
+    NSWarnMLog(@"Called to dispatch for non-local connection durng D-Bus event handling.");
     return;
   }
 
@@ -891,6 +933,9 @@ static NSRecursiveLock *activeConnectionLock;
   } while (DBUS_DISPATCH_DATA_REMAINS == status);
 }
 
+/**
+ * Adds a file descriptor that libdbus wants to monitor.
+ */
 - (BOOL)addWatch: (DBusWatch*)watch
 {
   NSInteger fd = -1;
@@ -924,6 +969,9 @@ static NSRecursiveLock *activeConnectionLock;
   return YES;
 }
 
+/**
+ * Remove a file descriptor from the list of those monitored.
+ */
 - (void)removeWatch: (DBusWatch*)watch
 {
 
