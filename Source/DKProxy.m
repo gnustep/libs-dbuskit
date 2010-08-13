@@ -890,7 +890,7 @@ static DKProxy *sessionBus;
       DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION] autorelease];
       sessionBus = [[DKDBus alloc] initWithEndpoint: ep
                                          andService: @"org.freedesktop.DBus"
-                                            andPath: @"/"];
+                                            andPath: @"/org/freedesktop/DBus"];
     }
     [busLock unlock];
   }

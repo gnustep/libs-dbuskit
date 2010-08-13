@@ -252,19 +252,52 @@
   }
 }
 
+
+/**
+ * Called by the notification center when the unique name of the sender changes.
+ */
+- (void)nameChanged: (NSNotification*)notification
+{
+  NSString *newName = [[notification userInfo] objectForKey: @"arg2"];
+
+  if (0 != [newName length])
+  {
+    [self setRule: newName
+           forKey: @"sender"];
+  }
+}
+
 /**
  * Adds a filter rule matching on the <var>proxy</var> object emitting the
  * signal.
  */
 - (void)filterSender: (DKProxy*)proxy
 {
-  // FIXME: We need to put the unique name here to avoid reentrancy when handling
-  // signals. In the future, we probably watch for NameOwnerChanged for the name
-  // specified in the proxy in order to update the unique name here.
+  if (nil == proxy)
+  {
+    return;
+  }
+  // We need to put the unique name here to avoid reentrancy when handling
+  // signals.
   [self setRule: [proxy _uniqueName]
          forKey: @"sender"];
   [self setRule: [proxy _path]
          forKey: @"path"];
+
+  // To keep the name up to date we watch for NameOwnerChanged with the name
+  // specified. (But don't do this for the bus object).
+  if ([@"org.freedesktop.DBus" isEqualToString: [proxy _service]])
+  {
+    return;
+  }
+  [[DKNotificationCenter centerForBusType: type] addObserver: self
+                                                    selector: @selector(nameChanged:)
+                                                      signal: @"NameOwnerChanged"
+                                                   interface: @"org.freedesktop.DBus"
+                                                      sender: [DKDBus busWithBusType: type]
+                                                 destination: nil
+                                                      filter: [proxy _service]
+                                                     atIndex: 0];
 }
 
 /**
@@ -380,6 +413,7 @@
 
 - (void)dealloc
 {
+  [[DKNotificationCenter centerForBusType: type] removeObserver: self];
   [rules release];
   [observations release];
   [super dealloc];

@@ -20,6 +20,7 @@
    Boston, MA 02111 USA.
    */
 
+#import <DBusKit/DKNotificationCenter.h>
 #import <DBusKit/DKPort.h>
 #import <DBusKit/DKProxy.h>
 #import <DBusKit/NSConnection+DBus.h>
