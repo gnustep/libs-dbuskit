@@ -11,7 +11,8 @@ include $(GNUSTEP_MAKEFILES)/common.make
 GNUSTEP_USE_PARALLEL_AGGREGATE=no
 
 #DBusKit Framework
-SUBPROJECTS = Source
+SUBPROJECTS = Source \
+              Tools
 
 #
 # Makefiles

@@ -235,7 +235,7 @@
     [declaration appendFormat: @"%@\n\n", [method methodDeclaration]];
   }
 
-  [declaration appendFormat: @"@end"];
+  [declaration appendFormat: @"@end\n"];
   return declaration;
 }
 
