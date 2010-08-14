@@ -1,3 +1,21 @@
+/** Small tool to generate protocol declarations from introspection data.
+
+   Copyright (C) 2010 Free Software Foundation, Inc.
+
+   Written by:  Niels Grewe <niels.grewe@halbordnung.de>
+   Created: August 2010
+
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License
+   as published by the Free Software Foundation; either
+   version 3 of the License, or (at your option) any later version.
+
+   You should have received a copy of the GNU General Public
+   License along with this program; see the file COPYINGv3.
+   If not, write to the Free Software Foundation,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+   */
 #import <Foundation/Foundation.h>
 #import "../Source/DKProxy+Private.h"
 #import "../Source/DKIntrospectionParserDelegate.h"
