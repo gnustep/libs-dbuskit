@@ -1,0 +1,165 @@
+@c This file is part of the GNUstep DBusKit and D-Bus Programming Manual
+@c Copyright (C) 2010
+@c   Free Software Foundation, Inc.
+@c See the file DBusKit.texi for copying conditions.
+
+@paragraphindent 0
+@node Introduction
+@chapter Introduction
+
+The aim of this manual is to familiarise the reader with the concepts
+and tools necessary to successfully integrate a GNUstep application into
+a desktop environment based around message exchange through the D-Bus
+messaging bus facilities. It tries to give succinct explanation of the
+concepts involved, providing illustrative examples whenever possibles.
+
+This manual will be most useful to a reader who has basic working
+knowledge of the Objective-C programming language and the OpenStep APIs
+(either from the GNUstep implementation or from Apple's Cocoa). In depth
+knowledge of the Distributed Objects system or D-Bus is also beneficial,
+but not required.
+
+@section An IPC primer
+@cindex IPC
+@cindex inter-process communication
+A typical modern computer system executes multiple units of computation
+at the same time. Even with a single-core CPU, the operating system will
+constantly switch between different units of computation by employing
+different multitasking strategies. This approach has a number of
+advantages, e.g.:
+@itemize @bullet
+@item
+It makes it easy to isolate processes from one another: A
+malignant process cannot easily modify the memory of other processes on
+the system.
+@item
+It allows privilege separation: It is not necessary that a
+web-browser has the same rights as a partitioning utility. Running both
+in different processes allows the operating system to assign different
+privileges to both.
+@item
+It increases modularity: You can easily change one part of the
+software on your computer without disturbing the other parts.
+@item
+ If the computer has more than one CPU, computation can be sped up
+by running more than one process (or thread) in parallel.
+@end itemize
+To leverage these advantages effectively, different processes or
+applications need a mechanism for inter-process communication (IPC) that
+allows them to exchange information (and ensure synchronisation if
+needed). 
+
+@cindex Message passing
+One way to implement an IPC mechanism is by use of the message passing
+paradigm. Entities in a message passing system communicate by exchanging
+messages with each other, which makes it a natural fit for object
+oriented languages, where the basic abstraction is the object.
+
+The message passing paradigm is also used in Objective-C (actually
+Objective-C inherited it from Smalltalk), where you interact with
+objects by sending messages to them. E.g. the intended meaning of
+@example
+[alice greet];
+@end example
+would be sending the @code{-greet} message to the @code{alice} object,
+which is referred to as the @emph{receiver} of the message. This idiom
+can be quite easily extended beyond the single process case, which the
+NeXT did by including the @emph{Distributed Objects} system in the
+OpenStep specification that GNUstep implements. The message passing
+paradigm is also employed by D-Bus an we will look at the similarities
+and differences of both systems in the following sections.
+
+@section Distributed Objects
+@cindex Distributed Objects
+@cindex DO
+
+The GNUstep Distributed Objects (DO) System is designed to go out of a
+programmer's way. Since ordinary (intra-process) usage Objective-C
+already has message passing semantics, Distributed Objects simply
+extends these semantics to objects in other processes.
+
+This works by usage of the proxy design pattern. A proxy is a stand-in
+object that receives messages @emph{in lieu} of another object and
+forwards them (most likely after processing them as it sees fit). In the
+case of Distributed Objects, the proxy will take the message that is
+being sent to the remote object, encode it an @code{NSInvocation}
+object and send a serialised version of the invocation to the remote
+process where it is invoked on the receiver it was initially intended
+for. 
+
+Establishing a connection to a remote object using DO is thus a simple
+three step process:
+@enumerate
+@item Look up a process that exposes ('vends', in DO parlance) an object.
+@item Establish a communications channel to the process.
+@item Create a proxy object to send messages to the remote object.
+@end enumerate
+Afterwards, the generated proxy can be used just like any in-process
+object.
+
+Task 1. involves the @code{NSPortNameServer} class which can be used to
+obtain a communication endpoint (@code{NSPort}) to a service with a
+specific name: 
+@example
+NSPort *sendPort = [[NSPortNameServer systemDefaultPortNameServer]
+  portForName: @@"MyService"];
+@end example
+Task 2. involves @code{NSPort} and @code{NSConnection}. While the former
+is concerned with the low-level details of encoding messages to a wire
+format, the latter manages sending messages over ports. A connection to
+the above @code{MyService} using the created @code{sendPort} could be
+obtained like this:
+@example
+NSConnection *c = [NSConnection connectionWithReceivePort: [NSPort port]
+                                                 sendPort: sendPort];
+@end example
+
+3. is done by calling @code{-rootProxy} on the @code{NSConnection}
+object. This will return an instance of @code{NSDistantObject}: A proxy
+that will use @code{NSConnection} and @code{NSPort} to forward messages
+to the remote object.
+@example
+id *remoteObject = [c rootProxy];
+@end example
+
+The DO mode of operation has a few notable advantages:
+@itemize @bullet
+@item Usual message passing semantics apply.
+@item The native Objective-C type system is used in both processes. No
+type conversion is necessary.
+@item New objects can be vended implicitly by returning them from the
+root proxy. New proxies will be created automatically for them.
+@item DO can make intelligent decisions about the remote objects: If
+process @emph{A} has vended object @emph{O} to process @emph{B}
+(yielding the proxy @emph{P(O)}, and @emph{B}  latter vends
+@emph{P(O)} to @emph{A}, @emph{A} will not use @emph{P(P(O))}, but its
+local reference to @emph{O}.
+@end itemize
+It goes without saying that DO is pretty useful and GNUstep uses it in
+many places. It drives, for example, the services architecture, the pasteboard
+server, or the distributed notification system. For further information
+about DO, please consult the
+@uref{../../Base/ProgrammingManual/manual_7.html, Objective-C GNUstep
+Base Programming Manual}. We will now turn our attention to the D-Bus
+IPC system.
+
+@section D-Bus
+@cindex D-Bus
+
+Distributed Objects has already been part of NeXT's OpenStep
+Specification, which appeared in 1994 and thus predates the D-Bus IPC
+system for quite some time.  But while DO is only useful in an
+Objective-C context, D-Bus was created to suit the needs of desktop
+environments such as KDE or GNOME, which are (among others) using C or
+C++ as their core programming languages. 
+@subsection Message Busses
+One core concept of D-Bus is that of the message bus, which manages
+name resolution and message exchange between applications. On a standard
+desktop system, there usually are two message busses active, dubbed the
+@emph{well-known busses}. One is the @emph{system bus}, to which
+system-wide services connect, the other is the @emph{session bus} which
+is started per user session and allows applications on the user's
+desktop to communicate. 
+@subsection Services
+@subsection Object Paths
+@subsection Interfaces
