@@ -49,7 +49,7 @@ applications need a mechanism for inter-process communication (IPC) that
 allows them to exchange information (and ensure synchronisation if
 needed). 
 
-@cindex Message passing
+@cindex message passing
 One way to implement an IPC mechanism is by use of the message passing
 paradigm. Entities in a message passing system communicate by exchanging
 messages with each other, which makes it a natural fit for object
@@ -131,7 +131,7 @@ type conversion is necessary.
 root proxy. New proxies will be created automatically for them.
 @item DO can make intelligent decisions about the remote objects: If
 process @emph{A} has vended object @emph{O} to process @emph{B}
-(yielding the proxy @emph{P(O)}, and @emph{B}  latter vends
+(yielding the proxy @emph{P(O)}), and @emph{B}  latter vends
 @emph{P(O)} to @emph{A}, @emph{A} will not use @emph{P(P(O))}, but its
 local reference to @emph{O}.
 @end itemize
@@ -150,16 +150,111 @@ Distributed Objects has already been part of NeXT's OpenStep
 Specification, which appeared in 1994 and thus predates the D-Bus IPC
 system for quite some time.  But while DO is only useful in an
 Objective-C context, D-Bus was created to suit the needs of desktop
-environments such as KDE or GNOME, which are (among others) using C or
+environments such as KDE or GNOME, which use (among others) C or
 C++ as their core programming languages. 
 @subsection Message Busses
-One core concept of D-Bus is that of the message bus, which manages
-name resolution and message exchange between applications. On a standard
-desktop system, there usually are two message busses active, dubbed the
-@emph{well-known busses}. One is the @emph{system bus}, to which
+@cindex message bus
+One core concept of D-Bus is that of the message bus. On a standard
+desktop system, there usually are two message buses active, dubbed the
+@emph{well-known buses}. One is the @emph{system bus}, to which
 system-wide services connect, the other is the @emph{session bus} which
 is started per user session and allows applications on the user's
 desktop to communicate. 
+
+The purpose of a bus, which is running as a separate process (the
+@emph{dbus-daemon}), is to provide name-services to the connected
+applications and route messages between them.
 @subsection Services
+@cindex service, D-Bus
+@cindex D-Bus service
+A process that connecting to a message bus is considered to be a
+@emph{service}, even if it will not expose any object to the bus. A
+unique name, which starts with a colon (e.g. @emph{:1.1}) and is
+required for message routing, will be assigned to every service by the
+bus. The service can also request further names from the bus. A text
+editor might, for example, want to request the name
+@emph{org.gnustep.TextEditor} from the bus. These names are referred to
+as @emph{well-known names} and usually utilise reverse-DNS notation.
+
+These names can be subject to different assignment policies. A service
+can specify that it wants to be queued for a name that has already be
+assigned. It will then become the owner of the name when the last
+previous owner exits or releases the name. Alternatively, the service
+can request to replace an existing name, a feature that can be used to
+ensure that only one application of a specific type is running (as would
+be the case for, e.g., a screensaver).
 @subsection Object Paths
+@cindex object path, D-Bus
+@cindex D-Bus object path
+
+When using DO the object graph vended by a service is generated
+explicitly: If a message send to a remote object returns another object,
+that object will implicitly be vended and wrapped in a proxy for use by
+the other process. D-Bus operates quite differently in that respect:
+Every object needs to be assigned a name that can be used by remote
+processes to interact with the object. Theses object names are organised
+in the directory-like structure, where each object is uniquely
+identified by its @emph{object path}. The UDisks service
+(@emph{org.freedesktop.UDisks}) on the system bus does, for example,
+expose different disks of a computer at different paths:
+@example
+/org/freedesktop/UDisks/devices/sda
+/org/freedesktop/UDisks/devices/sdb
+@end example
+It is worth noting that it is a D-Bus convention to have the root object
+of the service not reside at the root path (``/''), but at one that
+corresponds to the service name with all dots replaced by the path
+separator. Thus you don't access the root object of
+@emph{org.freedesktop.UDisks} at ``/'' but at ``/org/freedesktop/UDisks''.
+The reason for this is to ensure proper name-spacing if different code
+modules in a single process have registered multiple names on the bus
+(which will all point to the same unique name).
 @subsection Interfaces
+@cindex interface, D-Bus
+@cindex D-Bus interface
+D-Bus object-path nodes are the receivers and senders of D-Bus messages.
+They receive calls to methods and emit signals, which are broadcast by
+the bus and can be watched for by other applications. These methods and
+signals can be aggregated into @emph{interfaces}, which are a bit, but
+not quite, like Objective-C protocols. One interface that almost every
+D-Bus object implements, is @emph{org.freedesktop.Introspectable}, which
+has as its sole member the @code{Introspect()}-method. This will return
+XML-encoded information about all methods, signals, and properties the
+object exposes. 
+
+Interfaces are also used as namespaces for their members: Identically
+named methods with different implementations are allowed to appear in
+multiple interfaces, something that is not possible with Objective-C
+protocols.
+
+@subsection Type System
+@cindex type system, D-Bus
+@cindex D-Bus type system
+For arguments and values of methods, signals, and properties, D-Bus
+defines it's own type system, which is similar to the C type system. It
+contains integer and floating point types of different sizes as well as
+array and structure types. The type system represents dictionaries as
+arrays of ordered pairs. Additionally, there is a type available for
+references to objects (but these references are only valid within a
+single service) and a variant type that, just like Objective-C's
+@code{id}, allows for values of arbitrary types. This type system has to
+be adopted by any application that wants to interface with D-Bus.
+
+@section Comparison
+
+@multitable @columnfractions .22 .39 .39
+@headitem Feature @tab Distributed Objects @tab D-Bus
+@item IPC paradigm @tab message passing @tab message passing 
+@item type system @tab native Objective-C type system @tab custom D-Bus
+type system (C-like)
+@item supported programming languages @tab Objective-C@footnote{Please
+note that the GNUstep and Apple implementations of Distributed Objects
+are incompatible} @tab many languages through bindings
+@item polymorphism @tab no special provisions @tab through overloaded method names in
+different interfaces
+@item object-graph generation @tab implicit @tab explicit with named
+objects
+@item name service @tab provided by separate nameserver objects @tab integrated
+@item delivery of broadcast information @tab distributed notification
+system implemented on top of DO @tab integrated as D-Bus signals
+@end multitable

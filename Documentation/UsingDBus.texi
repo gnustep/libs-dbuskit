@@ -1,0 +1,246 @@
+@c This file is part of the GNUstep DBusKit and D-Bus Programming Manual
+@c Copyright (C) 2010
+@c   Free Software Foundation, Inc.
+@c See the file DBusKit.texi for copying conditions.
+
+@paragraphindent 0
+@node Using D-Bus From Objective-C
+@chapter Using D-Bus From Objective-C
+In order to access D-Bus services from an Objective-C application, the
+DBusKit framework is required. It provides infrastructure for
+managing connections to D-Bus message buses and translating Objective-C
+message sends to D-Bus method calls. This way, DBusKit can make
+interacting with D-Bus objects appear quite similar to the way one
+usually interacts with the DO system.
+@section Generating Protocol Declarations With dk_make_protocol
+@pindex dk_make_protocol
+@synindex pg cp
+
+If your application wants to invoke methods on D-Bus objects, some
+preparations are required: As with all other code, you need to provide
+declarations for the methods you want to invoke. You can either do this
+by writing them manually or let the @b{dk_make_protocol} tool
+generate them for you. This is possible if an .interface-file containing
+the introspection data for the interface exists. Calling @b{dk_make_protocol} with the ``@b{-i}''
+switch and the name of the .interface-file will generate a header file
+with an Objective-C protocol declaration for that interface. For the
+hypothetical interface file for @emph{org.freedesktop.Introspectable},
+@b{dk_make_protocol} might generate the following header file:
+@example
+#import <Foundation/Foundation.h>
+/*
+ * Objective-C protocol declaration for the D-Bus
+ * org.freedesktop.Introspectable interface.
+ */
+@@protocol org_freedesktop_Introspectable
+
+- (NSString*)createModel;
+
+@@end
+@end example
+The generated header file does only contain method declarations with
+arguments and return values that are Objective-C classes. The following
+default mappings between Foundation classes and D-Bus types are defined:
+
+@multitable @columnfractions .15 .8
+@item NSNumber @tab
+booleans (b), integers (y, n, q, i, u, x, t), floating point values (d)
+
+@item NSString @tab
+strings (s)
+
+@item DKProxy @tab
+object paths (o)
+
+@item NSArray @tab
+arrays (a?), structs ((?*))
+
+@item NSDictionary @tab
+dictionaries (a@{??@})
+
+@item id @tab
+variants (v)
+@end multitable
+Here ``?'' denotes a single complete D-Bus type signature and ``*''
+denotes possible repetition. It is, however, possible to use the plain C
+types corresponding to the D-Bus types, because DBusKit is capable of
+determining all necessary conversions. Thus the following declarations
+all specify valid ways to invoke @code{NameHasOwner()} method from
+@emph{org.freedesktop.DBus}:
+@example
+- (NSNumber*)NameHasOwner: (NSString*)name;
+- (NSNumber*)NameHasOwner: (char*)name;
+- (BOOL)NameHasOwner: (NSString*)name;
+- (BOOL)NameHasOwner: (char*)name;
+@end example
+
+@section Obtaining a Proxy to a D-Bus Object
+With these provisions in place, it is quite easy to obtain a proxy to a
+D-Bus object. The process is quite similar to creating a proxy to a
+distant object using DO. First, you create the required ports:
+@example
+DKPort *sPort = [[DKPort alloc] initWithRemote: @@"org.freedesktop.DBus"
+                                         onBus: DKDBusSessionBus]
+DKPort *rPort = [DKPort sessionBusPort];
+@end example
+If a service on the system bus was the desired target, one could pass
+@code{DKBusSystemBus} as the second argument of the @code{DKPort}
+initialiser or use the @code{+systemBusPort} convenience method to
+create a port object without remote.
+ 
+Afterwards, a connection can be obtained to the
+@emph{org.freedesktop.DBus} service (which is bus itself) as follows:
+
+@example
+NSConnection *c = [NSConnection connectionWithReceivePort: rPort
+                                                 sendPort: sPort];
+@end example
+Please note that this exactly the way one would create a Distributed
+objects connection. Consequentially, on can obtain a proxy to an object
+of this service by using @code{-rootProxy}:
+
+@example
+id remoteObject = [c rootProxy];
+@end example
+Unfortunately a proxy to the root object of a D-Bus service is very
+often not useful because services tend to install their primary object
+at a path corresponding to the service name. DBusKit thus
+extends @code{NSConnection} with a @code{-proxyAtPath:} method, which
+can be used to obtain proxies to non-root object. It could be used to
+obtain a proper proxy to @emph{org.freedesktop.DBus} like this:
+@example
+id remoteObject = [c proxyAtPath: @@"/org/freedesktop/DBus"];
+@end example
+
+@section Sending Messages to D-Bus Objects
+All further interactions with the remote object are indistinguishable
+from interactions with an object in the local process. E.g. the
+introspection data of the remote object could be obtained like this:
+@example
+NSString *introspectionData = [remoteObject Introspect];
+@end example
+
+@cindex interface, D-Bus
+@cindex method, D-Bus
+@cindex D-Bus interface
+@cindex D-Bus method
+In some cases it is, however, necessary to treat D-Bus object specially:
+Since D-Bus allows method names to be overloaded per interface, it might
+be necessary to specify which method to call. DBusKit provides two
+facilities to cope with this kind of situation. For one, it is possible
+to embed the information about the required interface in the selector
+string of the method to call. This is done by replacing all dots in the
+interface string with underscores, placing it between @code{_DKIf_}
+@code{_DKIfEnd_} marker and appending the method name.
+
+Assuming a D-Bus object  implements a @code{getBass()} method in the
+interfaces @code{org.foo.Fish} and @code{org.bar.Instruments}, one could
+distinguish between the methods by constructing the following selectors:
+@itemize @bullet
+@item @code{-_DKIf_org_foo_Fish_DKIfEnd_getBass}
+@item @code{-_DKIf_org_bar_Instruments_DKIfEnd_getBass}
+@end itemize
+Since this is obviously quite clumsy, it will only be feasible for
+simple cases. 
+
+The other facility provided by DBusKit is the
+@code{-setPrimaryDBusInterface:} method, which instructs the proxy to
+prefer the named interface when looking up methods. E.g. the following
+statements would result in a call to the correct method:
+@example
+[remoteObject setPrimaryDBusInterface: @@"org.bar.Instruments"];
+id anInstrument = [remoteObject getBass];
+@end example
+
+@section Watching D-Bus Signals
+@cindex signal, D-Bus
+@cindex D-Bus signal
+Besides responding to method calls, D-Bus objects can also actively
+inform remote objects about events or state changes by the use of
+@emph{signals}, which are published to the bus and re-broadcast by it to
+all connected entities that subscribe to the signals. DBusKit includes
+support for receiving D-Bus signals through the
+@code{DKNotificationCenter} class. @code{DKNotificationCenter} keeps to
+OpenStep conventions in that it delivers the signals it receives from
+D-Bus in the form of @code{NSNotification}s, and is thus similar to the
+notification center classes provided by the Foundation library
+(gnustep-base).
+
+To make use of the notification feature, it is sometimes not even
+necessary to create any explicit proxies. It is enough to just obtain a
+reference to one of the notification centers:
+
+@example
+DKNotificationCenter *center = [DKNotificationCenter sessionBusCenter];
+@end example
+(Again, a reference to the notification center for the system bus can be
+obtained similarly by using @code{+systemBusCenter}.) In a very simple
+case, one would simply use the center to add an object as an observer of
+the @emph{NameAcquired} signal from the @emph{org.freedesktop.DBus}
+interface.
+@example
+[center addObserver: myObject
+           selector: @@selector(didReceiveNotification:)
+               name: @@"DKSignal_org.freedesktop.DBus_NameAquired"
+             object: nil];
+@end example
+This example also illustrates the naming convention for singals: They
+start with the ``@code{DKSignal}''-identifier and continue with the
+interface name and the signal name separated by underscores
+(``@code{_}''). Additionally, it is possible to register a custom
+notification name for a signal:
+@example
+[center registerNotificationName: @@"DKNameAquired"
+                        asSignal: @@"NameAquired"
+                     inInterface: @@"org.freedesktop.DBus"];
+@end example
+If this method returns YES, it will be possible to register observers for the
+@code{DKNameAquired} notification (it might fail if the signal was
+already registered under another name).
+
+Since D-Bus provides a fine-grained matching mechanism for signals,
+Objective-C applications can specify in great detail what kind of signal
+they want to receive. The full-blown version of the registration method
+could be called as follows:
+@example
+[center addObserver: myObject
+           selector: @@selector(didReceiveNotification:)
+             signal: @@"NameOwnerChanged"
+          interface: @@"org.freedesktop.DBus"
+             sender: theBus
+        destination: nil
+             filter: @@"org.gnustep.TextEditor"
+            atIndex: 0];
+@end example
+If registered as an observer this way, @code{myObject} would only
+receive a notification if a new application took ownership of the name
+@emph{org.gnustep.TextEditor}. 
+
+When delivering an notification to the observer, the notification center
+will create a @code{NSNotification} with a userInfo dictionary that
+follows a specific format to make it easier to process the notification:
+@table @emph
+@item member
+The name of the signal being emitted.
+
+@item interface
+The name of the interface the signal belongs to.
+
+@item sender
+The @emph{unique} name of the service emitting the signal.
+
+@item path
+The path to the object of the service that emitted the signal.
+
+@item destination
+The intended receiver of the signal, might be empty if the signal was
+broadcast, which is usually the case.
+
+@item arg0, ..., n
+If the signal did specify any values to be send alongside the signal,
+these values will be present in keys called @emph{arg0}, @emph{arg1},
+..., @emph{argn}. 
+@end table
+
+Additionally, calling @code{-object} on the notification will return a
+proxy to the object that emitted the signal.

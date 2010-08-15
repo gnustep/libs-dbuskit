@@ -3,6 +3,7 @@
 @c %**start of header 
 @setfilename DBusKit.info 
 @settitle GNUstep D-Bus Programming Manual
+@documentencoding UTF-8
 @c %**end of header 
  
 @ifinfo 
@@ -54,10 +55,19 @@ section entitled ``GNU Free Documentation License''.
 @menu
 * Introduction::		  An introduction to the Distributed Objects and D-Bus IPC mechanisms
 * GNU Free Documentation License::The license terms of this document
+* Using D-Bus From Objective-C::  Describes how to access D-Bus services from an Objective-C application
+* Exposing Objects on D-Bus::     Describes how to expose Objective-C objects to other D-Bus aware applications.
 @end menu
 @end ifinfo
 @c Chapter 1: Introduction
 @include Introduction.texi
+
+@c Chapter 2: Using D-Bus From Objective-C
+@include UsingDBus.texi
+
+@c Chapter 3: Exposing Objects on D-Bus
+@include ExposingObjects.texi
+
 @c Appendix A: GNU Free Documentation License
 @include fdl-1.3.texi
 
