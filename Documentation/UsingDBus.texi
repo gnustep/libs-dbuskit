@@ -12,9 +12,8 @@ managing connections to D-Bus message buses and translating Objective-C
 message sends to D-Bus method calls. This way, DBusKit can make
 interacting with D-Bus objects appear quite similar to the way one
 usually interacts with the DO system.
+
 @section Generating Protocol Declarations With dk_make_protocol
-@pindex dk_make_protocol
-@synindex pg cp
 
 If your application wants to invoke methods on D-Bus objects, some
 preparations are required: As with all other code, you need to provide
@@ -95,14 +94,14 @@ Afterwards, a connection can be obtained to the
 NSConnection *c = [NSConnection connectionWithReceivePort: rPort
                                                  sendPort: sPort];
 @end example
-Please note that this exactly the way one would create a Distributed
-objects connection. Consequentially, on can obtain a proxy to an object
+Please note that this is exactly the way one would create a Distributed
+Objects connection. Consequentially, on can obtain a proxy to an object
 of this service by using @code{-rootProxy}:
 
 @example
 id remoteObject = [c rootProxy];
 @end example
-Unfortunately a proxy to the root object of a D-Bus service is very
+Unfortunately, a proxy to the root object of a D-Bus service is very
 often not useful because services tend to install their primary object
 at a path corresponding to the service name. DBusKit thus
 extends @code{NSConnection} with a @code{-proxyAtPath:} method, which
@@ -124,7 +123,7 @@ NSString *introspectionData = [remoteObject Introspect];
 @cindex method, D-Bus
 @cindex D-Bus interface
 @cindex D-Bus method
-In some cases it is, however, necessary to treat D-Bus object specially:
+In some cases it is, however, necessary to treat D-Bus objects special:
 Since D-Bus allows method names to be overloaded per interface, it might
 be necessary to specify which method to call. DBusKit provides two
 facilities to cope with this kind of situation. For one, it is possible
@@ -157,12 +156,12 @@ id anInstrument = [remoteObject getBass];
 @cindex D-Bus signal
 Besides responding to method calls, D-Bus objects can also actively
 inform remote objects about events or state changes by the use of
-@emph{signals}, which are published to the bus and re-broadcast by it to
-all connected entities that subscribe to the signals. DBusKit includes
-support for receiving D-Bus signals through the
-@code{DKNotificationCenter} class. @code{DKNotificationCenter} keeps to
-OpenStep conventions in that it delivers the signals it receives from
-D-Bus in the form of @code{NSNotification}s, and is thus similar to the
+@emph{signals}. These signals are published to the bus and the bus will
+re-broadcast them to all connected entities that subscribe to the
+signals. DBusKit includes support for receiving D-Bus signals through
+the @code{DKNotificationCenter} class. @code{DKNotificationCenter} keeps
+to OpenStep conventions in that it delivers the signals it receives from
+D-Bus in the form of @code{NSNotification}s and is thus similar to the
 notification center classes provided by the Foundation library
 (gnustep-base).
 
@@ -184,7 +183,7 @@ interface.
                name: @@"DKSignal_org.freedesktop.DBus_NameAquired"
              object: nil];
 @end example
-This example also illustrates the naming convention for singals: They
+This example also illustrates the naming convention for signals: They
 start with the ``@code{DKSignal}''-identifier and continue with the
 interface name and the signal name separated by underscores
 (``@code{_}''). Additionally, it is possible to register a custom
@@ -216,9 +215,10 @@ If registered as an observer this way, @code{myObject} would only
 receive a notification if a new application took ownership of the name
 @emph{org.gnustep.TextEditor}. 
 
-When delivering an notification to the observer, the notification center
+When delivering annotification to the observer, the notification center
 will create a @code{NSNotification} with a userInfo dictionary that
-follows a specific format to make it easier to process the notification:
+follows a specific format to allow the receiver to process the
+notification:
 @table @emph
 @item member
 The name of the signal being emitted.
@@ -233,7 +233,7 @@ The @emph{unique} name of the service emitting the signal.
 The path to the object of the service that emitted the signal.
 
 @item destination
-The intended receiver of the signal, might be empty if the signal was
+The intended receiver of the signal; might be empty if the signal was
 broadcast, which is usually the case.
 
 @item arg0, ..., n
