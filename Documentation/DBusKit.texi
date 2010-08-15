@@ -54,9 +54,9 @@ section entitled ``GNU Free Documentation License''.
 @top GNUstep D-Bus Programming Manual
 @menu
 * Introduction::		  An introduction to the Distributed Objects and D-Bus IPC mechanisms
-* GNU Free Documentation License::The license terms of this document
 * Using D-Bus From Objective-C::  Describes how to access D-Bus services from an Objective-C application
 * Exposing Objects on D-Bus::     Describes how to expose Objective-C objects to other D-Bus aware applications.
+* GNU Free Documentation License::The license terms of this document
 @end menu
 @end ifinfo
 @c Chapter 1: Introduction
