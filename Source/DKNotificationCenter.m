@@ -641,7 +641,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 	destination: (DKProxy*)destination
 {
   DKSignal *signal = [self _signalForNotificationName: notificationName];
-  DKObservable *observable = nil;
   if ((nil != notificationName) && (nil == signal))
   {
     //TODO: fail silently or raise an exception?
@@ -650,15 +649,13 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     return;
   }
 
-  observable = [self _observableForSignalName: [signal name]
-                                    interface: [[signal parent] name]
-                                       sender: sender
-                                  destination: destination
-				       filter: nil
-				      atIndex: 0];
-  [self _letObserver: observer
-   observeObservable: observable
-        withSelector: notifySelector];
+  [self addObserver: observer
+           selector: notifySelector
+             signal: [signal name]
+          interface: [[signal parent] name]
+             sender: sender
+        destination: destination
+  filtersAndIndices: nil, 0, nil];
 }
 
 - (void)addObserver: (id)observer
@@ -666,33 +663,24 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                name: (NSString*)notificationName
 	     object: (DKProxy*)sender
 {
+  DKSignal *signal = [self _signalForNotificationName: notificationName];
+  if ((nil != notificationName) && (nil == signal))
+  {
+    //TODO: fail silently or raise an exception?
+    NSWarnMLog(@"Cannot observe notification %@ (no corresponding D-Bus signal).",
+      notificationName);
+    return;
+  }
+
   [self addObserver: observer
            selector: notifySelector
-               name: notificationName
+             signal: [signal name]
+          interface: [[signal parent] name]
              sender: sender
-        destination: nil];
+        destination: nil
+  filtersAndIndices: nil, 0, nil];
 }
 
-
--  (void)addObserver: (id)observer
-            selector: (SEL)notifySelector
-              signal: (NSString*)signalName
-           interface: (NSString*)interfaceName
-              sender: (DKProxy*)sender
-         destination: (DKProxy*)destination
-              filter: (NSString*)filter
-	     atIndex: (NSUInteger)index
-{
-  DKObservable *observable = [self _observableForSignalName: signalName
-                                                  interface: interfaceName
-                                                     sender: sender
-                                                destination: destination
-                                                     filter: filter
-						    atIndex: index];
-  [self _letObserver: observer
-   observeObservable: observable
-        withSelector: notifySelector];
-}
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
               signal: (NSString*)signalName
@@ -706,8 +694,25 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
           interface: interfaceName
              sender: sender
         destination: destination
-             filter: nil
-             atIndex: 0];
+  filtersAndIndices: nil, 0, nil];
+}
+
+-  (void)addObserver: (id)observer
+            selector: (SEL)notifySelector
+              signal: (NSString*)signalName
+           interface: (NSString*)interfaceName
+              sender: (DKProxy*)sender
+         destination: (DKProxy*)destination
+              filter: (NSString*)filter
+	     atIndex: (NSUInteger)index
+{
+  [self addObserver: observer
+           selector: notifySelector
+             signal: signalName
+          interface: interfaceName
+             sender: sender
+        destination: destination
+  filtersAndIndices: filter, index, nil];
 }
 
 -  (void)addObserver: (id)observer
@@ -777,17 +782,28 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                 signal: [signal name]
              interface: [[signal parent] name]
                 sender: sender
-           destination: destination];
+           destination: destination
+     filtersAndIndices: nil, 0, nil];
 }
 
 - (void)removeObserver: (id)observer
                   name: (NSString*)notificationName
                 object: (DKProxy*)sender
 {
+  DKSignal *signal = [self _signalForNotificationName: notificationName];
+  if ((nil != notificationName) && (nil == signal))
+  {
+    //TODO: fail silently or raise an exception?
+    NSWarnMLog(@"Cannot remove notification %@ (no corresponding D-Bus signal).",
+      notificationName);
+    return;
+  }
   [self removeObserver: observer
-                  name: notificationName
+                signal: [signal name]
+             interface: [[signal parent] name]
                 sender: sender
-           destination: nil];
+           destination: nil
+     filtersAndIndices: nil, 0, nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -796,14 +812,12 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                 sender: (DKProxy*)sender
            destination: (DKProxy*)destination
 {
-  DKObservable *observable = [self _observableForSignalName: signalName
-                                                  interface: interfaceName
-                                                     sender: sender
-                                                destination: destination
-						     filter: nil
-						    atIndex: 0];
-  [self _removeObserver: observer
-          forObservable: observable];
+  [self removeObserver: observer
+                signal: signalName
+             interface: interfaceName
+                sender: sender
+           destination: destination
+     filtersAndIndices: nil, 0, nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -814,14 +828,12 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 	        filter: (NSString*)filter
     	       atIndex: (NSUInteger)index
 {
-  DKObservable *observable = [self _observableForSignalName: signalName
-                                                  interface: interfaceName
-                                                     sender: sender
-                                                destination: destination
-						     filter: filter
-						    atIndex: index];
-  [self _removeObserver: observer
-          forObservable: observable];
+  [self removeObserver: observer
+                signal: signalName
+             interface: interfaceName
+                sender: sender
+           destination: destination
+     filtersAndIndices: filter, index, nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -833,8 +845,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                 signal: signalName
              interface: interfaceName
                 sender: sender
-           destination: nil];
+           destination: nil
+     filtersAndIndices: nil, 0, nil];
 }
+
 -  (void)removeObserver: (id)observer
                  signal: (NSString*)signalName
               interface: (NSString*)interfaceName
