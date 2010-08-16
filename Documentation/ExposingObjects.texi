@@ -1,0 +1,12 @@
+@c This file is part of the GNUstep DBusKit and D-Bus Programming Manual
+@c Copyright (C) 2010
+@c   Free Software Foundation, Inc.
+@c See the file DBusKit.texi for copying conditions.
+
+@paragraphindent 0
+@node Exposing Objects on D-Bus
+@chapter Exposing Objects On D-Bus
+
+Unfortunately, the present version of DBusKit does not include support
+for exposing objects in an Objective-C application to other applications
+via D-Bus.

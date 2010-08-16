@@ -1,0 +1,18 @@
+  NSPrincipalClass = NSApplication;
+  NSServices = (
+    {
+      NSPortName = Apertium;
+      NSMessage = translate;
+      NSSendTypes = (
+	NSStringPboardType
+      );
+      NSReturnTypes = (
+        NSStringPboardType
+      );
+      NSMenuItem = {
+	default = "Translate with Apertium";
+	English = "Translate with Apertium";
+	German = "Mit Apertium übersetzen";
+      };
+    }
+  );
