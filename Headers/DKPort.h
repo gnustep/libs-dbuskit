@@ -33,6 +33,9 @@ enum
   DKDBusBusTypeMax,
 };
 
+/**
+ * Identifies the type of the well-known bus.
+ */
 typedef NSUInteger DKDBusBusType;
 
 /**
@@ -43,6 +46,7 @@ typedef NSUInteger DKDBusBusType;
  */
 @interface DKPort: NSPort
 {
+  @private
   /** The endpoint doing the connection handling. */
   DKEndpoint *endpoint;
 

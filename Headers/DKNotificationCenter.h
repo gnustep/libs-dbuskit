@@ -66,6 +66,7 @@
  */
 @interface DKNotificationCenter: NSObject
 {
+  @private
   /**
    * The endpoint object used by the notification center to communicate with
    * D-Bus.

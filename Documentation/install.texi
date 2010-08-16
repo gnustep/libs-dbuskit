@@ -1,0 +1,35 @@
+@chapter Installation Instructions
+
+@section Required software
+
+As an Objective-C framework, DBusKit depends on recent versions of the
+GNUstep Makefile Package and the GNUstep Base Library. Versions 2.4.0
+and 1.20.0 (respectively) are known to work. D-Bus support is provided
+by libdbus. DBusKit has been verified to work with version 1.2.1 of
+libdbus, but might work with earlier versions. To build the testsuite,
+the UnitKit framework is required. It is available from the Étoilé
+@uref{http://svn.gna.org/svn/etoile/trunk/Etoile/Frameworks/UnitKit/,
+repository}.
+
+@itemize @bullet
+@item gnustep-make (>=2.4.0)
+
+@item gnustep-base (>=1.20.0)
+
+@item libdbus (>=1.2.1)
+
+@item UnitKit (optional)
+@end itemize
+
+@section Build and Install
+To build and install DBusKit type @kbd{make install}. This will
+automatically configure the framework prior to building and installing. 
+
+@ifinfo
+Copyright @copyright{} 2010 Free Software Foundation
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+@end ifinfo
+

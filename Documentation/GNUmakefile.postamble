@@ -1,0 +1,16 @@
+# Rules for installing reference documentation.
+after-install::
+	rm -rf $(REF_DOC_INSTALL_DIR)/DBusKit/Reference
+	$(MKDIRS) $(REF_DOC_INSTALL_DIR)/DBusKit/Reference
+	(cd Reference; $(TAR) cf - .) | \
+	(cd $(REF_DOC_INSTALL_DIR)/DBusKit/Reference; $(TAR) xf -)
+ifneq ($(CHOWN_TO),)
+	$(CHOWN) -R $(CHOWN_TO) $(REF_DOC_INSTALL_DIR)/DBusKit/Reference
+endif
+
+after-uninstall::
+	rm -rf $(REF_DOC_INSTALL_DIR)/DBusKit/Reference
+	-rmdir $(REF_DOC_INSTALL_DIR)
+
+after-clean::
+	rm -rf Reference

@@ -1,4 +1,5 @@
 include $(GNUSTEP_MAKEFILES)/common.make
+-include ../GNUmakefile.preamble
 
 DOCUMENT_NAME = DBusKit
 
@@ -6,6 +7,35 @@ DBusKit_TEXI_FILES = 	DBusKit.texi \
 			Introduction.texi \
 			fdl-1.3.texi
 
-AppKit_DOC_INSTALL_DIR = Developer/DBusKit/ProgrammingManual
+DBusKit_DOC_INSTALL_DIR = Developer/DBusKit/ProgrammingManual
+
+DOCUMENT_TEXT_NAME = INSTALL README
+
+INSTALL_TEXT_MAIN = install.texi
+INSTALL_TEXI_FILES = install.texi
+INSTALL_DOC_INSTALL_DIR = Developer/DBusKit/ReleaseNotes/$(VERSION)
+
+README_TEXT_MAIN = readme.texi
+README_TEXI_FILES = readme.texi
+README_DOC_INSTALL_DIR = Developer/DBusKit/ReleaseNotes/$(VERSION)
+
+REF_DOC_INSTALL_DIR = $(GNUSTEP_DOC)/Developer
+
+DBusKit_AGSDOC_FLAGS = \
+	-MakeFrames YES \
+	-DocumentationDirectory Reference \
+	-HeaderDirectory ../Headers/ \
+	-Declared Foundation \
+	-ConstantsTemplate TypesAndConstants \
+	-FunctionsTemplate Functions \
+	-MacrosTemplate Functions \
+	-TypedefsTemplate TypesAndConstants \
+	-VariablesTemplate TypesAndConstants
+DBusKit_AGSDOC_FILES = \
+	DBusKit.gsdoc \
+	../Headers/DKNotificationCenter.h \
+	../Headers/DKPort.h \
+	../Headers/DKProxy.h 
 
 include $(GNUSTEP_MAKEFILES)/documentation.make
+-include GNUmakefile.postamble

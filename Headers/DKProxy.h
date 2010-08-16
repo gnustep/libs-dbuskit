@@ -33,14 +33,52 @@
  */
 @interface DKProxy: NSProxy <NSCoding>
 {
+  @private
+  /**
+   * The endpoint object used for communication with D-Bus.
+   */
   DKEndpoint *endpoint;
+
+  /**
+   * The name of the service the object proxied by this instance of DKProxy.
+   */
   NSString *service;
+
+  /**
+   * The object path identifying the object proxied.
+   */
   NSString *path;
+
+  /**
+   *
+   */
   NSMutableDictionary *interfaces;
+
+  /**
+   * The array of all direct children of the node.
+   */
   NSMutableArray *children;
+
+  /**
+   * A reference to the interface that is marked active and will be preferred
+   * for method resolution.
+   */
   DKInterface *activeInterface;
+
+  /**
+   * The lock protecting modifications to the tables.
+   */
   NSLock *tableLock;
+
+  /**
+   * The condition object ensures that state changes in the proxy can be
+   * conducted in a snychronized manner.
+   */
   NSCondition *condition;
+
+  /**
+   * Identifies the present state of the proxy.
+   */
   NSInteger state;
 }
 
