@@ -79,11 +79,6 @@
   NSHashTable *observables;
 
   /**
-   * Table relating observing objects to observation activities.
-   */
-  NSMapTable *observers;
-
-  /**
    * The signalInfo dictionary holds DKSignal objects indexed by their interface
    * and signal names. Proxies that discover signals during introspection will
    * register them here.

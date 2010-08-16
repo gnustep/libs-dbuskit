@@ -68,6 +68,12 @@
   NSHashTable *observations;
 
   /**
+   * Specifies whether the observable is watching for changes in the owner of a
+   * name. This is required to prevent an infinite loop, because observables
+   * might be created when removing an observation activity.
+   */
+  BOOL isWatchingNameChanges;
+  /**
    * The bus-type that should be used when making queries to the D-Bus object.
    */
    DKDBusBusType type;
@@ -93,24 +99,23 @@
    * The selector specifying the selector to call back to.
    */
   SEL selector;
-
-  /**
-   * A pointer back to the information about the observed signal.
-   */
-  DKObservable *observed;
 }
 
 /**
  * Creates an observation for the given observable.
  */
-- (id)initWithObservable: (DKObservable*)observable
-                observer: (id)observer
-                selector: (SEL)selector;
+- (id)initWithObserver: (id)observer
+              selector: (SEL)selector;
 
 /**
  * Schedules the delivery of the notification on the current run loop.
  */
 - (void)notifyWithNotification: (NSNotification*)notification;
+
+/**
+ * Returns the observer which will be notified by this notification.
+ */
+- (id)observer;
 @end
 
 @implementation DKObservable
@@ -159,6 +164,27 @@
   {
     [observations removeObject: oldObservation];
   }
+}
+
+/**
+ * Removes all observations for the given observer.
+ */
+- (void)removeObservationsForObserver: (id)observer
+{
+  NSHashEnumerator theEnum = NSEnumerateHashTable(observations);
+  // Construct a table to hold the observables to remove because we can't modify
+  // the table while enumerating.
+  NSHashTable *removeTable = [NSHashTable hashTableWithWeakObjects];
+  DKObservation *thisObservation = nil;
+  while (nil != (thisObservation = NSNextHashEnumeratorItem(&theEnum)))
+  {
+    if (observer == [thisObservation observer])
+    {
+      NSHashInsert(removeTable,thisObservation);
+    }
+  }
+  NSEndHashTableEnumeration(&theEnum);
+  [observations minusHashTable: removeTable];
 }
 
 /**
@@ -298,6 +324,7 @@
                                                  destination: nil
                                                       filter: [proxy _service]
                                                      atIndex: 0];
+  isWatchingNameChanges = YES;
 }
 
 /**
@@ -368,6 +395,10 @@
   return observations;
 }
 
+- (NSUInteger)observationCount
+{
+  return NSCountHashTable(observations);
+}
 /**
  * Determine whether a given notification's userInfo dictionary will be matched
  * by the receiver.
@@ -413,7 +444,10 @@
 
 - (void)dealloc
 {
-  [[DKNotificationCenter centerForBusType: type] removeObserver: self];
+  if (isWatchingNameChanges)
+  {
+    [[DKNotificationCenter centerForBusType: type] removeObserver: self];
+  }
   [rules release];
   [observations release];
   [super dealloc];
@@ -422,16 +456,13 @@
 
 @implementation DKObservation
 
-- (id)initWithObservable: (DKObservable*)anObservable
-                observer: (id)anObserver
-                selector: (SEL)aSelector
+- (id)initWithObserver: (id)anObserver
+              selector: (SEL)aSelector
 {
   if (nil == (self = [super init]))
   {
     return nil;
   }
-  // The observable retains the observation in its observation-table.
-  observed = anObservable;
   observer = GS_GC_HIDE(anObserver);
   selector = aSelector;
 
@@ -456,21 +487,16 @@
   return selector;
 }
 
-- (DKObservable*)observed
-{
-  return observed;
-}
-
 - (NSUInteger)hash
 {
-  return ((NSUInteger)(uintptr_t)observer ^ [observed hash]);
+  return ((NSUInteger)(uintptr_t)observer ^ (uintptr_t)selector);
 }
 
 - (BOOL)isEqual: (DKObservation*)other
 {
   BOOL sameObserver = (observer == [other observer]);
-  BOOL sameObserved = [observed isEqual: [other observed]];
-  return (sameObserver && sameObserved);
+  BOOL sameSelector = sel_isEqual(selector, [other selector]);
+  return (sameObserver && sameSelector);
 }
 
 - (void)notifyWithNotification: (NSNotification*)notification
@@ -603,9 +629,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                                        valueOptions: NSPointerFunctionsObjectPersonality
                                                            capacity: 5];
   observables = NSCreateHashTable(NSObjectHashCallBacks, 5);
-  observers = [[NSMapTable alloc] initWithKeyOptions: (NSPointerFunctionsObjectPersonality | NSPointerFunctionsZeroingWeakMemory)
-                                        valueOptions: NSPointerFunctionsObjectPersonality
-				            capacity: 5];
 
   return self;
 }
@@ -732,31 +755,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 - (void)removeObserver: (id)observer
 {
-  NSHashTable *observationTable = nil;
-  NSHashTable *enumTable = nil;
-  NSHashEnumerator obsEnum;
-  DKObservation *thisObservation = nil;
-  [lock lock];
-
-  observationTable = (NSHashTable*)NSMapGet(observers, (void*)observer);
-  if (nil == observationTable)
-  {
-    [lock unlock];
-    return;
-  }
-  // We copy the table be cause we will modify it subsequently:
-  enumTable = NSCopyHashTableWithZone(observationTable, NULL);
-  [lock unlock];
-  obsEnum = NSEnumerateHashTable(enumTable);
-  while (nil != (thisObservation = NSNextHashEnumeratorItem(&obsEnum)))
-  {
-    [self _removeObserver: observer
-            forObservable: [thisObservation observed]];
-    // On removal of the last observation, _removeObserver:forObservable: will
-    // remove the entry from the observers table.
-  }
-  NSEndHashTableEnumeration(&obsEnum);
-  NSFreeHashTable(enumTable);
+  // Specify a match-all observable to catch all instances of the observer.
+  [self _removeObserver: observer
+          forObservable: [[[DKObservable alloc] init] autorelease]];
 }
 
 - (void)removeObserver: (id)observer
@@ -943,11 +944,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
    observeObservable: (DKObservable*)observable
         withSelector: (SEL)selector
 {
-  DKObservation *observation = [[DKObservation alloc] initWithObservable: observable
-                                                                observer: observer
-                                                                selector: selector];
+  DKObservation *observation = [[DKObservation alloc] initWithObserver: observer
+                                                              selector: selector];
   DKObservable *oldObservable = nil;
-  NSHashTable *observationTable = nil;
   BOOL firstObservation = NO;
   DBusError err;
   dbus_error_init(&err);
@@ -999,43 +998,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   // reference to it.
   [observation release];
 
-  NS_DURING
-  {
-    observationTable = NSMapGet(observers, (void*)observer);
-
-    /*
-     * If a hash table for observations by this object doesn't exist, create one:
-     */
-    if (nil == observationTable)
-    {
-      observationTable = NSCreateHashTable(NSObjectHashCallBacks ,5);
-      NS_DURING
-      {
-        NSMapInsert(observers, observer, observationTable);
-      }
-      NS_HANDLER
-      {
-        NSFreeHashTable(observationTable);
-        [localException raise];
-      }
-      NS_ENDHANDLER
-      NSFreeHashTable(observationTable);
-    }
-    NSHashInsertIfAbsent(observationTable, observation);
-  }
-  NS_HANDLER
-  {
-    //Roll back:
-    [observable removeObservation: observation];
-    if (firstObservation)
-    {
-      NSHashRemove(observables, observable);
-      [self _removeHandler];
-    }
-    [lock unlock];
-    [localException raise];
-  }
-  NS_ENDHANDLER
   [lock unlock];
 }
 
@@ -1046,107 +1008,92 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (void)_removeObserver: (id)observer
           forObservable: (DKObservable*)observable
 {
-  NSHashTable *observationsInObserver = nil; // = A
-  DKObservable *theObservable = nil;
-  NSHashTable *observationsInObservable = nil; // = B
-  NSHashTable *intersectTable = nil; // = C
-  BOOL lastObservationInObservable = NO;
-  DBusError err;
-
+  NSHashEnumerator observableEnum;
+  NSHashEnumerator cleanupEnum;
+  NSHashTable *cleanupTable = [NSHashTable hashTableWithWeakObjects];
+  NSUInteger initialCount = 0;
+  if (nil == observable)
+  {
+    return;
+  }
   [lock lock];
-
+  initialCount = NSCountHashTable(observables);
   /*
    * First stage of cleanup: Remove references to the observation from the
-   * per-observer (A) and per-observable (B) tables.
+   * observables that will be matched by the one specified.
    */
   NS_DURING
   {
-    observationsInObserver = NSMapGet(observers, observer);
-    theObservable = NSHashGet(observables, observable);
-    if ((nil == theObservable) || (nil == observationsInObserver))
+    DKObservable *thisObservable = nil;
+    SEL matchSel = @selector(matchesUserInfo:);
+    IMP matchesUserInfo = [observable methodForSelector: matchSel];
+    SEL ruleSel = @selector(rules);
+    IMP getRules = [observable methodForSelector: ruleSel];
+    observableEnum = NSEnumerateHashTable(observables);
+
+    while (nil != (thisObservable = NSNextHashEnumeratorItem(&observableEnum)))
     {
-      // This observable does not seem to be monitored, just returned.
-      [lock unlock];
-      return;
-    }
-
-
-    observationsInObservable = [theObservable observations];
-    intersectTable = NSCopyHashTableWithZone(observationsInObservable, NULL);
-
-    // Compute the intersection of A and B. (C = {x|(x in A) and (x in B)})
-    [intersectTable intersectHashTable: observationsInObserver];
-
-    // Subtract the members of C from A and from B respectively.
-    [observationsInObserver minusHashTable: intersectTable];
-    [observationsInObservable minusHashTable: intersectTable];
-
-    // Dispose of the hash table.
-    NSFreeHashTable(intersectTable);
-    intersectTable = nil;
-  }
-  NS_HANDLER
-  {
-    if (nil != intersectTable)
-    {
-      NSFreeHashTable(intersectTable);
-    }
-    [lock unlock];
-    [localException raise];
-  }
-  NS_ENDHANDLER
-
-  /*
-   * Second stage of cleanup: If we left one of the tables empty, remove it and
-   * its key from the observables and observers tables.
-   */
-  NS_DURING
-  {
-    lastObservationInObservable = (0 == NSCountHashTable(observationsInObservable));
-    if (lastObservationInObservable)
-    {
-      NSHashRemove(observables, theObservable);
-    }
-
-    if (0 == NSCountHashTable(observationsInObserver))
-    {
-      NSMapRemove(observers, observer);
+      NSDictionary *rules = getRules(thisObservable, ruleSel);
+      if ((BOOL)(uintptr_t)matchesUserInfo(observable, matchSel, rules))
+      {
+        [thisObservable removeObservationsForObserver: observer];
+	// If we removed the last observation, add the observable to the cleanup
+	// table because we cannot modify the table we are enumerating.
+	if (0 == [thisObservable observationCount])
+	{
+	  NSHashInsertIfAbsent(cleanupTable, thisObservable);
+	}
+      }
     }
   }
   NS_HANDLER
   {
+    NSEndHashTableEnumeration(&observableEnum);
     [lock unlock];
     [localException raise];
   }
   NS_ENDHANDLER
+  NSEndHashTableEnumeration(&observableEnum);
 
   /*
-   * Third stage of cleanup: If we removed all observations for the observable,
-   * also remove the match rule.
+   * Second stage of cleanup: If we left an empty observable, remove it and the
+   * corresponding match rule.
    */
-  if (lastObservationInObservable)
+  NS_DURING
   {
-    dbus_error_init(&err);
-
+    DKObservable *thisObservable = nil;
+    cleanupEnum = NSEnumerateHashTable(cleanupTable);
+    while(nil != (thisObservable = NSNextHashEnumeratorItem(&cleanupEnum)))
+    {
+      DBusError err;
+      dbus_error_init(&err);
+      NSHashRemove(observables, thisObservable);
       // remove the match rule from D-Bus.
       dbus_bus_remove_match([endpoint DBusConnection],
-        [[observable ruleString] UTF8String],
+        [[thisObservable ruleString] UTF8String],
         &err);
 
       if (dbus_error_is_set(&err))
       {
-        [lock unlock];
         [NSException raise: @"DKSignalMatchException"
                     format: @"Error when trying to remove match for signal: %s. (%s)",
           err.name, err.message];
       }
+    }
   }
-
+  NS_HANDLER
+  {
+    NSEndHashTableEnumeration(&cleanupEnum);
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  NSEndHashTableEnumeration(&cleanupEnum);
   /*
-   * Fourth stage of cleanup: If we have no observables left, also remove the
+   * Third stage of cleanup: If we have no observables left, also remove the
    * D-Bus message handler until we have further signals to watch.
    */
-  if (0 == NSCountHashTable(observables))
+  if (0 == NSCountHashTable(observables) && (0 != initialCount))
   {
     [self _removeHandler];
   }
@@ -1567,7 +1514,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   [signalInfo release];
   [notificationNames release];
   NSFreeMapTable(notificationNamesBySignal);
-  NSFreeMapTable(observers);
   NSFreeHashTable(observables);
   [lock release];
   [super dealloc];
