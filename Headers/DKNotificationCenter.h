@@ -196,6 +196,8 @@
 
 /**
  * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
  */
 - (void)removeObserver: (id)observer
                   name: (NSString*)notificationName
@@ -203,6 +205,8 @@
 
 /**
  * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
  */
 - (void)removeObserver: (id)observer
                   name: (NSString*)notificationName
@@ -211,6 +215,8 @@
 
 /**
  * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
  */
 - (void)removeObserver: (id)observer
                 signal: (NSString*)signalName
@@ -219,6 +225,8 @@
 
 /**
  * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
  */
 - (void)removeObserver: (id)observer
                 signal: (NSString*)signalName
@@ -228,6 +236,8 @@
 
 /**
  * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
  */
 -  (void)removeObserver: (id)observer
                  signal: (NSString*)signalName
@@ -239,6 +249,8 @@
 
 /**
  * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
  */
 -  (void)removeObserver: (id)observer
                  signal: (NSString*)signalName
