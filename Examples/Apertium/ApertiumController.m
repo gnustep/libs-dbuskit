@@ -24,6 +24,7 @@
 #import "ApertiumTranslator.h"
 #import "ApertiumServer.h"
 
+#import <AppKit/NSPanel.h>
 
 @implementation ApertiumController
 
@@ -44,6 +45,7 @@
   if (0 == [targetLangs count])
   {
     [destinationLanguageField setEnabled: NO];
+    [translateButton setEnabled: NO];
     return;
   }
   else
@@ -54,9 +56,6 @@
     [[destinationLanguageField target] performSelector: [destinationLanguageField action]
                                             withObject: destinationLanguageField];
   }
-
-
-
 }
 
 - (IBAction)didChangeDestinationLanguage: (id)sender
