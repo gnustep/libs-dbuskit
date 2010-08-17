@@ -401,7 +401,21 @@
 }
 /**
  * Determine whether a given notification's userInfo dictionary will be matched
- * by the receiver.
+ * by the receiver. A userInfo dictionary will be considered to match a given
+ * set of rules if every individual rule entry from <ivar>rules</ivar> is equal
+ * to the corresponding value in <var>dict</var>.
+ * Take for example the following rule set:
+ * <example> {member = "NameOwnerChanged", interface="org.freedesktop.DBus",
+ * arg0="org.foo.bar"} </example>
+ * This will cause the value of the "member", "interface", and "arg0" keys of
+ * the ruleset to be compared for equality with the values of the corresponding
+ * keys in <var>dict</var>. If all comparisons succeed, <var>dict</var> will be
+ * considered to  match <ivar>rules</ivar>, no matter what other keys are
+ * present in the dictionary. E.g. the following dictionary would be a valid
+ * match:
+ * <example {member = "NameOwnerChanged", interface="org.freedesktop.DBus",
+ * sender = "org.freedesktop.DBus", destination = ":1.139",  arg0="org.foo.bar",
+ * arg1 = ":1.345", arg2=":1.139"} </example>
  */
 - (BOOL)matchesUserInfo: (NSDictionary*)dict
 {
@@ -412,7 +426,7 @@
     NSString *thisRule = [rules objectForKey: thisKey];
     if ([@"type" isEqualToString: thisKey])
     {
-      // We ignore the type, it's alway 'signal'.
+      // We ignore the type, it's always 'signal'.
       continue;
     }
 
@@ -546,8 +560,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                 interface: (NSString*)interfaceName
                                    sender: (DKProxy*)sender
                               destination: (DKProxy*)destination
-                                   filter: (NSString*)filter
-	                          atIndex: (NSUInteger)index;
+                        filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, ...;
 
 - (void)_installHandler;
 
@@ -724,31 +737,14 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
    filtersAndIndices: (NSString*)firstFilter, NSUInteger nullIndex, ...
 {
   va_list filters;
-  uintptr_t filterOrIndex = 0;
-  NSUInteger count = 1;
-  NSString *thisFilter = nil;
-
-  DKObservable *observable = [self _observableForSignalName: signalName
-                                                  interface: interfaceName
-                                                     sender: sender
-                                                destination: destination
-						     filter: firstFilter
-                                                    atIndex: nullIndex];
+  DKObservable *observable = nil;
   va_start(filters, nullIndex);
-  while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
-  {
-    if (0 == count)
-    {
-      thisFilter = (NSString*)filterOrIndex;
-      count++;
-    }
-    else if (1 == count)
-    {
-      [observable filterValue: thisFilter
-           forArgumentAtIndex: (NSUInteger)filterOrIndex];
-      count = 0;
-    }
-  }
+
+  observable = [self _observableForSignalName: signalName
+                                    interface: interfaceName
+                                       sender: sender
+                                  destination: destination
+                            filtersAndIndices: firstFilter, nullIndex, filters];
   va_end(filters);
 
   [self _letObserver: observer
@@ -761,8 +757,12 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (void)removeObserver: (id)observer
 {
   // Specify a match-all observable to catch all instances of the observer.
-  [self _removeObserver: observer
-          forObservable: [[[DKObservable alloc] init] autorelease]];
+  [self removeObserver: observer
+                signal: nil
+             interface: nil
+                sender: nil
+           destination: nil
+     filtersAndIndices: nil, 0, nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -857,31 +857,14 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       filtersAndIndices: (NSString*)firstFilter, NSUInteger nullIndex, ...
 {
   va_list filters;
-  uintptr_t filterOrIndex = 0;
-  NSUInteger count = 1;
-  NSString *thisFilter = nil;
-
-  DKObservable *observable = [self _observableForSignalName: signalName
-                                                  interface: interfaceName
-                                                     sender: sender
-                                                destination: destination
-						     filter: firstFilter
-                                                    atIndex: nullIndex];
+  DKObservable *observable = nil;
   va_start(filters, nullIndex);
-  while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
-  {
-    if (0 == count)
-    {
-      thisFilter = (NSString*)filterOrIndex;
-      count++;
-    }
-    else if (1 == count)
-    {
-      [observable filterValue: thisFilter
-           forArgumentAtIndex: (NSUInteger)filterOrIndex];
-      count = 0;
-    }
-  }
+
+ observable = [self _observableForSignalName: signalName
+                                   interface: interfaceName
+                                      sender: sender
+                                 destination: destination
+                           filtersAndIndices: firstFilter, nullIndex, filters];
   va_end(filters);
 
   [self _removeObserver: observer
@@ -897,19 +880,40 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                 interface: (NSString*)interfaceName
                                    sender: (DKProxy*)sender
                               destination: (DKProxy*)destination
-                                   filter: (NSString*)filter
-	                          atIndex: (NSUInteger)index
+                        filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, ...
 {
+  va_list filters;
+  uintptr_t filterOrIndex = 0;
+  NSUInteger count = 1;
+  NSString *thisFilter = nil;
   DKObservable *observable = [[[DKObservable alloc] initWithBusType: [endpoint DBusBusType]] autorelease];
+
   [observable filterSignalName: signalName];
   [observable filterInterface: interfaceName];
   [observable filterSender: sender];
   [observable filterDestination: destination];
-  if (filter != nil)
+  if (firstFilter != nil)
   {
-    [observable filterValue: filter
-         forArgumentAtIndex: index];
+    [observable filterValue: firstFilter
+         forArgumentAtIndex: firstIndex];
   }
+
+  va_start(filters, firstIndex);
+  while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
+  {
+    if (0 == count)
+    {
+      thisFilter = (NSString*)filterOrIndex;
+      count++;
+    }
+    else if (1 == count)
+    {
+      [observable filterValue: thisFilter
+           forArgumentAtIndex: (NSUInteger)filterOrIndex];
+      count = 0;
+    }
+  }
+  va_end(filters);
   return observable;
 }
 
