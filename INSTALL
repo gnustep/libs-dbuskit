@@ -26,6 +26,9 @@ repository
 
 To build and install DBusKit type `make install'. This will
 automatically configure the framework prior to building and installing.
+DBusKit will usually tell your compiler to treat warnings as errors, if
+you don't want that behaviour, add the `nonstrict=yes' flag to your
+`make'-invocation.
 
    Copyright (C) 2010 Free Software Foundation
 
