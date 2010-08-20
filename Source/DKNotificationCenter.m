@@ -1253,7 +1253,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (BOOL)_registerNotificationName: (NSString*)notificationName
                          asSignal: (DKSignal*)signal
 {
-  if ((nil == notificationName) || (nil == signal));
+  if ((nil == notificationName) || (nil == signal))
   {
     return NO;
   }

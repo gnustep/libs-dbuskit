@@ -13,9 +13,13 @@ GNUSTEP_USE_PARALLEL_AGGREGATE=no
 
 #DBusKit Framework
 SUBPROJECTS = Source \
-              Tools \
-              Documentation
+              Tools
 
+ifneq ($(strip `which makeinfo`),)
+ifneq ($(strip `which texi2pdf`),)
+SUBPROJECTS += Documentation
+endif
+endif
 #
 # Makefiles
 #
