@@ -9,8 +9,8 @@ ifneq ($(CHOWN_TO),)
 endif
 
 after-uninstall::
-	rm -rf $(REF_DOC_INSTALL_DIR)/DBusKit/Reference
-	-rmdir $(REF_DOC_INSTALL_DIR)
+	rm -rf $(REF_DOC_INSTALL_DIR)/DBusKit
+	-rmdir --ignore-fail-on-non-empty $(REF_DOC_INSTALL_DIR)
 
 after-clean::
 	rm -rf Reference
