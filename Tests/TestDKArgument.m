@@ -28,8 +28,8 @@
 
 #import <UnitKit/UnitKit.h>
 
-#import "../Headers/DKProxy.h"
-#import "../Headers/DKPort.h"
+#import "DBusKit/DKProxy.h"
+#import "DBusKit/DKPort.h"
 #import "../Source/DKArgument.h"
 
 #include <stdint.h>

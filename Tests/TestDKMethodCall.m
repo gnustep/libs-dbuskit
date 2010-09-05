@@ -26,8 +26,8 @@
 #import <Foundation/NSString.h>
 #import <UnitKit/UnitKit.h>
 
-#import "../Headers/DKPort.h"
-#import "../Headers/DKProxy.h"
+#import "DBusKit/DKPort.h"
+#import "DBusKit/DKProxy.h"
 #import "../Source/DKProxy+Private.h"
 #import "../Source/DKInterface.h"
 #import "../Source/DKMethodCall.h"

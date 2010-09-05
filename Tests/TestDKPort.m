@@ -23,8 +23,8 @@
 #import <Foundation/NSConnection.h>
 #import <UnitKit/UnitKit.h>
 
-#import "../Headers/DKPort.h"
-#import "../Headers/DKProxy.h"
+#import "DBusKit/DKPort.h"
+#import "DBusKit/DKProxy.h"
 
 @interface TestDKPort: NSObject <UKTest>
 @end

@@ -1,12 +1,15 @@
 #
-# GNUmakefile.postamble for DBusKit
+# GNUmakefile.postamble for DBusKit test bundle 
 #
 
 # Things to do before compiling
-# before-all::
+before-all::
+	ln -s ../Source/DBusKit.framework/Versions/Current/Headers DBusKit
 
 # Things to do after compiling
-#after-all::
+after-all::
+	@-$(RM) DBusKit
+	LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:../Source/DBusKit.framework/Versions/Current/$(GNUSTEP_TARGET_LDIR) ukrun $(BUNDLE_NAME).bundle
 
 # Things to do before installing
 # before-install::

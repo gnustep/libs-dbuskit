@@ -26,10 +26,10 @@
 #include "../Source/config.h"
 #undef INCLUDE_RUNTIME_H
 
-#import "../Headers/DKProxy.h"
+#import "DBusKit/DKProxy.h"
 #import "../Source/DKEndpoint.h"
-#import "../Headers/DKPort.h"
-#import "../Headers/NSConnection+DBus.h"
+#import "DBusKit/DKPort.h"
+#import "DBusKit/NSConnection+DBus.h"
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSException.h>
