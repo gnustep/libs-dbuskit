@@ -956,10 +956,13 @@ static DKProxy *sessionBus;
     [self release];
     return nil;
   }
-  if (NO == [aPath isEqualToString: @"/"])
+  if (NO == [aPath isEqualToString: @"/org/freedesktop/DBus"])
   {
-    [self release];
-    return nil;
+    if (NO == [aPath isEqualToString: @"/"])
+    {
+      [self release];
+      return nil;
+    }
   }
   if (anEndpoint == nil)
   {
