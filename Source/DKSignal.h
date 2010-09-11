@@ -19,7 +19,7 @@
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111 USA.
 
-   <title>DKMethod class reference</title>
+   <title>DKSignal class reference</title>
    */
 
 #import "DKIntrospectionNode.h"

@@ -1,0 +1,1079 @@
+2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* ChangeLog: Generate from `svn log'.
+	* Source/DKSignal.h: Documentation fix.
+	* Source/DKProperty.h: Add header.
+
+	Begin conceptualizing property support. Add ChangeLog.
+
+2010-09-10  Richard Frith-Macdonald <rfm@gnu.org>
+
+	* GNUmakefile: warn if gnustep-make not found
+
+2010-09-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Fix bug reported by Philippe Roussel. (Note to self:
+	Unit tests are only useful if you actually run them…)
+
+2010-09-05  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tests/GNUmakefile
+	* Tests/GNUmakefile.postamble
+	* Tests/TestDKArgument.m
+	* Tests/TestDKMethodCall.m
+	* Tests/TestDKPort.m
+	* Tests/TestDKProxy.m:
+	Fix compilation of testcases if DBusKit is not yet installed.
+
+2010-08-23  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tools/GNUmakefile.postamble: Fix build by creating link to the header
+	dir. (reported by Philippe Roussel).
+	* Documentation/GNUmakefile.postamble: Fix removal of documentation on
+	`make uninstall'.
+
+2010-08-20  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile: Only build documentation if makeinfo and texi2pdf are
+	available.
+	* Source/DKNotificationCenter.m: Fix bug that caused a sanity check to
+	be skipped.
+
+2010-08-18  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/install.texi: Mention the nonstrict flag.
+	* INSTALL: Regenerate.
+
+2010-08-18  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Fix cast
+
+2010-08-17  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKNotificationCenter.m: Improve documentation for
+	-[DKObservable matchesUserInfo:], simplified generation of observables
+	by the notification center.
+
+2010-08-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* COPYING: Add LGPL.
+	* GNUmakefile: Add documentation to the build.
+	* GNUmakefile.preamble: Add version variable.
+	* Documentation/GNUmakefile
+	* Documentation/GNUmakefile.postamble
+	* Documentation/readme.texi
+	* Documentation/install.texi
+	* Documentation/DBusKit.gsdoc:
+	Build README and INSTALL as well as reference documentation.
+	* Headers/DKProxy.h
+	* Headers/DKPort.h
+	* Headers/DNotificationCenter.h:
+	Mark ivars as private. Minor documentation improvements.
+	* README
+	* INSTALL:
+	Regenerate.
+	
+	Improvements to the documentation.
+
+2010-08-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples/Apertium/ApertiumUtilityPanel.h,
+	* Examples/Apertium/ApertiumUtilityPanel.m:
+	Add files missing from last commit.
+
+2010-08-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples/Apertium/ApertiumController.m
+	* Examples/Apertium/GNUmakefile
+	* Examples/Apertium/LanguagePanel.gorm/data.classes
+	* Examples/Apertium/LanguagePanel.gorm/objects.gorm:
+	Make language selection panel an utility window.
+
+2010-08-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h: Clarify removal semantics for
+	observations.
+
+2010-08-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKNotificationCenter.m: More consistent implementation of
+	adding/removing observers.
+
+2010-08-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Simplify removal of observations.
+
+2010-08-15  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/Introduction.texi
+	* Documentation/UsingDBus.texi:
+	Orthographical corrections.
+
+2010-08-15  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/DBusKit.texi: Reorder menu.
+
+2010-08-15  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/DBusKit.texi
+	* Documentation/ExposingObjects.texi
+	* Documentation/Introduction.texi
+	* Documentation/UsingDBus.texi:
+	Further work on the manual.
+
+2010-08-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation
+	* Documentation/DBusKit.texi,
+	* Documentation/GNUmakefile
+	* Documentation/Introduction.texi
+	* Documentation/fdl-1.3.texi:
+	Begun writing a guide on how to use D-Bus with GNUstep:
+
+2010-08-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tools/COPYING
+	* Tools/dk_make_protocol.m:
+	Add license.
+
+2010-08-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUMakefile
+	* Tools/GNUmakefile
+	* Tools/dk_make_protocol.m:
+	Add primitive tool to generate protocol declarations from .interface
+	files.
+	* Source/DKInterface.m: Small tweak to the generation of protocol
+	declarations.
+
+2010-08-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKInterface.m
+	* Source/DKPort.m
+	* Source/DKProxy.m:
+	A few more documentation improvements.
+
+2010-08-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKEndpoint.m
+	* Source/DKInterface.h
+	* Source/DKIntrospectionNode.h
+	* Source/DKIntrospectionParserDelegate.h
+	* Source/DKMessage.h
+	* Source/DKMethod.h
+	* Source/DKObjectPathNode.h
+	* Source/DKObjectPathNode.m
+	* Source/DKSignal.h:
+	Documentation improvements.
+
+2010-08-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DBusKit.h: Add DKNotificationCenter.h
+	* Source/DKProxy.m: Use correct path to the bus object.
+	* Source/DKNotificationCenter.m: Observe name changes so that sender
+	rules for observables stay up to date.
+
+2010-08-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKNotificationCenter.m: Improve documentation. Fix removal
+	of signal-match from D-Bus.
+
+2010-08-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h: Small documentation improvement.
+	* Headers/DKNotificationCenter.h: Documented DKNotificationCenter. Added
+	ivar.
+	* Source/DKProxy.m: Override -respondsToSelector:. Protect generation of
+	the method cache so that a remote error doesn't leave the object in an
+	unusable state.
+	* Source/DKEndpoint.m: Fix DKWakeUp(). (Previously, it would create
+	unwanted reentrancy.)
+	* Source/DKNotificationCenter.m: Primitive support for observing D-Bus
+	signals.
+	
+	Preliminary support for D-Bus signals. Documentation
+	improvements.
+
+2010-08-12  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/DKProxy.m
+	* Source/DKInterface.[hm]:
+	Remove dispatch table from DKProxy and let DKInterface generate it
+	instead.
+	* Source/DKInterface.[hm]: Fix memory leak. Rename -methodForSelector:
+	to -DBusMethodForSelector:. Also move registration of signals here.
+	* Source/DKMethod.m: Generate smarter method declarations.
+	* Source/DKIntrospectionParserDelegate.m: Return nil from -leaf instead
+	of NSNull. Improve handling signals.
+	* Source/DKSignal.[hm]: Implement generation of userInfo dictionaries
+	for notifications from received signals.
+	* Source/DKMethodCall.m: Small indentation fix.
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Bugfixes. Continue implementing generation of notifications from
+	signals.
+	* Tests/TestDKMethodCall.m
+	* Tests/TestDkMethod.m:
+	Use new method name.
+	
+	A few bugfixes and improvements suggested by Fred Kiefer.
+	Continued work on D-Bus signals.
+
+2010-08-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Implement method to add match rules for signals.
+
+2010-08-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Remove workaround for some libdbus oddity I was
+	experiencing earlier.
+
+2010-08-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/DKProxy.m:
+	API refinements for DKDBus.
+	* Headers/DKPort.h
+	* Source/DKPort.m
+	* Tests/TestDKProxy.m:
+	Finish replacing subclasses with equivalent initializers. Adopt
+	test case.
+
+2010-08-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Mark some functions as inlineable.
+	* Source/DKEndpoint.[hm]: Carry over information about the new
+	endpoint when an old one is being reused. Fix bug in
+	-initWithConnectionTo: where the new connection never got assigned.
+	Rearrange method order. Improve documentation a bit.
+
+2010-08-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Move rule generation into DKObservable helper-class.
+
+2010-08-08  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Remove struct nonsense in favour of real objects.
+
+2010-08-08  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKSignal.[hm]: Make DKSignal useful.
+	* Header/DKNotificationCenter.h: Add notificationNames ivar.
+	* Source/DKNotificationCenter.m: Implement registration of signals and
+	notification names.
+	* DKIntrospectionParserDelegate.m: Parse signals and trigger their
+	registration with the appropriate notification center.
+	* Tests/TestDKProxy.m: Fix test for errors returned by remote objects.
+
+2010-08-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethodCall.m: Clarify exception name.
+
+2010-08-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKNotificationCenter.m: Add methods to generate rules for
+	matching D-Bus signals.
+
+2010-08-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/DKProxy.m:
+	Add DKDBus subclass for getting shared proxies to the
+	org.freedesktop.DBus services on their respective busses.
+	* Source/DKProxy.m
+	* Source/DKProxy+Private.h:
+	Implement -_uniqueName to get the unique name of a service from the bus.
+	* Headers/DKPort.h: Add "don't know" member value to the bus type
+	enumeration.
+	* Source/DKPort.m: Use DKDBus instead of -getBusObject magic.
+	* Source/DKEndpoint.[hm]: Implement -DBusBusType to get the type of bus
+	an endpoint is connected to.
+	* Source/DKInterface.[hm]: Add some more methods for signals/properties.
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m
+	* Source/GNUmakefile:
+	Add very much work-in-progress notification center class for managing
+	D-Bus signals.
+
+2010-08-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKInterface.m
+	* Source/DKIntrospectionNode.m
+	* Source/DKMethod.m
+	* Source/DKSignal.m
+	* Source/DKObjectPathNode.m:
+	Fix various issues in -copyWithZone:.
+	* Source/DKInterface.[hm]: Begin adding plumbing for signals/properties.
+	* Source/DKIntrospectionNode.[hm]: Add -annotations method to get the
+	annotation dictionary for a node.
+	* Tests/TestDKMethod.m: Fix the copy test to use the correct selector.
+	
+	Fix NSCopying for DKIntrospectionNode and subclasses.
+
+2010-08-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tests/TestDKMethod.m: Add test for copying parts of the introspection
+	graph (fails at the moment).
+
+2010-08-05  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKPort.h
+	* Source/DKPort.m:
+	Add DKDBusBusType enumeration and related initializer.
+	* Source/DKArgument.m
+	* Source/DKInterface.m
+	* Source/DKIntrospectionNode.[hm]
+	* Source/DKMethod.m
+	* Source/DKObjectPathNode.m
+	* Source/DKSignal.m:
+	Adopt NSCopying for DKIntrospectionNode and subclasses.
+	* Source/NSConnection+DBus.m: Add further integration methods (commented
+	out until DKPortNameServer can be committed).
+
+2010-07-31  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/DKProxy.m:
+	Add an explicit NSCondition and a state variable to make synchronisation
+	more robust (and readable).
+	* Tests/TestDKProxy.m: Adopt to changed code and add test for calling
+	methods from multiple threads.
+	
+	Thread safety improvements.
+
+2010-07-30  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/AsyncBehavior.h
+	* Source/DKProxy.m:
+	Disable asnychronous generation of the method cache again (it doesn't
+	seem to be working reliably).
+
+2010-07-30  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/AsyncBehavior.h: Bugfix.
+	* Source/DKEndpoint.[hm]: Support watchers and timers on multiple
+	run-loops.
+	* Source/DKProxy.m: Allow D-Bus methods to be called from multiple
+	threads. Also enable asynchronous generation of the method cache.
+
+2010-07-30  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Attempt to clarify the code path for method lookup.
+
+2010-07-29  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Rename -_methodForSelector:block: to
+	-_methodForSelector:waitForCache:.
+	* Source/DKArgument.m: Add cast that might be needed.
+
+2010-07-29  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKInterface.m: Really fix the initializer this time.
+	* Source/DKIntrospectionParserDelegate.m: Smarter handling of the root
+	node.
+	* Source/DKArgument.m
+	* Source/DKMethodCall.m
+	* Source/DKProxy.m
+	* Source/DKProxy+Private.m:
+	Move some more methods that are often used by the internal classes into
+	DKProxy+Private.h.
+	* Source/DKObjectPathNode.h
+	* Source/DKObjectPathNode.m:
+	Implement retrieval of a proxy for a DKObjectPathNode.
+	
+	More cleanup and minor improvements.
+
+2010-07-28  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKIntrospectionParserDelegate.m
+	* Source/DKMethod.[hm]
+	* Source/DKSignal.[hm]:
+	Simplify (or remove) method and signal initalizer to not require
+	the interface name. Remove _DKMethodIntrospect.
+	* Source/DKProxy.m
+	* Source/DKProxy+Private.h:
+	Implement _DKInterfaceIntrospectable to replace _DKMethodIntrospect.
+	* Source/DKInterface.m: Normalize selectors before table
+	lookups/updates.
+	* Tests/TestDKMethod.m
+	* Tests/TestDKMethodCall.m:
+	Adapt test cases to use _DKInterfaceIntrospectable.
+	
+	Refactor the global introspection method into a global introspection
+	interface to allow simpler initializers for DKMethod and DKSignal.
+
+2010-07-28  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/GNUmakefile
+	* Source/DKObjectPathNode.[hm]
+	* Source/DKProxy.m
+	* Source/DKProxy+Private.h:
+	Add DKObjectPathNode class and protocol (handles object trees and
+	interfaces). Implement DKObjectPathNode protocol in DKProxy and expose
+	it via DKProxy+Private.h.
+	* Source/DKArgument.m
+	* Source/DKIntrospectionNode.m
+	* Source/DKMethod.m
+	* Source/DKMethodCall.m
+	* Source/DKOutgoingProxy.h
+	* Source/DKPort.m
+	* Source/DKProxy.m
+	* Source/NSConnection+DBus.m:
+	Include new DKProxy+Private.h instead of the public header.
+	* Source/DKMethod.[hm]
+	* Source/DKInterface.[hm]
+	* Source/DKIntrospectionParserDelegate.m
+	* Tests/TestDKMethod.m:
+	Rename initializers of DKMethod and DKInterface to follow the naming
+	scheme of the superclass more closely.
+	* Source/DKIntrospectionParserDelegate.[hm]: Use the parent to store the
+	introspection tree and not the parser delegate.
+	
+	Clean up the generation of the introspection data so that the parser
+	delegate doesn't need to keep the generated tree around. Also be more
+	consistent about naming initializers in subclasses of
+	DKIntrospectionNode.
+
+2010-07-28  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Prevent libdbus from calling _exit() when
+	the bus goes away.
+
+2010-07-27  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKInterface.m
+	* Source/DKIntrospectionNode.[hm]
+	* Source/DKMethod.m:
+	Remove parser delegate methods and ivars.
+	* Source/DKSignal.[hm]
+	* Source/GNUmakefile:
+	Add stub for handling signals.
+	* Source/DKIntrospectionParserDelegate.[hm]: Consolidate XML parsing and
+	keep a stack for the XML tree.
+	
+	Refactor introspection handling so that the generation of the
+	introspection graph happens entirely from within
+	DKIntrospectionParserDelegate.
+
+2010-07-21  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Only refer to D-Bus methods by their untyped
+	selector IDs.
+
+2010-07-21  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples/Apertium/ApertiumInfo.m
+	* Examples/Apertium/ApertiumTranslator.m
+	* Tests/TestDKPort.m
+	* Tests/TestDKProxy.m:
+	Fix memory leaks generated by the fact that I copy and paste too much
+	without thinking.
+
+2010-07-21  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/NSConnection+DBus.h
+	* Source/NSConnection+DBus.m:
+	Add -proxyAtPath: method to obtain proxies for non-root objects of a
+	D-Bus service.
+	* Source/GNUmakefile: Add NSConnection+DBus.[hm] to build.
+	* Source/DKPort.m: Rearrange so that proxy generation is separated from
+	encoding the proxy for use in NSConnection.
+	* Headers/DBusKit.h: Add DKProxy.h and NSConnection+DBus.h.
+	* Tests/TestDKProxy.m: Test for fetching proxies to non-root objects.
+
+2010-07-20  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Improve error reporting.
+
+2010-07-20  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKPort.m: Make DKPort check whether the requested remote
+	is available on the bus.
+
+2010-07-19  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Use sel_get_type() instead of accessing a
+	selector's type field directly.
+
+2010-07-19  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKPort.m: Move from NSLog() to NSDebugMLog()
+	* Source/DKProxy.[mh]: Move from NSLog() to NSDebugMLog(). Implement
+	-setPrimaryDBusInterface:.
+
+2010-07-19  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples/Apertium/ApertiumInfo.m: Check whether making calls to
+	the org.apertium.info object on D-Bus raises an exception. Also more
+	checking when generating the localized language string for the UI.
+
+2010-07-18  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples/Apertium/ApertiumInfo.m: Strip whitespace from mode strings.
+	* Examples/Apertium/ApertiumServer.m: Properly handle exceptions from
+	the D-Bus side.
+
+2010-07-18  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples, Examples/Apertium
+	* Examples/Apertium/ApertiumController.h
+	* Examples/Apertium/ApertiumController.m
+	* Examples/Apertium/ApertiumInfo.h
+	* Examples/Apertium/ApertiumInfo.m
+	* Examples/Apertium/ApertiumInfo.plist
+	* Examples/Apertium/ApertiumServer.h
+	* Examples/Apertium/ApertiumServer.m
+	* Examples/Apertium/ApertiumTranslator.h
+	* Examples/Apertium/ApertiumTranslator.m
+	* Examples/Apertium/COPYING
+	* Examples/Apertium/GNUmakefile
+	* Examples/Apertium/LanguagePanel.gorm
+	* Examples/Apertium/LanguagePanel.gorm/data.classes
+	* Examples/Apertium/LanguagePanel.gorm/data.info
+	* Examples/Apertium/LanguagePanel.gorm/objects.gorm
+	* Examples/Apertium/SourceLanguagePopup.h
+	* Examples/Apertium/SourceLanguagePopup.m
+	* Examples/Apertium/main.m:
+	Commit a little example demonstrating what is possible with DBusKit. The
+	Apertium.service hooks into the Apertium machine translation system via
+	D-Bus and exposes it as a service. You can thus use the translator from
+	within any GNUstep application. The DBusKit-specific portions are
+	contained in ApertiumTranslator.m and ApertiumInfo.m.
+
+2010-07-18  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Turn NSLog() calls into NSDebugMLog().
+	Fix a bug where timers were not tracked, causing them to not be
+	invalidated properly (they would sometimes fire after the target object
+	disappeared).
+
+2010-07-17  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Guard against nil values as arguments. Fix bug in
+	* marshalling variant type arguments.
+
+2010-07-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Fix bug where strings would be messed up
+	because of an improper cast.
+
+2010-07-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tests/GNUmakefile: Keep gnustep-make from installing the
+	testsuite.
+
+2010-07-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tests/TestDKProxy.m: Add test case for methods that contain boxed
+	and non-boxed arguments.
+
+2010-07-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethod.[hm]: Be more flexible about boxing. Decide
+	whether argument should or shouldn't be boxed based on the
+	related invocation.
+	* Source/DKMethodCall.[hm]
+	* Source/DKProxy.m
+	* Tests/TestDKMethodCall.m
+	* Tests/TestDKProxy.m:
+	Remove references to the old argument types which did statically
+	decide on a boxing scheme.
+	* Headers/DKProxy.h: Remove unused ivar.
+	
+	Make better use of D-Bus and Objective-C introspection data to
+	decide on the fly whether an argument to a D-Bus method should
+	be boxed in an Objective-C object or not.
+
+2010-07-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKInterface.[hm]:
+	Add -methods to return the array of all methods in the interface.
+	* Source/DKIntrospectionNode.[hm]: Add -setParent: method that is
+	needed to reparent nodes from the parser delegate to the proxy
+	that is using them.
+	* Source/DKIntrospectionParserDelegate.[hm]: Add class to hold
+	the constructed introspection graph.
+	* Source/DKMethod.m: Remove call to DKProxy's _installMethod:...
+	method.
+	* Source/DKProxy.m: Remove parser delegate methods and reorganise
+	the code so that DKProxy itself is responsible for installing
+	the methods found by introspection.
+	* Source/GNUmakefile: Add DKIntrospectionParserDelegate.m to the
+	build.
+	
+	Separate parsing of introspection data from DKProxy, which is now
+	also responsible for installing methods.
+
+2010-07-16  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKIntrospectionNode.m
+	* Source/DKProxy.m:
+	Simplify -proxyParent method.
+
+2010-07-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile
+	* GNUmakefile.postamble
+	* Source/GNUmakefile
+	* Source/GNUmakefile.postamble
+	* Source/Tests
+	* Tests
+	* Tests/GNUmakefile
+	* Tests/GNUmakefile.postamble
+	* Tests/TestDKArgument.m
+	* Tests/TestDKMethod.m
+	* Tests/TestDKMethodCall.m
+	* Tests/TestDKPort.m
+	* Tests/TestDKProxy.m:
+	Reorganise the project so that the tests are built as a separate
+	subproject and linked against the framework.
+
+2010-07-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKInterface.m: Remove erratic parentheses around protocol
+	names.
+
+2010-07-13  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKMethod.m
+	* Source/DKMethodCall.m:
+	Replace side-effect ridden NSAsserts.
+
+2010-07-12  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Make proper use of selector types to
+	generate the method signature so that methods can be called
+	unmangled without boxing the arguments.
+	* Source/Tests/TestDKProxy.m: Implement test for unboxed method
+	calls.
+
+2010-07-12  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Some bugfixes. Implement handling mangled
+	selectors.
+	* Source/Tests/TestDKProxy.m: Test sending unboxed method calls
+	with mangled selectors.
+
+2010-07-12  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethodCall.m: Fix statement order and typo.
+	* Source/Tests/TestDKProxy.m: Test for returning errors from
+	D-Bus.
+
+2010-07-12  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h: Add needed ivars.
+	* Source/AsyncBehavior.h: Minor addition.
+	* Source/DKArgument.[mh]: Remove -proxyParent method (now in
+	superclass)
+	* Source/DKInterface.h: Declare -mangledName.
+	* Source/DKInterface.m: Implement selector/method-map and XML
+	parser delegate methods.
+	* Source/DKIntrospectionNode.[mh]: Move -proxyParent method here.
+	Handle annotations.
+	* Source/DKMethod.[hm]: Implement -selectorString method to
+	generate selector names. Also add XML parser delegate methods.
+	* Source/DKMethodCall.m: Fix bug where an D-Bus error was used
+	unitialized.
+	* Source/DKProxy.m: Remove async stuff (pretty superfluous right
+	now). Fix various bugs in selector resolution and implement
+	building the method cache.
+	* Source/Tests/TestDKProxy.m: Add tests for new functionality.
+	
+	Implement the remaining bits of basic proxy functionality.
+	Arbitrary D-Bus methods can now be called when their arguments
+	are boxed as Objective-C types. Calling methods without boxing
+	to come.
+
+2010-07-04  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Fix -isDictionary method for array
+	arguments.
+
+2010-07-04  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Remove isa-swizzling in favour of creating
+	the correct objects in the initalizers.
+
+2010-07-03  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Remove
+	incorrect -release (spotted by Fred Kiefer).
+	* Source/Tests/TestDKMethodCall.m
+	* Source/Tests/TestDKArgument.m:
+	Small test improvements.
+
+2010-07-02  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/AsyncBehavior.h: Add macros to do stuff asynchronously
+	if possible.
+	* Source/DKInterface.[hm]: Remove superfluous -parent method.
+	* Source/DKMethod.m: Some more modularisation. Add comparison
+	method. Calculate offsets and sizes for signatures correctly.
+	* Headers/DKProxy.h: Add instance variables.
+	* Source/DKProxy.[hm]: Implement -forwardInvocation: and triggers
+	to generate the method cache (actual generation of the cache
+	still missing).
+	* Source/Tests/TestDKProxy.m: Add test for calling Introspect()
+	via the built-in _DKMethodIntrospect.
+	* Source/Tests/TestDKArgument.m: Minor rearrangement.
+	
+	Made dispatching D-Bus method calls work via -forwardInvocation:.
+	As of yet, you can only call -Introspect (this is needed to obtain the
+	introspection data used to build the actual method cache).
+
+2010-06-28  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* configure.ac: Fix autoconf test for location of runtime.h
+	* configure: Regenerate
+
+2010-06-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.[hm]: Turn DKRunLoopContext into an instance
+	variable. Some features need access to the run loop and run loop
+	mode information.
+	* Source/DKMethodCall.[hm]: Add implementation of synchronous
+	method calls and stubbed out support for asynchronous calls.
+	* Source/GNUmakefile: Add new modules.
+	* Source/Tests/TestDKMethodCall.m: Add test for introspection
+	method call.
+
+2010-06-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethod.h: Fixed missing include.
+
+2010-06-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethod.h: Add (un-)marshalling methods to the header.
+
+2010-06-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.[mh]:
+	Add accessor method for the DBusConnection on libdbus-level.
+	* Source/GNUmakefile
+	* Source/DKMessage.[mh]:
+	Add primitive class for sending message to D-Bus.
+
+2010-06-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/Tests/TestDKArgument.m: Add test for fallback-to-struct
+	feature when encoding dictionaries to variant types.
+
+2010-06-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m, Source/Tests/TestDKArgument.m: Fix
+	generation of signatures for objects that are passed as variant
+	type arguments. Some test-cases for this.
+
+2010-06-24  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.[mh]: Implement marshalling of variant
+	types. Also add the ability to customize the unboxing of
+	objects.
+	* Source/DKEndpoint.m
+	* Source/DKMethod.m
+	* Source/DKPort.m:
+	Compile fixes for clang.
+	* Source/DKOutgoingProxy.[mh]
+	* Source/GNUmakefile:
+	Add stub implementation for outgoing proxies.
+	* Source/DKProxy.m: Add method to distinguish outgoing and
+	incoming proxies.
+	* Source/Tests/TestDKProxy.m: Fix runtime.h include.
+	* Source/Tests/TestDKArgument.m: Add test for custom unboxing
+	methods.
+	* Source/config.h.in
+	* config.make.in
+	* configure.ac
+	* GNUmakefile.postamble:
+	Update configure script and paraphernalia to check for advanced
+	runtime features.
+	* configure: Regenerate
+	
+	Finish implementation of (un-)marshalling values between
+	NSInvocation and D-Bus messages. More flexible scheme for
+	unboxing values. Various smaller fixes.
+
+2010-06-21  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Implement unmarshalling D-Bus variant types.
+
+2010-06-21  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: (Un-)marshalling of D-Bus structs.
+
+2010-06-21  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Finish (un-)marshalling of dictionaries.
+
+2010-06-20  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Implement unmarshalling of D-Bus
+	dictionaries.
+
+2010-06-20  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: WIP (un-)marshalling of complex types.
+
+2010-06-18  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/GNUmakefile
+	Source/DKInterface.[hm]:
+	Add WIP representation of D-Bus interfaces.
+	* Source/DKIntrospectionNode.[mh]: Basic XML parser delegate
+	methods.
+	* Source/DKMethod.m: Remove superflous method signature code.
+	* Source/DKMethod.m
+	* Source/DKArgument.m
+	* Source/DKArgument.h:
+	Work on marshalling/unmarshalling between NSInvocation and D-Bus
+	messages.
+
+2010-06-15  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethod.h, Source/DKMethod.m: Remove leftover duplicate
+	code.
+
+2010-06-15  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKIntrospectionNode.h
+	* Source/DKIntrospectionNode.m
+	* Source/DKMethod.h
+	* Source/DKMethod.m
+	* Source/GNUmakefile,
+	* Source/Tests/TestDKMethod.m:
+	Factor common code out into DKIntrospectionNode and make
+	DKArgument and DKMethod use it.
+
+2010-06-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethod.h, Source/DKMethod.m: Also use
+	org.freedesktop.DBus.Method.NoReply annotation to mark the
+	method as oneway.
+
+2010-06-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethod.h
+	* Source/DKMethod.m,
+	Source/Tests/TestDKMethod.m:
+	Make DKMethod generate method declarations.
+
+2010-06-14  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m
+	* Source/GNUmakefile
+	* Source/Tests/TestDKProxy.m:
+	Work on method name unmangling. Now partially working, still ugly
+	as hell.
+
+2010-06-11  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/Tests/TestDKMethod.m
+	* Source/Tests/TestDKArgument.m:
+	Tests for assignments in the initializers.
+	* Source/DKProxy.m
+	* Headers/DKProxy.h:
+	-hasSameScopeAs: method to test whether two proxies fall into
+	the scope of one and the same D-Bus service.
+	* Source/DKArgument.h: Expose a few accessors.
+	* Source/DKArgument.m: Fix bug in the name assignment. Implement
+	-name method.
+	Let the proxy do the scope checking.
+	* Source/DKMethod.m: Shuffle a few statements around for more
+	natural ordering.
+	* configure.ac: Leave a TODO about needing to fix the configure
+	script ugliness.
+	* config.make.in: Another attempt to get linking done properly.
+	
+	Many improvement suggested by Fred Kiefer.
+
+2010-06-11  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/DKProxy.m
+	* config.make.in:
+	Fix failure to link against libdbus (reported by Fred Kiefer).
+	Initial work on method-name mangling.
+
+2010-06-11  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: short is apparently always 16bit.
+
+2010-06-11  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Fix unboxing of doubles.
+	* Source/Tests/TestDKArgument.m: Add test cases for unboxing.
+
+2010-06-11  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKProxy.m:
+	Implement unboxing of simple types. Fix boxing of 64bit values.
+
+2010-06-11  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKProxy.m
+	* Source/GNUmakefile,
+	* Source/GNUmakefile.postamble
+	* Source/Tests/TestDKArgument.m,
+	* Source/Tests/TestDKPort.m:
+	Add a few more tests and some dummy methods.
+
+2010-06-10  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKProxy.m,
+	* Source/Tests/TestDKArgument.m:
+	Boxing of simple types with associated test-coverage.
+
+2010-06-10  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKMethod.h
+	* Source/DKMethod.m
+	* Source/GNUmakefile
+	* Source/Tests/TestDKMethod.m:
+	Add initial implementation of DKMethod to encapsulate D-Bus
+	method information.
+
+2010-06-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/GNUmakefile
+	* Source/GNUmakefile.postamble:
+	Provide link to	public headers when compiling the tests.
+
+2010-06-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile: autorun ukrun for tests.
+	* configure.ac
+	* config.make.in
+	* Source/GNUmakefile:
+	Check for and use -Wdeclaration-after-statement
+	* Source/DKArgument.m
+	* Source/DKPort.m:
+	Fix C99isms.
+	* Source/Tests/TestDKArgument.m: Separate unit tests from source.
+	Properly include local headers.
+
+2010-06-08  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/GNUmakefile
+	* Source/TestDKArgument.m:
+	Fix DKArgument problems. Add test cases for DKArgument (requires
+	UnitKit).
+
+2010-06-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m:
+	Support generating D-Bus type signatures from DKArgument trees.
+
+2010-06-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m:
+	Made DKArgument collect all subtypes of an argument from a D-Bus
+	message. Totally untested, though.
+
+2010-06-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Place -release call properly. Thanks to Fred
+	Kiefer for pointing that out.
+
+2010-06-07  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKEndpoint.m,
+	* Source/GNUmakefile:
+	WIP representation of D-Bus argument information.
+
+2010-05-31  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKPort.m: Simpify DKPort a bit.
+
+2010-05-31  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m: Actually, -[NSProxy dealloc] can be called.
+	Pointed out by Fred Kiefer; no idea why I thought that wasn't
+	possible…
+
+2010-05-30  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile
+	* Headers/DKProxy.h
+	* Source/DKEndpoint.h
+	* Source/DKEndpoint.m
+	* Source/DKPort.m
+	* Source/DKProxy.m
+	* Source/GNUmakefile:
+	Add a dummy proxy class. Finish implementation of the
+	NSConnection integration for ROOTPROXY_REQUEST messages:
+	Connections to D-Bus can now return their own proxies.
+
+2010-05-27  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKPort.m: Call self instead of super for DKPort subclass
+	initializers.
+
+2010-05-26  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Fixes a bug where returning an pre-existing
+	DKEndpoint would result in a teardown of the D-Bus connection.
+	Also work around some libdbus strangeness that needs further
+	investigation.
+	* Source/DKPort.m: Slightly more expressive designated
+	initializer. Begin stubbing out integration into NSConnection.
+	* Headers/DKPort.h: Add initializer.
+
+2010-05-10  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile.postamble
+	* Headers/config.h.in
+	* aclocal.m4
+	* configure
+	* configure.ac:
+	Add configure script and paraphernalia (but make still
+	regenerates config.make on distclean).
+	* Source/DKPort: Simple initializers for DKPort.
+
+2010-05-09  Niels Grewe <niels.grewe@halbordnung.de>
+
+	* .
+	* GNUmakefile
+	* GNUmakefile.postamble
+	* Headers
+	* Headers/DBusKit.h
+	* Headers/DKPort.h
+	* Headers/config.h.in
+	* Source
+	* Source/DKEndpoint.h
+	* Source/DKEndpoint.m
+	* Source/DKPort.m
+	* Source/GNUmakefile
+	* config.make.in
+	* configure.ac:
+	Import code in preparation for GSoC.
