@@ -54,19 +54,14 @@ typedef NSUInteger DKPropertyAttributes;
   DKPropertyAttributes attr;
 
   /**
-   * Lazily generated mutator method.
+   * Mutator method.
    */
-  DKPropertyMutator *cachedMutator;
+  DKPropertyMutator *mutator;
 
   /**
-   * Lazily generated accessor method.
+   * Accessor method.
    */
-  DKPropertyAccessor *cachedAccessor;
-
-  /**
-   * Lock protecting method generation.
-   */
-  NSLock *lock;
+  DKPropertyAccessor *accessor;
 }
 
 - (id)initWithDBusSignature: (const char*)characters
@@ -77,4 +72,12 @@ typedef NSUInteger DKPropertyAttributes;
 - (DKPropertyMutator*)mutatorMethod;
 
 - (DKPropertyAccessor*)accessorMethod;
+
+- (DKArgument*)type;
+
+- (BOOL)isReadble;
+
+- (BOOL)isWritable;
+
+- (NSString*)interface;
 @end

@@ -57,7 +57,7 @@ NSString *DKArgumentDirectionOut = @"out";
  */
 
 #define DK_MARSHALLING_RAISE_OOM [NSException raise: @"DKArgumentMarshallingException"\
-                                             format: @"Out of memory when marshalling arument."]
+                                             format: @"Out of memory when marshalling argument."]
 
 #define DK_ITER_APPEND(iter, type, addr) do {\
   if (NO == (BOOL)dbus_message_iter_append_basic(iter, type, (void*)addr))\
@@ -1796,9 +1796,21 @@ DKDBusTypeForUnboxingObject(id object)
   theArgument = [[DKArgument alloc] initWithDBusSignature: theSig
                                                      name: nil
                                                    parent: self];
-  theValue = [theArgument unmarshalledObjectFromIterator: &subIter];
+  NS_DURING
+  {
+    theValue = [theArgument unmarshalledObjectFromIterator: &subIter];
+  }
+  NS_HANDLER
+  {
+    [theArgument release];
+    dbus_free(theSig);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
   [theArgument release];
   dbus_free(theSig);
+
   return theValue;
 }
 

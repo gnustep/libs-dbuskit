@@ -1,5 +1,18 @@
 2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKArgument.m: Fix typo. Protect against potential
+	memory leak when unmarshalling a variant type argument raises an
+	exception.
+	* Source/DKProperty.h: Changes to the class layout, added some
+	method declarations.
+	* Source/DKPropertyMethod.h
+	* Source/DKPropertyMethod.m:
+	Began stubbing out support for property accessor methods.
+
+	Further work on properties. (Not yet connected to the build)
+
+2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Documentation/GNUmakefile: Fix copy-and-paste error.
 
 2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
