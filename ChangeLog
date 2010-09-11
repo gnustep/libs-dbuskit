@@ -1,5 +1,9 @@
 2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Documentation/GNUmakefile: Fix copy-and-paste error.
+
+2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* ChangeLog: Generate from `svn log'.
 	* Source/DKSignal.h: Documentation fix.
 	* Source/DKProperty.h: Add header.

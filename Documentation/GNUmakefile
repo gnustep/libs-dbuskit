@@ -25,7 +25,7 @@ DBusKit_AGSDOC_FLAGS = \
 	-MakeFrames YES \
 	-DocumentationDirectory Reference \
 	-HeaderDirectory ../Headers/ \
-	-Declared Foundation \
+	-Declared DBusKit \
 	-ConstantsTemplate TypesAndConstants \
 	-FunctionsTemplate Functions \
 	-MacrosTemplate Functions \
