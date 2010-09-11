@@ -125,8 +125,8 @@ extern NSString *DKArgumentDirectionOut;
 
 /**
  * Marshall a value from an NSInvocation into an D-Bus message iterator set up
- * for writing. index indicates the index of the argument to be marshalled into
- * the D-Bus format (-1 indicates the return value).
+ * for writing. index indicates the index of the argument (in the invocation) to
+ * be marshalled into the D-Bus format (-1 indicates the return value).
  */
 - (void) marshallArgumentAtIndex: (NSInteger)index
                   fromInvocation: (NSInvocation*)inv

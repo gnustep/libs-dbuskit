@@ -36,6 +36,8 @@ DBusKit_OBJC_FILES = \
 	DKObjectPathNode.m \
 	DKOutgoingProxy.m \
 	DKPort.m \
+	DKProperty.m \
+	DKPropertyMethod.m \
         DKProxy.m \
 	DKSignal.m \
 	NSConnection+DBus.m

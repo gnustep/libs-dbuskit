@@ -25,18 +25,6 @@
 #import "DKIntrospectionNode.h"
 @class NSLock, NSString, DKArgument, DKPropertyAccessor, DKPropertyMutator;
 
-enum {
-  DKPropertyAttributeReadable = 1,
-  DKPropertyAttributeWritable = 2,
-  DKPropertyAttributeReadWrite = 3,
-  DKPropertyAttributeMax = 4,
-} DKPropertyAttribute;
-
-/**
- * Possible property access types from the DKPorpertyAttribute enumeration.
- */
-typedef NSUInteger DKPropertyAttributes;
-
 /**
  * DKProperty encapsulates information about D-Bus properties.
  */
@@ -46,12 +34,6 @@ typedef NSUInteger DKPropertyAttributes;
    * The D-Bus type of the property.
    */
   DKArgument *type;
-
-  /**
-   * An attribute bitfield determining whether the property can be read and/or
-   * written.
-   */
-  DKPropertyAttributes attr;
 
   /**
    * Mutator method.

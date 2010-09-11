@@ -21,9 +21,16 @@
    */
 
 #import "DKMethod.h"
-@class NSLock, NSString, DKArgument, DKPropertyAccessor, DKPropertyMutator;
+
+@class DKProperty;
 
 @interface DKPropertyMethod: DKMethod
-{
-}
+@end
+
+@interface DKPropertyAccessor: DKPropertyMethod
+- (id)initWithProperty: (DKProperty*)property;
+@end
+
+@interface DKPropertyMutator: DKPropertyMethod
+- (id)initWithProperty: (DKProperty*)property;
 @end

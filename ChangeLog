@@ -1,4 +1,21 @@
 2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
+	* GNUmakefile: Add DKProperty.m and DKPropertyMethod.m to the
+	build.
+	* Source/DKArgument.h: Tiny documentation clarification.
+	* Source/DKMethod.h: Expose some methods needed by the
+	subclasses.
+	* Source/DKMethod.m: Introduce a slightly more flexible way of
+	comparing D-Bus and Obj-C method signatures. 
+	* Source/DKProperty.h: Remove redundant attribute field.
+	* Source/DKProperty.m: Implement DKProperty to hold
+	introspection data about properties.
+	* Source/DKPropertyMethod.h: Complete header.
+	* Source/DKPropertyMethod.m: Slight cleanup for the accessor,
+	implement the mutator method.
+
+	Even more work on properties.
+
+2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.m: Fix typo. Protect against potential
 	memory leak when unmarshalling a variant type argument raises an

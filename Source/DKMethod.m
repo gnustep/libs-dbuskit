@@ -38,15 +38,6 @@
 #include <dbus/dbus.h>
 #include <stdint.h>
 
-
-
-enum
-{
-  DK_ARGUMENT_UNBOXED = 0,
-  DK_ARGUMENT_BOXED = 1,
-  DK_ARGUMENT_INVALID = -1
-};
-
 @implementation DKMethod
 
 - (id) initWithName: (NSString*)aName
@@ -109,11 +100,12 @@ enum
 
 - (NSInteger)boxingStateForArgumentAtIndex: (NSUInteger)argIndex
                        fromMethodSignature: (NSMethodSignature*)aSignature
+                                   atIndex: (NSUInteger)sigIndex
 {
   NSUInteger argCount = [inArgs count];
   if (argIndex < argCount)
   {
-    const char* typeFromSig = [aSignature getArgumentTypeAtIndex: (argIndex + 2)];
+    const char* typeFromSig = [aSignature getArgumentTypeAtIndex: sigIndex];
     const char* boxedType = @encode(id);
     const char *unboxedTypeFromDBus = [[inArgs objectAtIndex: argIndex] unboxedObjCTypeChar];
     BOOL boxedMatch = NO;
@@ -137,6 +129,16 @@ enum
     }
   }
   return DK_ARGUMENT_INVALID;
+}
+
+
+- (NSInteger)boxingStateForArgumentAtIndex: (NSUInteger)argIndex
+                       fromMethodSignature: (NSMethodSignature*)aSignature
+{
+  // Add an offest to accomodate self and _cmd
+  return [self boxingStateForArgumentAtIndex: argIndex
+                         fromMethodSignature: aSignature
+                                     atIndex: (argIndex + 2)];
 }
 
 - (NSInteger)boxingStateForReturnValueFromMethodSignature: (NSMethodSignature*)aSignature

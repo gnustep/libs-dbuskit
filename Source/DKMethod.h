@@ -26,6 +26,13 @@
 #include <dbus/dbus.h>
 @class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
 
+enum
+{
+  DK_ARGUMENT_UNBOXED = 0,
+  DK_ARGUMENT_BOXED = 1,
+  DK_ARGUMENT_INVALID = -1
+};
+
 /**
  * DKMethod provides the infrastructure for using D-Bus methods from
  * Objective-C. It can be used to deserialize a DBusMessage into an NSInvocation
@@ -42,6 +49,12 @@
  * indicate whether the boxed signature is requested.
  */
 - (const char*)objCTypesBoxed: (BOOL)doBox;
+
+/**
+ * Returns the Objective-C type of the return value from this method. Use doBox
+ * to indicate whether the boxed or non-boxed type signature is requested.
+ */
+- (char*) returnTypeBoxed: (BOOL)doBox;
 
 /**
  * Returns whether the method signature sig matches the signature for this
@@ -130,5 +143,22 @@
 - (void)marshallFromInvocation: (NSInvocation*)inv
                   intoIterator: (DBusMessageIter*)iter
                    messageType: (int)type;
+
+
+/**
+ * Determines whether the argument at <var>argIndex</var> corresponds to the
+ * boxed/non-boxed type of the argument at <var>sigIndex</var> in
+ * <var>aSignature</var>.
+ */
+- (NSInteger)boxingStateForArgumentAtIndex: (NSUInteger)argIndex
+                       fromMethodSignature: (NSMethodSignature*)aSignature
+                                   atIndex: (NSUInteger)sigIndex;
+
+/**
+ * Use this method to determine whether the return value type of
+ * <var>aSignature</var> corresponds boxed or unboxed to the out-arguments of
+ * the receiver.
+ */
+- (NSInteger)boxingStateForReturnValueFromMethodSignature: (NSMethodSignature*)aSignature;
 @end
 
