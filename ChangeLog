@@ -1,5 +1,11 @@
 2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKInterface.m: Include property methods in protocol
+	declarations (no Objective-C 2 style "@property()"-stuff yet)
+	* Documentation/UsingDBus.texi: Document property support.
+
+2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKMethodCall.m: Fix to respect the semantics of
 	dbus_message_iter_init().
 

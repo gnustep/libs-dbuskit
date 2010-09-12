@@ -151,6 +151,28 @@ statements would result in a call to the correct method:
 id anInstrument = [remoteObject getBass];
 @end example
 
+@section Accessing and changing D-Bus properties
+@cindex property, D-Bus
+@cindex D-Bus property
+DBusKit will automatically generate getters and setters for D-Bus properties. A
+D-Bus interface might, for example, specifythe following property in its
+introspection data:
+@example
+<property name="address" type="s" access="readwrite"/>
+@end example
+This property can then be accessed by calling @code(-address) and changed by
+calling @code(-setaddress:). Both the plain C types and the corresponding
+Foundation classes are valid as parameters to the getter and setter methods:
+@example
+- (NSString*)address;
+- (char*)address;
+- (void)setaddress: (NSString*)address;
+- (void)setaddress: (char*)address;
+@end example
+If other methods with the same names exist within the same interface of the
+remote object, those will take precedence over the generated getter and setter
+methods.
+
 @section Watching D-Bus Signals
 @cindex signal, D-Bus
 @cindex D-Bus signal

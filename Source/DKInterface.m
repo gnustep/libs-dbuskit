@@ -256,13 +256,29 @@
 {
   NSMutableString *declaration = [NSMutableString stringWithFormat: @"@protocol %@\n\n", [self protocolName]];
   NSEnumerator *methodEnum = [methods objectEnumerator];
+  NSEnumerator *propertyEnum = [properties objectEnumerator];
   DKMethod *method = nil;
-
+  DKProperty *property = nil;
   while (nil != (method = [methodEnum nextObject]))
   {
     [declaration appendFormat: @"%@\n\n", [method methodDeclaration]];
   }
 
+  // TODO: Also generate Objective-C 2 syle @property declarations.
+  while (nil != (property = [propertyEnum nextObject]))
+  {
+    DKPropertyAccessor *accessor = [property accessorMethod];
+    DKPropertyMutator *mutator = [property mutatorMethod];
+
+    if (nil != accessor)
+    {
+      [declaration appendFormat: @"%@\n\n", [accessor methodDeclaration]];
+    }
+    if (nil != mutator)
+    {
+      [declaration appendFormat: @"%@\n\n", [mutator methodDeclaration]];
+    }
+  }
   [declaration appendFormat: @"@end\n"];
   return declaration;
 }
