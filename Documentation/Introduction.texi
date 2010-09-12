@@ -189,7 +189,7 @@ be the case for, e.g., a screensaver).
 @cindex D-Bus object path
 
 When using DO, the object graph vended by a service is generated
-explicitly: If a message send to a remote object returns another object,
+implicitly: If a message send to a remote object returns another object,
 that object will implicitly be vended and wrapped in a proxy for use by
 the other process. D-Bus operates quite differently in that respect:
 Every object needs to be assigned a name that can be used by remote

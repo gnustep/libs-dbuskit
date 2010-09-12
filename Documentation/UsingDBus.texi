@@ -33,7 +33,7 @@ hypothetical interface file for @emph{org.freedesktop.Introspectable},
  */
 @@protocol org_freedesktop_Introspectable
 
-- (NSString*)createModel;
+- (NSString*)Introspect;
 
 @@end
 @end example
@@ -160,9 +160,10 @@ introspection data:
 @example
 <property name="address" type="s" access="readwrite"/>
 @end example
-This property can then be accessed by calling @code(-address) and changed by
-calling @code(-setaddress:). Both the plain C types and the corresponding
-Foundation classes are valid as parameters to the getter and setter methods:
+This property can then be accessed by calling @code{-address} and changed by
+calling @code{-setaddress:} on the proxy object. Just like with other methods,
+both the plain C types and the corresponding Foundation classes are valid as
+parameters to the getter and setter methods:
 @example
 - (NSString*)address;
 - (char*)address;
