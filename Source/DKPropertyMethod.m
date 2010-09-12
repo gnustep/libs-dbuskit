@@ -32,6 +32,7 @@
 #import <Foundation/NSString.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#include <string.h>
 #include <dbus/dbus.h>
 
 @implementation DKPropertyMethod

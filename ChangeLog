@@ -1,3 +1,15 @@
+2010-09-12 Phillipe Rouselle
+
+	* Source/DKMethod.m
+	* Source/DKArgument.m
+	* Source/DKMethodCall.m
+	* Source/DKProxy.m
+	* Source/DKPropertyMethod.m:
+	Include string.h
+
+	With the last modifications to base and libobjc2, each string
+	function would generate a warning.
+
 2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKInterface.h

@@ -37,6 +37,7 @@
 
 #include <dbus/dbus.h>
 #include <stdint.h>
+#include <string.h>
 
 @implementation DKMethod
 

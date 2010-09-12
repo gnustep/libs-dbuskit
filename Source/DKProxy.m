@@ -51,6 +51,8 @@
 #import <Foundation/NSXMLParser.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#include <string.h>
+
 /*
  * Definitions of the strings used for selector mangling.
  */

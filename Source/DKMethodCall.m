@@ -35,6 +35,8 @@
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#include <string.h>
+
 @interface DKMethodCall (Private)
 - (BOOL) serialize;
 @end

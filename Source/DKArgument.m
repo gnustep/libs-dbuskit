@@ -46,6 +46,7 @@
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
 
+#include <string.h>
 #include <dbus/dbus.h>
 
 NSString *DKArgumentDirectionIn = @"in";
