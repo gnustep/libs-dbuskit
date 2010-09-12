@@ -43,8 +43,7 @@ DBusKit_OBJC_FILES = \
 	NSConnection+DBus.m
 
 
-DBusKit_OBJCFLAGS += $(WARN_FLAGS)
-
+DBusKit_OBJCFLAGS += $(WARN_FLAGS) 
 # Treat warnings as errors unless someone chooses to ignore them.
 ifneq ($(nonstrict), yes)
 DBusKit_OBJCFLAGS += -Werror

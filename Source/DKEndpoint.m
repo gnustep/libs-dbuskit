@@ -315,6 +315,7 @@ static NSRecursiveLock *activeConnectionLock;
   conn = dbus_connection_open([endpoint UTF8String], &err);
   if (NULL == conn)
   {
+    [theInfo release];
     NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
       err.name,
       err.message);
@@ -343,6 +344,7 @@ static NSRecursiveLock *activeConnectionLock;
   conn = dbus_bus_get(type, &err);
   if (NULL == conn)
   {
+    [theInfo release];
     NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
       err.name,
       err.message);

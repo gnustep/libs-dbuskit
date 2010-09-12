@@ -1,3 +1,14 @@
+2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKIntrospectionParserDelegate.m: Fix (benign) dead store.
+	* Source/DKArgument.m
+	* Source/DKEndpoint.m
+	* Source/DKProxy.m
+	* Source/DKSignal:
+	Fix memory leaks.
+
+	Fix bugs found by the clang static analyzer.
+
 2010-09-11 Niels Grewe <niels.grewe@halbordnung.de>
 	* GNUmakefile: Add DKProperty.m and DKPropertyMethod.m to the
 	build.

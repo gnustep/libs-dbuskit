@@ -224,7 +224,6 @@ didStartElement: (NSString*)aNode
     // We did not autorelease the nodes when creating them, so we release them
     // here:
     [newNode release];
-    newNode = nil;
   }
 }
 

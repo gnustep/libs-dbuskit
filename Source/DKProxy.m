@@ -363,6 +363,7 @@ static void DKInitIntrospectionThread(void *data);
 
   if (0 == selector)
   {
+    [selectorString release];
     return 0;
   }
 

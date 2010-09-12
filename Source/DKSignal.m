@@ -127,7 +127,7 @@
 - (NSDictionary*)userInfoFromIterator: (DBusMessageIter*)iter
 {
   NSUInteger numArgs = [args count];
-  NSMutableDictionary *userInfo = [NSMutableDictionary new];
+  NSMutableDictionary *userInfo = [[NSMutableDictionary new] autorelease];
   NSUInteger index = 0;
   while (index < (numArgs))
   {

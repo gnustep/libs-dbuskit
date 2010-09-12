@@ -1764,9 +1764,9 @@ DKDBusTypeForUnboxingObject(id object)
     int type = DKDBusTypeForUnboxingObject(object);
     if ((DBUS_TYPE_INVALID != type) && (DBUS_TYPE_OBJECT_PATH != type))
     {
-      return [[DKArgument alloc] initWithDBusSignature: (char*)&type
-                                                  name: nil
-                                                parent: self];
+      return [[[DKArgument alloc] initWithDBusSignature: (char*)&type
+                                                   name: nil
+                                                 parent: self] autorelease];
     }
     else if ([[self proxyParent] _isLocal])
     {
