@@ -1,5 +1,20 @@
 2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKInterface.h
+	* Source/DKInterface.m:
+	Add -installProperties method.
+	* Source/DKIntrospectionParserDelegate.m: Enable parsing
+	properties.
+	* Source/DKProperty.h: Fix typo and rename method.
+	* Source/DKProperty.m: Implement -copyWithZone:
+	* Source/DKPropertyMethod.m: Fix selector string for setters.
+	* Source/DKProxy.m: Trigger generation of property methods
+
+	Enabled property support. Getters are already working, setters
+	not so much.
+
+2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKIntrospectionParserDelegate.m: Fix (benign) dead store.
 	* Source/DKArgument.m
 	* Source/DKEndpoint.m

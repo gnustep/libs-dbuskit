@@ -89,6 +89,12 @@
 - (void)installMethods;
 
 /**
+ * Add accessor and mutator methods for all properties to the dispatch table if
+ * no method with the same name exists.
+ */
+- (void)installProperties;
+
+/**
  * Registers all signals in the interface for use with DKNotificationCenter.
  */
 - (void)registerSignals;

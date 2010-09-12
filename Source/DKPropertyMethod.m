@@ -327,7 +327,7 @@
 - (NSString*)selectorString
 {
   // We could camelCase this, but perhaps we shouldn't to avoid ambiguities.
-  return [NSString stringWithFormat: @"set%@", [parent name]];
+  return [NSString stringWithFormat: @"set%@:", [parent name]];
 }
 
 - (const char*)objCTypesBoxed: (BOOL)doBox

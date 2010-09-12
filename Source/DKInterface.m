@@ -33,6 +33,8 @@
 #undef INCLUDE_RUNTIME_H
 
 #import "DKMethod.h"
+#import "DKProperty.h"
+#import "DKPropertyMethod.h"
 #import "DKSignal.h"
 #import "DKInterface.h"
 
@@ -119,8 +121,7 @@
 
 - (void)addProperty: (DKProperty*)property
 {
-  //FIXME: Remove cast once a DKProperty class is there
-  [self _addMember: (id)property
+  [self _addMember: property
             toDict: properties];
 }
 
@@ -145,7 +146,8 @@
     return;
   }
 
-  if (nil == [methods objectForKey: [method name]])
+  if ((nil == [methods objectForKey: [method name]])
+    && (NO == [method isKindOfClass: [DKPropertyMethod class]]));
   {
     [self addMethod: method];
   }
@@ -190,6 +192,28 @@
   }
 }
 
+- (void)installProperties
+{
+  NSEnumerator *propertyEnum = [properties objectEnumerator];
+  DKProperty *property = nil;
+  SEL installationSelector = @selector(installMethod:);
+  IMP installMethod = [self methodForSelector: installationSelector];
+  while (nil != (property = [propertyEnum nextObject]))
+  {
+    DKPropertyAccessor *accessor = [property accessorMethod];
+    DKPropertyMutator *mutator = [property mutatorMethod];
+    BOOL accessorExists = (nil != [self DBusMethodForSelector: NSSelectorFromString([accessor selectorString])]);
+    BOOL mutatorExists = (nil != [self DBusMethodForSelector: NSSelectorFromString([mutator selectorString])]);
+    if ((nil != accessor) && (NO == accessorExists))
+    {
+      installMethod(self, installationSelector, accessor);
+    }
+    if ((nil != mutator) && (NO == mutatorExists))
+    {
+      installMethod(self, installationSelector, mutator);
+    }
+  }
+}
 - (void)registerSignals
 {
   NSEnumerator *signalEnum = [signals objectEnumerator];
@@ -205,6 +229,10 @@
 
 - (DKMethod*) DBusMethodForSelector: (SEL)selector
 {
+  if (0 == selector)
+  {
+    return nil;
+  }
   selector = sel_getUid(sel_getName(selector));
   return NSMapGet(selectorToMethodMap, selector);
 }

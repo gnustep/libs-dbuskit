@@ -28,6 +28,7 @@
 #import "DKIntrospectionNode.h"
 #import "DKMethod.h"
 #import "DKObjectPathNode.h"
+#import "DKProperty.h"
 #import "DKSignal.h"
 
 #import <Foundation/NSArray.h>
@@ -187,7 +188,13 @@ didStartElement: (NSString*)aNode
     }
     else if ([@"property" isEqualToString: aNode])
     {
-      //TODO: Implement properties.
+      const char *type = [[someAttributes objectForKey: @"type"] UTF8String];
+      NSString *access = [someAttributes objectForKey: @"access"];
+      newNode = [[DKProperty alloc] initWithDBusSignature: type
+                                         accessAttributes: access
+                                                     name: theName
+                                                   parent: leaf];
+      [ifLeaf addProperty: (DKProperty*)newNode];
     }
   }
   else if (([leaf isKindOfClass: [DKMethod class]])
@@ -201,7 +208,7 @@ didStartElement: (NSString*)aNode
       newNode = [[DKArgument alloc] initWithDBusSignature: type
                                                      name: theName
 						   parent: leaf];
-      // DKSignal also implements addArgument:direction: with the same
+      // DKSignal also implements -addArgument:direction: with the same
       // signature.
       [(DKMethod*)leaf addArgument: (DKArgument*)newNode
                          direction: direction];

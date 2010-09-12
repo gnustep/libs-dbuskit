@@ -47,7 +47,7 @@
 }
 
 - (id)initWithDBusSignature: (const char*)characters
-                 attributes: (NSString*)attributes
+           accessAttributes: (NSString*)attributes
                        name: (NSString*)name
                      parent: (NSString*)parent;
 
@@ -57,7 +57,7 @@
 
 - (DKArgument*)type;
 
-- (BOOL)isReadble;
+- (BOOL)isReadable;
 
 - (BOOL)isWritable;
 

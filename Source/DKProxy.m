@@ -699,6 +699,7 @@ static void DKInitIntrospectionThread(void *data);
   while (nil != (theIf = [ifEnum nextObject]))
   {
     [theIf installMethods];
+    [theIf installProperties];
     [theIf registerSignals];
   }
   [tableLock unlock];

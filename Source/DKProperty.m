@@ -31,7 +31,7 @@
 @implementation DKProperty
 
 - (id)initWithDBusSignature: (const char*)characters
-                 attributes: (NSString*)attributes
+           accessAttributes: (NSString*)attributes
                        name: (NSString*)aName
                      parent: (NSString*)aParent
 {
@@ -51,8 +51,9 @@
                                             parent: self];
 
   /*
-   * Possible attribute strings are "read" "write" and "readwrite", so checking
-   * with -hasPrefix: and -hasSuffix: covers all three posibilities.
+   * Possible attribute strings are "read" "write" and "readwrite", and since
+   * both checks will return YES for "readwrite", we cover all three
+   * posibilities.
    */
   if ([attributes hasPrefix: @"read"])
   {
@@ -77,7 +78,7 @@
   return type;
 }
 
-- (BOOL)isReadble
+- (BOOL)isReadable
 {
   return (nil != accessor);
 }
@@ -86,9 +87,29 @@
 {
   return (nil != mutator);
 }
+
 - (NSString*)interface
 {
   return [parent name];
+}
+
+- (id)copyWithZone: (NSZone*)zone
+{
+  NSMutableString *accessString = [NSMutableString new];
+  DKProperty *newNode = nil;
+  if ([self isReadable])
+  {
+    [accessString appendString: @"read"];
+  }
+  if ([self isWritable])
+  {
+    [accessString appendString: @"write"];
+  }
+  newNode = [[DKProperty allocWithZone: zone] initWithDBusSignature: [[type DBusTypeSignature] UTF8String]
+                                                   accessAttributes: accessString
+		                                               name: name
+		                                             parent: parent];
+  return newNode;
 }
 
 - (void)dealloc
