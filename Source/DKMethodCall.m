@@ -215,14 +215,14 @@
   // we are operating asynchronously.
   NS_DURING
   {
-    if (NO ==(BOOL)dbus_message_iter_init(reply, &iter))
+    // dbus_message_iter_init() will return NO if there are no arguments to
+    // unmarshall.
+    if (YES == (BOOL)dbus_message_iter_init(reply, &iter))
     {
-      [NSException raise: @"DKMethodCallException"
-                  format: @"Out of memory when creating D-Bus message iterator."];
+      [method unmarshallFromIterator: &iter
+                      intoInvocation: invocation
+                         messageType: DBUS_MESSAGE_TYPE_METHOD_RETURN];
     }
-    [method unmarshallFromIterator: &iter
-                    intoInvocation: invocation
-                       messageType: DBUS_MESSAGE_TYPE_METHOD_RETURN];
   }
   NS_HANDLER
   {

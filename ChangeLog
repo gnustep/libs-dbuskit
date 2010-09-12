@@ -1,3 +1,8 @@
+2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethodCall.m: Fix to respect the semantics of
+	dbus_message_iter_init().
+
 2010-09-12 Phillipe Rouselle
 
 	* Source/DKMethod.m
