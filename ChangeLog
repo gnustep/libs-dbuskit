@@ -1,4 +1,10 @@
 2010-09-19 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* ChangLog: Adjust formating.
+	* Tools/dk_make_protocol.m: Point to the correct license file.
+
+2010-09-19 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKProxy.h
 	* Source/DKProxy.m:
 	Adjust to use DKPort.
