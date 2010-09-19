@@ -1469,9 +1469,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     DKSignal *theSignal = [[origSignal copy] autorelease];
 
     /* Construct a proxy for the object emitting the signal: */
-    DKProxy *senderProxy = [DKProxy proxyWithEndpoint: endpoint
-                                           andService: sender
-                                              andPath: path];
+    DKProxy *senderProxy = [[[DKProxy alloc] initWithEndpoint: endpoint
+                                                   andService: sender
+                                                      andPath: path] autorelease];
     [theSignal setParent: senderProxy];
 
     userInfo = [[NSMutableDictionary alloc] initWithObjectsAndKeys: signal, @"member",

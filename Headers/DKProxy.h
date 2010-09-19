@@ -35,14 +35,9 @@
 {
   @private
   /**
-   * The endpoint object used for communication with D-Bus.
+   * The (remote) port object used for communication with D-Bus.
    */
-  DKEndpoint *endpoint;
-
-  /**
-   * The name of the service the object proxied by this instance of DKProxy.
-   */
-  NSString *service;
+  DKPort *port;
 
   /**
    * The object path identifying the object proxied.
@@ -82,9 +77,19 @@
   NSInteger state;
 }
 
-+ (id) proxyWithEndpoint: (DKEndpoint*)anEndpoint
-              andService: (NSString*)aService
-                 andPath: (NSString*)aPath;
++ (id) proxyWithPort: (DKPort*)aPort
+                path: (NSString*)aPath;
+
++ (id) proxyWithService: (NSString*)aService
+                   path: (NSString*)aPath
+                    bus: (DKDBusBusType)type;
+
+- (id) initWithPort: (DKPort*)aPort
+               path: (NSString*)aPath;
+
+- (id) initWithService: (NSString*)aService
+                  path: (NSString*)aPath
+                   bus: (DKDBusBusType)type;
 
 - (id) initWithEndpoint: (DKEndpoint*)anEndpoint
              andService: (NSString*)aService

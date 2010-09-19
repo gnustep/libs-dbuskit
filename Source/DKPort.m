@@ -188,6 +188,23 @@ enum {
   return [self hasValidRemoteOnBus: (id<DBus>)[DKDBus busWithBusType: [endpoint DBusBusType]]];
 }
 
+
+/**
+ * Returns the present endpoint.
+ */
+- (DKEndpoint*)endpoint
+{
+  return endpoint;
+}
+
+/**
+ * Returns the name of the remote.
+ */
+- (NSString*)serviceName
+{
+  return remote;
+}
+
 /**
  * This is the main method used to dispatch stuff from the DO system to D-Bus.
  * Primarily we want to respond to ROOTPROXY_REQUEST, because everyting else
@@ -326,8 +343,8 @@ enum {
 
   // TODO: Check whether the path is valid.
   return [[[DKProxy alloc] initWithEndpoint: endpoint
-                                andService: remote
-                                   andPath: path] autorelease];
+                                 andService: remote
+                                    andPath: path] autorelease];
 
 }
 

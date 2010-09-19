@@ -1,3 +1,19 @@
+2010-09-19 Niels Grewe <niels.grewe@halbordnung.de>
+	* Source/DKProxy.h
+	* Source/DKProxy.m:
+	Adjust to use DKPort.
+	* Source/DKArgument.m
+	* Source/DKNotificationCenter.m
+	* Source/DKObjectPathNode.m
+	* Source/DKPort.m:
+	Fixup for changes in DKProxy.
+
+	Make DKProxy use a DKPort instead of a DKEndpoint/service name
+	pair. This is the level of abstraction that will be used by
+	DKPortNameServer to handle connection invalidation etc.
+	Note: This breaks binary compatibility for DKPort subclasses
+	with the fragile ABI.
+
 2010-09-12 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Documentation/Introduction.texi

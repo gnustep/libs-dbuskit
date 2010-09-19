@@ -848,9 +848,9 @@ DKDBusTypeForUnboxingObject(id object)
       NSString *service = [ancestor _service];
       DKEndpoint *endpoint = [ancestor _endpoint];
       NSString *path = [[NSString alloc] initWithUTF8String: *(char**)buffer];
-      DKProxy *newProxy = [objCEquivalent proxyWithEndpoint: endpoint
-	                                         andService: service
-	                                            andPath: path];
+      DKProxy *newProxy = [[[objCEquivalent alloc] initWithEndpoint: endpoint
+	                                               andService: service
+	                                                  andPath: path] autorelease];
       [path release];
       return newProxy;
     }

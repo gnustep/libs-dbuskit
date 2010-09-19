@@ -83,9 +83,9 @@
   DKProxy *rootProxy = [self proxyParent];
   DKEndpoint *theEndpoint = [rootProxy _endpoint];
   NSString *theService = [rootProxy _service];
-  return [DKProxy proxyWithEndpoint: theEndpoint
-                         andService: theService
-                            andPath: [self _path]];
+  return [[[DKProxy alloc] initWithEndpoint: theEndpoint
+                                 andService: theService
+                                    andPath: [self _path]] autorelease];
 }
 
 - (void)setChildren: (NSMutableArray*)newChildren

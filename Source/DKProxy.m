@@ -59,6 +59,15 @@
 #define SEL_MANGLE_IFSTART_STRING @"_DKIf_"
 #define SEL_MANGLE_IFEND_STRING @"_DKIfEnd_"
 
+
+static SEL getEndpointSelector;
+static SEL getServiceNameSelector;
+static IMP getEndpoint;
+static IMP getServiceName;
+
+#define DK_PORT_ENDPOINT getEndpoint(port, getEndpointSelector)
+#define DK_PORT_SERVICE getServiceName(port, getServiceNameSelector)
+
 enum
 {
   NO_TABLES,
@@ -80,6 +89,11 @@ enum
 
 /* Define introspect on ourselves. */
 - (NSString*)Introspect;
+@end
+
+@interface DKPort (DKPortPrivate)
+- (id)initWithRemote: (NSString*)remote
+          atEndpoint: (DKEndpoint*)ep;
 @end
 
 static inline void DKBuildMethodCacheForProxy(void *p);
@@ -116,31 +130,70 @@ static void DKInitIntrospectionThread(void *data);
     [xmlOutArg release];
     ASYNC_INIT_QUEUE(introspectionQueue, "Introspection parser queue");
     IF_ASYNC(dispatch_async_f(introspectionQueue, NULL, DKInitIntrospectionThread));
+    getEndpointSelector = @selector(endpoint);
+    getEndpoint = class_getMethodImplementation([DKPort class],
+      getEndpointSelector);
+    getServiceNameSelector = @selector(serviceName);
+    getServiceName = class_getMethodImplementation([DKPort class],
+      getServiceNameSelector);
   }
 }
 
-+ (id)proxyWithEndpoint: (DKEndpoint*)anEndpoint
-             andService: (NSString*)aService
-                andPath: (NSString*)aPath
++ (id)proxyWithService: (NSString*)aService
+                  path: (NSString*)aPath
+                   bus: (DKDBusBusType)type
 {
-  return [[[self alloc] initWithEndpoint: anEndpoint
-                              andService: aService
-                                 andPath: aPath] autorelease];
+  return [[[self alloc] initWithService: aService
+                                   path: aPath
+				    bus: type] autorelease];
 }
 
-- (id)initWithEndpoint: (DKEndpoint*)anEndpoint
++ (id)proxyWithPort: (DKPort*)aPort
+               path: (NSString*)aPath
+{
+  return [[[self alloc] initWithPort: aPort
+                                path: aPath] autorelease];
+}
+
+- (id)initWithService: (NSString*)aService
+                 path: (NSString*)aPath
+                  bus: (DKDBusBusType)type
+{
+  DKPort *aPort = [[DKPort alloc] initWithRemote: aService
+                                           onBus: type];
+
+  id ret = [self initWithPort: aPort
+                         path: aPath];
+  [aPort release];
+  return ret;
+}
+
+/**
+ * Legacy initializer:
+ */
+- (id)initWithEndpoint: (DKEndpoint*)ep
             andService: (NSString*)aService
                andPath: (NSString*)aPath
 {
+  DKPort *aPort = [[DKPort alloc] initWithRemote: aService
+                                      atEndpoint: ep];
+  id ret = [self initWithPort: aPort
+                         path: aPath];
+  [aPort release];
+  return ret;
+}
+
+- (id)initWithPort: (DKPort*)aPort
+              path: (NSString*)aPath
+{
   // This class derives from NSProxy, hence no call to -[super init].
-  if ((((nil == anEndpoint)) || (nil == aService)) || (nil == aPath))
+  if (((nil == aPort)) || (nil == aPath))
   {
     [self release];
     return nil;
   }
-  ASSIGNCOPY(service, aService);
   ASSIGNCOPY(path, aPath);
-  ASSIGN(endpoint, anEndpoint);
+  ASSIGN(port, aPort);
   tableLock = [[NSLock alloc] init];
   condition = [[NSCondition alloc] init];
   state = NO_TABLES;
@@ -151,6 +204,8 @@ static void DKInitIntrospectionThread(void *data);
 
 - (id)initWithCoder: (NSCoder*)coder
 {
+  DKEndpoint *endpoint = nil;
+  NSString *service = nil;
   if ([coder allowsKeyedCoding])
   {
     endpoint = [coder decodeObjectForKey: @"DKProxyEndpoint"];
@@ -163,6 +218,8 @@ static void DKInitIntrospectionThread(void *data);
     [coder decodeValueOfObjCType: @encode(id) at: &service];
     [coder decodeValueOfObjCType: @encode(id) at: &path];
   }
+  port = [[DKPort alloc] initWithRemote: service
+                             atEndpoint: endpoint];
   tableLock = [[NSLock alloc] init];
   condition = [[NSCondition alloc] init];
   state = NO_TABLES;
@@ -175,14 +232,14 @@ static void DKInitIntrospectionThread(void *data);
 {
   if ([coder allowsKeyedCoding])
   {
-    [coder encodeObject: endpoint forKey: @"DKProxyEndpoint"];
-    [coder encodeObject: service forKey: @"DKProxyService"];
+    [coder encodeObject: DK_PORT_ENDPOINT forKey: @"DKProxyEndpoint"];
+    [coder encodeObject: DK_PORT_SERVICE forKey: @"DKProxyService"];
     [coder encodeObject: path forKey: @"DKProxyPath"];
   }
   else
   {
-    [coder encodeObject: endpoint];
-    [coder encodeObject: service];
+    [coder encodeObject: DK_PORT_ENDPOINT];
+    [coder encodeObject: DK_PORT_SERVICE];
     [coder encodeObject: path];
   }
 }
@@ -481,7 +538,7 @@ static void DKInitIntrospectionThread(void *data);
     [NSException raise: @"DKInvalidArgumentException"
                 format: @"D-Bus object %@ for service %@: Mismatched method signature.",
       path,
-      service];
+      DK_PORT_SERVICE];
   }
 
   return nil;
@@ -568,7 +625,7 @@ static void DKInitIntrospectionThread(void *data);
     [NSException raise: @"DKInvalidArgumentException"
                 format: @"D-Bus object %@ for service %@ does not recognize %@",
       path,
-      service,
+      DK_PORT_SERVICE,
      NSStringFromSelector(selector)];
   }
 
@@ -577,7 +634,7 @@ static void DKInitIntrospectionThread(void *data);
     [NSException raise: @"DKInvalidArgumentException"
                 format: @"D-Bus object %@ for service %@: Mismatched method signature.",
       path,
-      service];
+      DK_PORT_SERVICE];
   }
 
   call = [[DKMethodCall alloc] initWithProxy: self
@@ -587,7 +644,7 @@ static void DKInitIntrospectionThread(void *data);
   // Reschedule the endpoint so that the call does not spin infinitely when a
   // different thread is trying to invoke a D-Bus method and the main thread is
   // blocked.
-  [endpoint scheduleInCurrentThread];
+  [DK_PORT_ENDPOINT scheduleInCurrentThread];
 
   //TODO: Implement asynchronous method calls using futures
   [call sendSynchronouslyAndWaitUntil: 0];
@@ -605,12 +662,12 @@ static void DKInitIntrospectionThread(void *data);
 
 - (DKEndpoint*)_endpoint
 {
-  return endpoint;
+  return DK_PORT_ENDPOINT;
 }
 
 - (NSString*)_service
 {
-  return service;
+  return DK_PORT_SERVICE;
 }
 
 - (NSString*)_path
@@ -620,13 +677,13 @@ static void DKInitIntrospectionThread(void *data);
 
 - (NSString*)_uniqueName
 {
-  DKDBusBusType type = [endpoint DBusBusType];
+  DKDBusBusType type = [DK_PORT_ENDPOINT DBusBusType];
   DKDBus *bus = [DKDBus busWithBusType: type];
   NSString *uniqueName = nil;
 
   NS_DURING
   {
-    uniqueName = [(id<DKDBusStub>)bus GetNameOwner: service];
+    uniqueName = [(id<DKDBusStub>)bus GetNameOwner: DK_PORT_SERVICE];
   }
   NS_HANDLER
   {
@@ -665,8 +722,8 @@ static void DKInitIntrospectionThread(void *data);
 
 - (BOOL) hasSameScopeAs: (DKProxy*)aProxy
 {
-  BOOL sameService = [service isEqualToString: [aProxy _service]];
-  BOOL sameEndpoint = [endpoint isEqual: [aProxy _endpoint]];
+  BOOL sameService = [DK_PORT_SERVICE isEqualToString: [aProxy _service]];
+  BOOL sameEndpoint = [DK_PORT_ENDPOINT isEqual: [aProxy _endpoint]];
   return (sameService && sameEndpoint);
 }
 
@@ -841,8 +898,7 @@ static void DKInitIntrospectionThread(void *data);
 
 - (void) dealloc
 {
-  [endpoint release];
-  [service release];
+  [port release];
   [path release];
   [interfaces release];
   [children release];
