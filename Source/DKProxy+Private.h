@@ -27,6 +27,7 @@
 @class DKInterface;
 
 @interface DKProxy (DKProxyPrivate) <DKObjectPathNode>
+- (DKPort*)_port;
 - (DKEndpoint*)_endpoint;
 - (NSString*)_service;
 - (BOOL)_isLocal;

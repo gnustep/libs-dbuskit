@@ -632,6 +632,28 @@ static NSRecursiveLock *activeConnectionLock;
 {
   return connection;
 }
+
+
+/* Hashing and equality is easy: */
+
+- (BOOL)isEqual: (DKEndpoint*)other
+{
+  // This should usually be the case, if everything works as expected:
+  if (self == other)
+  {
+    return YES;
+  }
+  // Since libdbus will return unique connection objects, we simply test for
+  // pointer equality.
+  return (connection == [other DBusConnection]);
+}
+
+- (NSUInteger)hash
+{
+  // Again, the connection pointer uniquely represents the endpoint.
+  return (NSUInteger)(uintptr_t)connection;
+}
+
 - (void)dealloc
 {
   [self cleanup];
@@ -810,8 +832,8 @@ static NSRecursiveLock *activeConnectionLock;
  */
 - (void)reschedule
 {
-  NSMapEnumerator watchEnum = NSEnumerateMapTable(watchers);
-  NSMapEnumerator timerEnum = NSEnumerateMapTable(timers);
+  NSMapEnumerator watchEnum;
+  NSMapEnumerator timerEnum;
   NSTimer *aTimer = nil;
   DKWatcher *aWatcher = nil;
   NSRunLoop *rl = nil;
@@ -819,25 +841,35 @@ static NSRecursiveLock *activeConnectionLock;
   void *watch = NULL;
   void *timeout = NULL;
   [lock lock];
-  rlMode = [self runLoopMode];
-  rl = [self runLoop];
-  while (NSNextMapEnumeratorPair(&watchEnum, &timeout, (void**)&aWatcher))
+  NS_DURING
   {
-    [aWatcher reschedule];
-  }
-
-  while (NSNextMapEnumeratorPair(&timerEnum, &watch, (void**)&aTimer))
-  {
-    if ([aTimer isValid])
+    watchEnum = NSEnumerateMapTable(watchers);
+    timerEnum = NSEnumerateMapTable(timers);
+    rlMode = [self runLoopMode];
+    rl = [self runLoop];
+    while (NSNextMapEnumeratorPair(&watchEnum, &timeout, (void**)&aWatcher))
     {
-      [rl addTimer: aTimer
-           forMode: rlMode];
+      [aWatcher reschedule];
     }
-  }
-  [lock unlock];
 
-  NSEndMapTableEnumeration(&watchEnum);
-  NSEndMapTableEnumeration(&timerEnum);
+    while (NSNextMapEnumeratorPair(&timerEnum, &watch, (void**)&aTimer))
+    {
+      if ([aTimer isValid])
+      {
+        [rl addTimer: aTimer
+             forMode: rlMode];
+      }
+    }
+    NSEndMapTableEnumeration(&watchEnum);
+    NSEndMapTableEnumeration(&timerEnum);
+  }
+  NS_HANDLER
+  {
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [lock unlock];
 }
 
 - (void)dealloc

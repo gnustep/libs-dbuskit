@@ -1,3 +1,22 @@
+2010-09-22 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Add -isEqual: and -hash implementations
+	to DKEndpoint. Improve thread-safety of DKRunLoopContext.
+	* Source/DKPort.m: Add -isEqual: and -hash implementations.
+	Remove -_proxyAtPath:, which is superfluous with recent
+	changes to the DKProxy API.
+	* Source/DKProxy.m
+	* Source/DKProxy+Private.h:
+	Add accessor method for the port and check proxy scopes by means
+	of port equality.
+	* Source/NSConnection+DBus.m: Remove use of -[DKPort
+	_proxyAthPath:].
+	* Tests/TestDKProxy.m: Improve logging for failure in threaded
+	test.
+
+	Follow-up changes for DKProxy API change, based on suggestions
+	by Fred Kiefer.
+
 2010-09-19 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* ChangLog: Adjust formating.

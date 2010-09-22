@@ -660,6 +660,11 @@ static void DKInitIntrospectionThread(void *data);
   return NO;
 }
 
+- (DKPort*)_port
+{
+  return port;
+}
+
 - (DKEndpoint*)_endpoint
 {
   return DK_PORT_ENDPOINT;
@@ -722,9 +727,7 @@ static void DKInitIntrospectionThread(void *data);
 
 - (BOOL) hasSameScopeAs: (DKProxy*)aProxy
 {
-  BOOL sameService = [DK_PORT_SERVICE isEqualToString: [aProxy _service]];
-  BOOL sameEndpoint = [DK_PORT_ENDPOINT isEqual: [aProxy _endpoint]];
-  return (sameService && sameEndpoint);
+  return [port isEqual: [aProxy _port]];
 }
 
 - (void) _installIntrospectionMethod

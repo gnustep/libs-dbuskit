@@ -30,14 +30,11 @@
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
-
 @interface DKPort (DKPortPrivate)
-- (DKProxy*)_proxyAtPath: (NSString*)path;
+- (BOOL)hasValidRemote;
 @end
 
 @implementation NSConnection (DBusKit)
-
-
 - (DKProxy*)proxyAtPath: (NSString*)path
 {
   id sp = [self sendPort];
@@ -46,7 +43,14 @@
     NSWarnMLog(@"Not attempting to find proxy at path '%@' for non D-Bus port", path);
     return nil;
   }
-  return [(DKPort*)sp _proxyAtPath: path];
+
+  if (NO == [sp hasValidRemote])
+  {
+    return nil;
+  }
+
+  return [DKProxy proxyWithPort: sp
+                           path: path];
 }
 /*
 + (DKProxy*)     proxyAtPath: (NSString*)path

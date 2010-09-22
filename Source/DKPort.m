@@ -205,6 +205,27 @@ enum {
   return remote;
 }
 
+
+/**
+ * Two ports are considered equal if they connect to the same service behind the
+ * same endpoint.
+ */
+- (BOOL)isEqual: (DKPort*)other
+{
+  if (self == other)
+  {
+    return YES;
+  }
+  return ([endpoint isEqual: [other endpoint]]
+    && [remote isEqual: [other serviceName]]);
+}
+
+- (NSUInteger)hash
+{
+  // Bitwise XOR the hashes of the two values we are using for equality tests:
+  return ([endpoint hash] ^ [remote hash]);
+}
+
 /**
  * This is the main method used to dispatch stuff from the DO system to D-Bus.
  * Primarily we want to respond to ROOTPROXY_REQUEST, because everyting else
@@ -332,22 +353,6 @@ enum {
   [super dealloc];
 }
 
-- (DKProxy*)_proxyAtPath: (NSString*)path
-{
-
-  /* Check whether the remote service exists. */
-  if (NO == [self hasValidRemote])
-  {
-    return nil;
-  }
-
-  // TODO: Check whether the path is valid.
-  return [[[DKProxy alloc] initWithEndpoint: endpoint
-                                 andService: remote
-                                    andPath: path] autorelease];
-
-}
-
 /**
  * Performs checks to ensure that the corresponding D-Bus service and object
  * path exist and sends a message to the delegate NSConnection object containing
@@ -364,6 +369,11 @@ enum {
   DKProxy *proxy = nil;
   NSPortMessage *pm = nil;
 
+  if (NO == [self hasValidRemote])
+  {
+    return NO;
+  }
+
   /* Decode the sequence number, we need it to send the correct reply. */
   seqCoder = [[NSPortCoder alloc] initWithReceivePort: receivePort
                                              sendPort: self
@@ -379,9 +389,13 @@ enum {
                                                 sendPort: self
                                               components: nil];
 
-   proxy = [self _proxyAtPath: path];
+
+
+   proxy = [DKProxy proxyWithPort: self
+                             path: path];
    if (nil == proxy)
    {
+     NSDebugMLog(@"Got nil proxy for %@ (path: %@).", self, path);
      [proxyCoder release];
      return NO;
    }

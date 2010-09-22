@@ -66,6 +66,7 @@
   }
   NS_HANDLER
   {
+    NSLog(@"Got exception: %@", localException);
     UKFail();
   }
   NS_ENDHANDLER
