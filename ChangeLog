@@ -1,3 +1,10 @@
+2010-10-19 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKPort.m: Implement automatic invalidation of ports
+	when the remote disappears from the bus. Applications should
+	watch for NSPortDidBecomeInvalidNotification to catch this
+	situation.
+
 2010-09-22 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKEndpoint.m: Add -isEqual: and -hash implementations

@@ -21,6 +21,7 @@
    */
 
 #import "DBusKit/DKPort.h"
+#import "DBusKit/DKNotificationCenter.h"
 #import "DKProxy+Private.h"
 #import "DKEndpoint.h"
 
@@ -30,6 +31,7 @@
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSLock.h>
+#import <Foundation/NSNotification.h>
 #import <Foundation/NSPort.h>
 #import <Foundation/NSPortCoder.h>
 #import <Foundation/NSPortMessage.h>
@@ -80,9 +82,13 @@ enum {
          utilizingComponents: (NSArray*)components
                     fromPort: (NSPort*)receivePort;
 
+/**
+ * Called by the notification center when the remote is removed from the bus.
+ */
+- (void)_remoteDisappeared: (NSNotification*)notification;
+
 - (id)initForBusType: (DKDBusBusType)type;
 @end
-
 
 @implementation DKPort
 
@@ -126,6 +132,30 @@ enum {
     ASSIGN(endpoint, anEndpoint);
   }
   ASSIGNCOPY(remote, aRemote);
+
+  /*
+   * If the port is non-local (i.e. has a specified name), we set up the
+   * notification center to inform us when the remote disappears. The whole
+   * process would be pointless for ports to the org.freedesktop.DBus service,
+   * so we avoid observing its name.
+   */
+  if ((0 != [remote length])
+    && (NO == [@"org.freedesktop.DBus" isEqualToString: remote]))
+  {
+    DKDBusBusType busType = [endpoint DBusBusType];
+    DKNotificationCenter *center = [DKNotificationCenter centerForBusType: busType];
+    /*
+     * Setup observation rule: arg0 carries the name, arg2 the new owner, which
+     * is empty if the name disappeared.
+     */
+    [center addObserver: self
+               selector: @selector(_remoteDisappeared:)
+                 signal: @"NameOwnerChanged"
+              interface: @"org.freedesktop.DBus"
+                 sender: [DKDBus busWithBusType: busType]
+            destination: nil
+      filtersAndIndices: remote, 0, @"", 2, nil];
+  }
   return self;
 }
 
@@ -346,13 +376,39 @@ enum {
   return 0;
 }
 
-- (void) dealloc
+- (void)invalidate
 {
+  [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
+  // The implementation in NSPort sends out the appropriate notification.
+  [super invalidate];
+}
+
+- (void)dealloc
+{
+  if ([self isValid])
+  {
+    [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
+  }
   [endpoint release];
   [remote release];
   [super dealloc];
 }
 
+
+- (void)_remoteDisappeared: (NSNotification*)n
+{
+  NSDictionary *userInfo = [n userInfo];
+  NSString *name = [userInfo objectForKey: @"arg0"];
+  NSString *newOwner = [userInfo objectForKey: @"arg2"];
+
+  // Bail out if we got rubbish data from the notification:
+  if ((NO == [@"" isEqualToString: newOwner])
+    || (NO == [remote isEqualToString: name]))
+  {
+    return;
+  }
+  [self invalidate];
+}
 /**
  * Performs checks to ensure that the corresponding D-Bus service and object
  * path exist and sends a message to the delegate NSConnection object containing
