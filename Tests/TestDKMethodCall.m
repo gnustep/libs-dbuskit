@@ -65,5 +65,6 @@
   UKNotNil(returnValue);
   UKTrue([returnValue isKindOfClass: [NSString class]]);
   UKTrue([returnValue length] > 0);
+  [call release];
 }
 @end

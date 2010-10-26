@@ -157,6 +157,7 @@ static NSDictionary *basicSigsAndClasses;
                                                           name: nil
                                                         parent: nil];
     UKObjectsEqual([basicSigsAndClasses objectForKey: sig] ,[arg objCEquivalent]);
+    [arg release];
   }
 }
 
