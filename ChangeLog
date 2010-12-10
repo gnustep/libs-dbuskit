@@ -1,3 +1,9 @@
+2010-12-10 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKPort.m: Fix crash in -isEqual: when the receiver is
+	being compared with a NSPort subclass other than DKPort
+	(reported by Philippe Roussel).
+
 2010-10-26 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Tests/TestDKMethodCall.m
