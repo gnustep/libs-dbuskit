@@ -86,11 +86,6 @@ DKRelease(void *ptr);
 
 
 
-/*
- * Global state for referencing connections:
- */
-static NSMapTable *activeConnections;
-static NSRecursiveLock *activeConnectionLock;
 
 
 @interface DKEndpoint (DBusEndpointPrivate)
@@ -128,6 +123,39 @@ static NSRecursiveLock *activeConnectionLock;
   DKRunLoopContext *ctx;
 }
 @end
+
+@interface DKEndpointManager: NSObject
+{
+  /**
+   * The thread running the runloop which interacts with libdbus.
+   */
+  NSThread *workerThread;
+  /**
+   * Maps active DBusConnections to the corresponding DKEndpoints.
+   */
+  NSMapTable *activeConnections;
+  /**
+   * Keeps track of DBusConnections that no longer work but for which recovery
+   * is being attempted.
+   */
+  NSMapTable *faultedConnections;
+  /**
+   * Lock to protect changes to the connection tables.
+   */
+  NSRecursiveLock *connectionStateLock;
+}
+
++ (id)sharedEndpointManager;
+
+- (id)endpointForDBusConnection: (DBusConnection*)connection
+                    mergingInfo: (NSDictionary*)info;
+
+- (void)start;
+
+- (void)attemptRecoveryForEndpoint: (DKEndpoint*)endpoint;
+@end
+
+static DKEndpointManager *sharedManager;
 
 @implementation DKEndpoint
 

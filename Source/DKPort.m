@@ -246,6 +246,15 @@ enum {
   {
     return YES;
   }
+  /*
+   * Check whether the class of other is also DKPort. Only then we stand any
+   * chance of being equal to it. Otherwise, we might crash because most NSPort
+   * subclasses won't respond to -endpoint.
+   */
+  if (NO  == [other isKindOfClass: [DKPort class]])
+  {
+    return NO;
+  }
   return ([endpoint isEqual: [other endpoint]]
     && [remote isEqual: [other serviceName]]);
 }
