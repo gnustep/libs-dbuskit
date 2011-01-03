@@ -113,6 +113,11 @@ didStartElement: (NSString*)aNode
   DKIntrospectionNode *newNode = nil;
   id leaf = [self leaf];
   BOOL isRoot = (0 == xmlDepth);
+  // Ignore the !doctype if the parser exposes it.
+  if (isRoot && [@"!doctype" isEqualToString: aNode])
+  {
+    return;
+  }
   xmlDepth++;
   NSDebugLog(@"Starting <%@> node '%@' at depth %lu.",
     aNode,
@@ -239,6 +244,11 @@ didStartElement: (NSString*)aNode
    namespaceURI: (NSString*)aNamespaceURI
   qualifiedName: (NSString*)aQualifierName
 {
+  // Ignore the doctype if the parser exposes it
+  if ((0 == xmlDepth) && [@"!doctype" isEqualToString: aNode])
+  {
+    return;
+  }
   NSDebugMLog(@"Ended node: %@", aNode);
   xmlDepth--;
   [self popStack];

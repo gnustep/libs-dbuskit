@@ -96,6 +96,11 @@ enum
           atEndpoint: (DKEndpoint*)ep;
 @end
 
+
+@interface NSXMLParser (GSSloppyParserMode)
+- (void) _setAcceptHTML: (BOOL)yesno;
+@end
+
 static inline void DKBuildMethodCacheForProxy(void *p);
 
 DKInterface *_DKInterfaceIntrospectable;
@@ -876,6 +881,12 @@ static void DKInitIntrospectionThread(void *data);
     // Set up parser and delegate:
     parser = [[NSXMLParser alloc] initWithData: introspectionData];
     [parser setDelegate: delegate];
+
+    // Workaround for situations where gnustep-base is using its sloppy parser:
+    if ([parser respondsToSelector: @selector( _setAcceptHTML:)])
+    {
+      [parser  _setAcceptHTML: YES];
+    }
 
     // Generate the introspection tree:
     [parser parse];
