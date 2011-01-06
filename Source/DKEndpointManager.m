@@ -72,10 +72,11 @@ static DKEndpointManager *sharedManager;
  * 3. Lock the producer lock since multiple threads might want to write to the
  *    buffer.
  * 4. Check again if the buffer hasn't filled in the meantime.
- * 5. Insert the new request into the buffer.
- * 6. Increment the producer counter.
- * 7. Unlock the producer lock.
- * 8. If the consumer thread has not been  instructed to start draining the
+ * 5. Retain the target for its trip to the other thread.
+ * 6. Insert the new request into the buffer.
+ * 7. Increment the producer counter.
+ * 8. Unlock the producer lock.
+ * 9. If the consumer thread has not been  instructed to start draining the
  *    buffer, do so.
  */
 #define DKRingInsert(x) do {\
@@ -95,16 +96,19 @@ static DKEndpointManager *sharedManager;
 	sched_yield();\
       }\
     }\
+  [x.target retain];\
   ringBuffer[DKMaskIndex(producerCounter)] = x;\
   __sync_fetch_and_add(&producerCounter, 1);\
   [producerLock unlock];\
-  if (NO == willDrain)\
+  NSDebugMLog(@"Inserting into ringbuffer (remaining capacity: %lu).",\
+    DKRingSpace);\
+  if (NO == DKRingEmpty)\
   {\
+    NSDebugMLog(@"Stuff in buffer: Scheduling buffer draining.");\
     [self performSelector: @selector(drainBuffer:)\
                  onThread: workerThread\
 	       withObject: nil\
             waitUntilDone: NO];\
-    __sync_fetch_and_add(&willDrain, 1);\
   }\
 } while (0)
 
@@ -115,11 +119,16 @@ static DKEndpointManager *sharedManager;
 #define DKRingRemove(x) do {\
   if (NO == DKRingEmpty)\
   {\
+    NSDebugMLog(@"Removing element at %lu from ring buffer", DKMaskIndex(consumerCounter));\
     x = ringBuffer[DKMaskIndex(consumerCounter)];\
     ringBuffer[DKMaskIndex(consumerCounter)] = (DKRingBufferElement){nil, NULL, nil, NULL};\
+    [x.target autorelease];\
     __sync_fetch_and_add(&consumerCounter, 1);\
   }\
+  NSDebugMLog(@"(new capacity: %lu).",\
+    DKRingSpace);\
 } while (0)
+
 @implementation DKEndpointManager
 
 + (void)initialize
@@ -319,6 +328,7 @@ static DKEndpointManager *sharedManager;
   if ([workerThread isEqual: [NSThread currentThread]])
   {
     IMP performRequest = [target methodForSelector: selector];
+    NSDebugMLog(@"Performing on current thread");
     NSAssert2(performRequest, @"Could not perform selector %@ on %@",
       selector,
       target);
@@ -333,9 +343,9 @@ static DKEndpointManager *sharedManager;
    * the request.
    */
   DKRingInsert(request);
-  while (-1 == retVal)
+  while ((-1 == retVal) && (YES == doWait))
   {
-    if (++count % 16)
+    if (count % 16)
     {
       sched_yield();
     }
@@ -347,7 +357,7 @@ static DKEndpointManager *sharedManager;
 {
   DKRingBufferElement element = {nil, NULL, nil, NULL};
   NSInteger *returnPointer = NULL;
-  __sync_bool_compare_and_swap(&willDrain, YES, NO);
+  NSDebugMLog(@"Started draining buffer");
   DKRingRemove(element);
 
   if (nil != element.target)
@@ -394,13 +404,18 @@ static DKEndpointManager *sharedManager;
    * If there are further elements to remove, we will reschedule draining the
    * buffer.
    */
-  if ((NO == DKRingEmpty) && (NO == willDrain))
+/*  if ((NO == DKRingEmpty))
   {
+    NSDebugMLog(@"Elements remain in buffer, rescheduling draining");
     __sync_bool_compare_and_swap(&willDrain, NO, YES);
     [self performSelector: @selector(drainBuffer:)
                  onThread: workerThread
 	       withObject: nil
             waitUntilDone: NO];
   }
+  else
+  {
+    __sync_bool_compare_and_swap(&willDrain, YES, NO);
+  }*/
 }
 @end
