@@ -1,3 +1,12 @@
+2011-01-03 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProxy.m
+	* Source/DKIntrospectionParserDelegate.m:
+	Tweak compatibility with different XML parser versions in
+	gnustep-base.
+	* Documentation/readme.texi: Fix typo.
+	* README: Regenerate.
+
 2010-12-10 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKPort.m: Fix crash in -isEqual: when the receiver is

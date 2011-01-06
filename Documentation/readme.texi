@@ -23,12 +23,12 @@ installation.
 @section License
 
 The DBusKit library is covered under the  GNU Lesser Public License.
-This means you can use these it in any program (even non-free
-programs). If you distribute the library along with your program, 
-you must make the improvements you have made freely available. You
-should read the COPYING file in the root directory of the framework
-distribution for more information. All files in the @file{Source},
-@file{Headers}, and @file{Tests} directories are covered under the LGPL.
+This means you can use it in any program (even non-free programs). If
+you distribute the library along with your program, you must make the
+improvements you have made freely available. You should read the
+COPYING file in the root directory of the framework distribution for
+more information. All files in the @file{Source}, @file{Headers}, and
+@file{Tests} directories are covered under the LGPL.
 
 The associated tools and examples are covered under the GNU Public
 License. This means if you make changes to these programs, you cannot

@@ -5,6 +5,19 @@ AC_PROG_CC(clang gcc cc c1 egcs)
 AC_PROG_CPP
 AC_LANG(Objective C)
 PKG_PROG_PKG_CONFIG([])
+AC_LANG_PUSH(C)
+AC_MSG_CHECKING([whether the compiler supports atomic operations]);
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[typedef int atomic;]],
+    [[atomic x; atomic y; __sync_bool_compare_and_swap(&x, y, y + 1);]])],
+  have_atomic=yes,
+have_atomic=no);
+  if test "$have_atomic" = "yes"; then
+    AC_MSG_RESULT([yes]);
+  else
+      AC_MSG_RESULT([no]);
+      AC_MSG_ERROR([Please use a compiler that supports atomic operations.]);
+  fi
+AC_LANG_POP(C)
 
 # FIXME: We need a proper test for libobjc2 for some advanced features (e.g.
 # the declared-properties - dbus-properties bridge).

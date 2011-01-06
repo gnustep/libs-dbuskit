@@ -37,6 +37,7 @@
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #import "DBusKit/DKPort.h"
+#import "DKEndpointManager.h"
 
 /*
  * Integration functions:
@@ -124,79 +125,13 @@ DKRelease(void *ptr);
 }
 @end
 
-@interface DKEndpointManager: NSObject
-{
-  /**
-   * The thread running the runloop which interacts with libdbus.
-   */
-  NSThread *workerThread;
-  /**
-   * Maps active DBusConnections to the corresponding DKEndpoints.
-   */
-  NSMapTable *activeConnections;
-  /**
-   * Keeps track of DBusConnections that no longer work but for which recovery
-   * is being attempted.
-   */
-  NSMapTable *faultedConnections;
-  /**
-   * Lock to protect changes to the connection tables.
-   */
-  NSRecursiveLock *connectionStateLock;
-}
 
-+ (id)sharedEndpointManager;
-
-- (id)endpointForDBusConnection: (DBusConnection*)connection
-                    mergingInfo: (NSDictionary*)info;
-
-- (void)start;
-
-- (void)attemptRecoveryForEndpoint: (DKEndpoint*)endpoint;
-@end
-
-static DKEndpointManager *sharedManager;
 
 @implementation DKEndpoint
-
-+ (void)initialize
-{
-  if (self != [DKEndpoint class])
-  {
-    return;
-  }
-  /*
-   * It might be smart to put DBus into thread-safe mode by default because
-   * there is a fair chance of missing NSWillBecomeMultiThreadedNotification.
-   * (This code might be executed pretty late in the application lifecycle.)
-   * Note: We could define our own hooks and use NSLock and friends, but that's
-   * pretty pointless because DBus will use pthreads itself, just as NSLock
-   * would.
-   */
-   dbus_threads_init_default();
-
-   /*
-    * Further initializations unfortunately need to be done on a per-connection
-    * basis. We can only optimize by reusing existing connections (D-Bus
-    * will recycle them behind our back anyways). We do this by weakly
-    * referencing the connections and DKEndpoint objects in a global
-    * map-table. They will be removed from there prior to deallocation. The
-    * downside is that we need to protect the table with a lock. (A capacity of
-    * 3 is a good guess because we will probably at most need a connection to
-    * the session and one to the system bus).
-    */
-    activeConnections = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
-      NSNonRetainedObjectMapValueCallBacks,
-      3);
-    activeConnectionLock = [NSRecursiveLock new];
-    NSAssert((activeConnections && activeConnectionLock),
-      @"Could not allocate map table and lock for D-Bus connection management");
-}
 
 - (id) initWithConnection: (DBusConnection*)conn
                      info: (NSDictionary*)infoDict
 {
-  DKEndpoint *oldConnection = nil;
   BOOL initSuccess = NO;
 
   if (nil == (self = [super init]))
@@ -211,110 +146,56 @@ static DKEndpointManager *sharedManager;
     return nil;
   }
 
-  [activeConnectionLock lock];
-  NS_DURING
-  {
 
-    /* Check wether we can reuse an old connection. */
-    oldConnection = NSMapGet(activeConnections, (void*)conn);
-    if (nil != oldConnection)
-    {
-      NSDebugMLog(@"Will reuse old connection");
-      // Retain the old connection to make it stick around:
-      [oldConnection retain];
-      [oldConnection _mergeInfo: infoDict];
-    }
-  }
-  NS_HANDLER
+  /*
+   * Reference the connection on the dbus level so that it sticks around until
+   * -cleanup is called.
+   */
+  dbus_connection_ref(conn);
+  connection = conn;
+  ctx = [[DKRunLoopContext alloc] _initWithConnection: connection];
+
+  // Install our runLoop hooks:
+  if ((initSuccess = (nil != ctx)))
   {
-    [activeConnectionLock unlock];
-    [localException raise];
-  }
-  NS_ENDHANDLER
-  if (nil != oldConnection)
-  {
-    [self release];
-    [activeConnectionLock unlock];
-    return oldConnection;
+    initSuccess = (BOOL)dbus_connection_set_timeout_functions(connection,
+      DKTimeoutAdd,
+      DKTimeoutRemove,
+      DKTimeoutToggled,
+      (void*)ctx,
+      DKRelease);
   }
 
-  NS_DURING
+  if (initSuccess)
   {
-    // We keep the lock until we're done initializing.
-
-    /*
-     * Reference the connection on the dbus level so that it sticks around until
-     * -cleanup is called.
-     */
-    dbus_connection_ref(conn);
-    connection = conn;
-    ctx = [[DKRunLoopContext alloc] _initWithConnection: connection];
-
-    // Install our runLoop hooks:
-    if ((initSuccess = (nil != ctx)))
-    {
-      initSuccess = (BOOL)dbus_connection_set_timeout_functions(connection,
-        DKTimeoutAdd,
-        DKTimeoutRemove,
-        DKTimeoutToggled,
-        (void*)ctx,
-        DKRelease);
-    }
-
-    if (initSuccess)
-    {
-      initSuccess = (BOOL)dbus_connection_set_watch_functions(connection,
-        DKWatchAdd,
-        DKWatchRemove,
-        DKWatchToggled,
-        (void*)ctx,
-        DKRelease);
-    }
-
-    if (initSuccess)
-    {
-      dbus_connection_set_wakeup_main_function(connection,
-        DKWakeUp,
-        (void*)ctx,
-        DKRelease);
-      dbus_connection_set_dispatch_status_function(connection,
-        DKUpdateDispatchStatus,
-        (void*)ctx,
-        DKRelease);
-    }
-
-    if (!initSuccess)
-    {
-      [self cleanup];
-    }
+    initSuccess = (BOOL)dbus_connection_set_watch_functions(connection,
+      DKWatchAdd,
+      DKWatchRemove,
+      DKWatchToggled,
+      (void*)ctx,
+      DKRelease);
   }
-  NS_HANDLER
+
+  if (initSuccess)
   {
-    [activeConnectionLock unlock];
-    [localException raise];
+    dbus_connection_set_wakeup_main_function(connection,
+      DKWakeUp,
+      (void*)ctx,
+      DKRelease);
+    dbus_connection_set_dispatch_status_function(connection,
+      DKUpdateDispatchStatus,
+      (void*)ctx,
+      DKRelease);
   }
-  NS_ENDHANDLER
 
   if (!initSuccess)
   {
-    [activeConnectionLock unlock];
+    [self cleanup];
     [self release];
     return nil;
   }
 
-  NS_DURING
-  {
-    NSMapInsert(activeConnections, connection, self);
-  }
-  NS_HANDLER
-  {
-    [activeConnectionLock unlock];
-    [localException raise];
-  }
-  NS_ENDHANDLER
-
-  [activeConnectionLock unlock];
-  ASSIGN(info, infoDict);
+    ASSIGN(info, infoDict);
   return self;
 }
 
@@ -590,7 +471,8 @@ static DKEndpointManager *sharedManager;
  */
 - (void)scheduleInCurrentThread
 {
-  [ctx reschedule];
+  NSWarnMLog(@"Calling -scheduleInCurrentThread has been deprecated and no longer operational.");
+  return;
 }
 
 /**
@@ -610,28 +492,11 @@ static DKEndpointManager *sharedManager;
 {
   if (connection != NULL)
   {
-    // Make this endpoint unavailable to other threads:
-    [activeConnectionLock lock];
-    NS_DURING
-    {
-      if (connection != NULL)
-      {
-        NSMapRemove(activeConnections, connection);
-
-        dbus_connection_unref(connection);
-        connection = NULL;
-	[ctx release];
-      }
-    }
-    NS_HANDLER
-    {
-      [activeConnectionLock unlock];
-      [localException raise];
-    }
-    NS_ENDHANDLER
-    [activeConnectionLock unlock];
+    [[DKEndpointManager sharedEndpointManager] removeEndpointForDBusConnection: connection];
+    dbus_connection_unref(connection);
+    connection = NULL;
+    [ctx release];
   }
-
 }
 
 /* Methods to access information about the bus: */
@@ -913,9 +778,9 @@ static DKEndpointManager *sharedManager;
  * Lets libdbus add a timeout.
  */
 - (BOOL)addTimeout: (DBusTimeout*)timeout
-      withInterval: (int)milliSeconds
 {
   NSTimer *timer = nil;
+  int milliSeconds = dbus_timeout_get_interval(timeout);
   NSTimeInterval interval = (milliSeconds / 1000.0);
   NSAssert(timeout, @"Missing timeout data during D-Bus event handling.");
   // Just return if we already have a timer for this timeout:
@@ -1063,8 +928,7 @@ DKTimeoutAdd(DBusTimeout *timeout, void *data)
   {
     return TRUE;
   }
-  return (dbus_bool_t)[ctx addTimeout: timeout
-                         withInterval: dbus_timeout_get_interval(timeout)];
+  return (dbus_bool_t)[ctx addTimeout: timeout];
 }
 
 static void
