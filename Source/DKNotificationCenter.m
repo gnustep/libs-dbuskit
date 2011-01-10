@@ -560,7 +560,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                 interface: (NSString*)interfaceName
                                    sender: (DKProxy*)sender
                               destination: (DKProxy*)destination
-                        filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, ...;
+                        filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, va_list filters;
 
 - (void)_installHandler;
 
@@ -627,6 +627,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   {
     return nil;
   }
+  // Trigger initialization of the bus proxy:
+  [DKDBus busWithBusType: type];
   endpoint = [[DKEndpoint alloc] initWithWellKnownBus: (DBusBusType)type];
 
   if (nil == endpoint)
@@ -874,18 +876,18 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 // Observation management methods doing the actual work:
 
 /**
- * Create an observable matching the information specified.
+ * Create an observable matching the information specified. The va_start and
+ * va_end calls for <var>filters</var> should be done by calling code.
  */
 - (DKObservable*)_observableForSignalName: (NSString*)signalName
                                 interface: (NSString*)interfaceName
                                    sender: (DKProxy*)sender
                               destination: (DKProxy*)destination
-                        filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, ...
+                        filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, va_list filters
 {
-  va_list filters;
-  uintptr_t filterOrIndex = 0;
-  NSUInteger count = 1;
+  int thisIndex = 0;
   NSString *thisFilter = nil;
+  BOOL processNextFilter = NO;
   DKObservable *observable = [[[DKObservable alloc] initWithBusType: [endpoint DBusBusType]] autorelease];
 
   [observable filterSignalName: signalName];
@@ -898,22 +900,25 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
          forArgumentAtIndex: firstIndex];
   }
 
-  va_start(filters, firstIndex);
-  while (0 != (filterOrIndex = va_arg(filters, uintptr_t)))
+  do
   {
-    if (0 == count)
+    thisFilter = va_arg(filters, id);
+    if (thisFilter != nil)
     {
-      thisFilter = (NSString*)filterOrIndex;
-      count++;
+      thisIndex = va_arg(filters, int);
     }
-    else if (1 == count)
+
+    if ((thisFilter != nil) && (thisIndex != 0))
     {
       [observable filterValue: thisFilter
-           forArgumentAtIndex: (NSUInteger)filterOrIndex];
-      count = 0;
+           forArgumentAtIndex: thisIndex];
+      processNextFilter = YES;
     }
-  }
-  va_end(filters);
+    else
+    {
+      processNextFilter = NO;
+    }
+  } while (processNextFilter);
   return observable;
 }
 
@@ -1408,12 +1413,46 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 }
 
 /**
+ * This method will be called from the runloop and will replace the standins with
+ * an actual proxies before sending out the notification.
+ */
+- (void)_fixupProxyAndNotify: (NSDictionary*)infoDict
+{
+  DKSignal *signal = [infoDict objectForKey: @"signal"];
+  NSDictionary *userInfo = [infoDict objectForKey: @"userInfo"];
+  NSMutableDictionary *fixedInfo = [NSMutableDictionary dictionary];
+  NSNotification  *notification = nil;
+  DKProxy *senderProxy = [(DKObjectPathNode*)[infoDict objectForKey: @"standin"] proxy];
+  NSArray *matchingObservables = [infoDict objectForKey: @"matches"];
+  NSEnumerator *userInfoEnum = [userInfo keyEnumerator];
+  NSString *key = nil;
+
+  //Fixup the userInfo:
+  while (nil != (key = [userInfoEnum nextObject]))
+  {
+    id object = [userInfo objectForKey: key];
+    if ([object isKindOfClass: [DKProxyStandin class]])
+    {
+      object = [(DKProxyStandin*)object proxy];
+    }
+    [fixedInfo setObject: object
+                  forKey: key];
+  }
+  notification = [NSNotification notificationWithName: [self _notificationNameForSignal: signal]
+                                               object: senderProxy
+					     userInfo: fixedInfo];
+  [matchingObservables makeObjectsPerformSelector: @selector(notifyWithNotification:)
+                                       withObject: notification];
+
+}
+
+/**
  * Handles a message caught by the handler. If the signal is not yet known to
  * the center, this will generate arguments from the D-Bus signature. This
  * method also deserializes the message into an userInfo dictionary for use in
  * the notification. This is necessary to determine whether the message matches
- * one or more of the registered observables. If so, a notification will be
- * generated and dispatched to all observers.
+ * one or more of the registered observables. If so, generation and dispatching
+ * to the observers will be scheduled.
  */
 - (BOOL)_handleMessage: (DBusMessage*)msg
 {
@@ -1455,8 +1494,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   {
     DBusMessageIter iter;
     NSMutableDictionary *userInfo = nil;
+    NSDictionary *infoDict = nil;
     NSArray *matchingObservables = nil;
-    NSNotification *notification = nil;
 
     /*
      * Copying the signal allows us to set the sender as its parent (circumventing
@@ -1468,11 +1507,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                      inInterface: interface];
     DKSignal *theSignal = [[origSignal copy] autorelease];
 
-    /* Construct a proxy for the object emitting the signal: */
-    DKProxy *senderProxy = [[[DKProxy alloc] initWithEndpoint: endpoint
-                                                   andService: sender
-                                                      andPath: path] autorelease];
-    [theSignal setParent: senderProxy];
+    /* Construct a intermediary proxy for the object emitting the signal: */
+    DKProxyStandin *senderNode = [[[DKProxyStandin alloc] initWithEndpoint: endpoint
+                                                                   service: sender
+                                                                      path: path] autorelease];
+    [theSignal setParent: senderNode];
 
     userInfo = [[NSMutableDictionary alloc] initWithObjectsAndKeys: signal, @"member",
       interface, @"interface",
@@ -1510,11 +1549,16 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       [lock unlock];
       return NO;
     }
-    notification = [NSNotification notificationWithName: [self _notificationNameForSignal: origSignal]
-                                                 object: senderProxy
-					       userInfo: userInfo];
-    [matchingObservables makeObjectsPerformSelector: @selector(notifyWithNotification:)
-                                         withObject: notification];
+    infoDict = [NSDictionary dictionaryWithObjectsAndKeys: senderNode, @"standin",
+      userInfo, @"userInfo",
+      origSignal, @"signal",
+      matchingObservables, @"matches", nil];
+    // Schedule sending out the notifications:
+    [[NSRunLoop currentRunLoop] performSelector: @selector(_fixupProxyAndNotify:)
+                                         target: self
+                                       argument: infoDict
+                                          order: 0
+                                          modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
   }
   NS_HANDLER
   {

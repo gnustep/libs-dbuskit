@@ -135,7 +135,15 @@
     DKArgument *arg = (DKArgument*)[args objectAtIndex: index];
     NSString *annotatedKey = [arg annotationValueForKey: @"org.gnustep.openstep.notification.key"];
 
-    id value = [arg unmarshalledObjectFromIterator: iter];
+    id value = nil;
+    if (DBUS_TYPE_OBJECT_PATH == [arg DBusType])
+    {
+      value = [arg unmarshalledProxyStandinFromIterator: iter];
+    }
+    else
+    {
+      value = [arg unmarshalledObjectFromIterator: iter];
+    }
     if (nil == value)
     {
       value = [NSNull null];

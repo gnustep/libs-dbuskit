@@ -885,9 +885,9 @@ static NSRecursiveLock *activeConnectionLock;
  * Lets libdbus add a timeout.
  */
 - (BOOL)addTimeout: (DBusTimeout*)timeout
-      withInterval: (int)milliSeconds
 {
   NSTimer *timer = nil;
+  int milliSeconds = dbus_timeout_get_interval(timeout);
   NSTimeInterval interval = (milliSeconds / 1000.0);
   NSAssert(timeout, @"Missing timeout data during D-Bus event handling.");
   // Just return if we already have a timer for this timeout:
@@ -1035,8 +1035,7 @@ DKTimeoutAdd(DBusTimeout *timeout, void *data)
   {
     return TRUE;
   }
-  return (dbus_bool_t)[ctx addTimeout: timeout
-                         withInterval: dbus_timeout_get_interval(timeout)];
+  return (dbus_bool_t)[ctx addTimeout: timeout];
 }
 
 static void

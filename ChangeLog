@@ -1,3 +1,30 @@
+2011-01-10 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m:
+	Add specialised deserialisation method for proxy-standins.
+	* Source/DKObjectPathNode.h
+	* Source/DKObjectPathNode.m:
+	Add DKProxyStandin class to be used by the notification
+	center while generating notifications.
+	* Source/DKSignal.m: Deserialise DBUS_OBJECT_PATH as a standin,
+	not as a proxy.
+	* Source/DKEndpoint.m: Simplify -addTimeout: callback method.
+	* Source/DKProxy.m: Generate method cache for the bus objects on
+	init time. (The methods will be used internally anyways.)
+	* Source/DKNotificationCenter.m: Avoid reentrancy when handling
+	signals by a) making sure the bus objects are already available
+	when initialising the notification center and b) using a
+	DKProxyStandin when checking whether the signal should be
+	handled and scheduling delivery of the notification on the run
+	loop. Also fix a stupid va_arg bug.
+
+	Attempt to fix reentrancy problems in DKNotificationCenter.
+	Previously, handling a D-Bus signal could trigger the generation
+	of DKProxies. Those would in turn would call back into libdbus
+	code where things would get locked up. (Problem originally
+	reported by Philippe Roussel.)
+
 2011-01-03 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKProxy.m

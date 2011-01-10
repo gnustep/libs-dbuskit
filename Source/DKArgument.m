@@ -39,6 +39,7 @@
 
 #import "DKProxy+Private.h"
 #import "DKEndpoint.h"
+#import "DKObjectPathNode.h"
 #import "DKOutgoingProxy.h"
 #import "DKArgument.h"
 
@@ -944,6 +945,28 @@ DKDBusTypeForUnboxingObject(id object)
   dbus_message_iter_get_basic(iter, (void*)&buffer);
 
   return [self boxedValueForValueAt: (void*)&buffer];
+}
+
+-(id) unmarshalledProxyStandinFromIterator: (DBusMessageIter*)iter
+{
+  uint64_t buffer = 0;
+  DKProxy *ancestor = [self proxyParent];
+  NSString *service = [ancestor _service];
+  DKEndpoint *endpoint = [ancestor _endpoint];
+  NSString *path = nil;
+  DKProxyStandin *standin = nil;
+  // Check that the method contains the expected type.
+  NSAssert((dbus_message_iter_get_arg_type(iter) == DBusType),
+    @"Type mismatch between D-Bus message and introspection data.");
+
+  dbus_message_iter_get_basic(iter, (void*)&buffer);
+  path = [[NSString alloc] initWithUTF8String: *(char**)buffer];
+  standin = [[[DKProxyStandin alloc] initWithEndpoint: endpoint
+	                                      service: service
+	                                         path: path] autorelease];
+  [path release];
+  return standin;
+
 }
 
 - (void) marshallArgumentAtIndex: (NSInteger)index
