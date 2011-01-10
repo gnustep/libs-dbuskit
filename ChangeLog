@@ -1,5 +1,10 @@
 2011-01-10 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKArgument.m: Be explicit about the buffer type for
+	object path arguments when generating standins.
+
+2011-01-10 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.h
 	* Source/DKArgument.m:
 	Add specialised deserialisation method for proxy-standins.

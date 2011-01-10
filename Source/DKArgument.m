@@ -949,7 +949,7 @@ DKDBusTypeForUnboxingObject(id object)
 
 -(id) unmarshalledProxyStandinFromIterator: (DBusMessageIter*)iter
 {
-  uint64_t buffer = 0;
+  const char *buffer = 0;
   DKProxy *ancestor = [self proxyParent];
   NSString *service = [ancestor _service];
   DKEndpoint *endpoint = [ancestor _endpoint];
@@ -960,7 +960,7 @@ DKDBusTypeForUnboxingObject(id object)
     @"Type mismatch between D-Bus message and introspection data.");
 
   dbus_message_iter_get_basic(iter, (void*)&buffer);
-  path = [[NSString alloc] initWithUTF8String: *(char**)buffer];
+  path = [[NSString alloc] initWithUTF8String: buffer];
   standin = [[[DKProxyStandin alloc] initWithEndpoint: endpoint
 	                                      service: service
 	                                         path: path] autorelease];
