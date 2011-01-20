@@ -124,3 +124,69 @@
   [super dealloc];
 }
 @end
+
+
+@implementation DKProxyStandin
+
+- (id)initWithEndpoint: (DKEndpoint*)anEndpoint
+               service: (NSString*)aService
+                  path: (NSString*)aPath
+{
+  if (nil == (self = [super initWithName: @"standin"
+                                  parent: nil]))
+  {
+    return nil;
+  }
+
+  if (NO == (anEndpoint && [aService length]))
+  {
+    [self release];
+    return nil;
+  }
+
+  if (0 == [aPath length])
+  {
+    aPath = @"/";
+  }
+
+  ASSIGN(endpoint, anEndpoint);
+  ASSIGN(service, aService);
+  ASSIGN(path, aPath);
+  return self;
+}
+
+- (DKEndpoint*)_endpoint
+{
+  return endpoint;
+}
+
+- (NSString*)_service
+{
+  return service;
+}
+
+- (NSString*)_path
+{
+  return [[path copy] autorelease];
+}
+
+- (DKProxyStandin*)proxyParent
+{
+  return self;
+}
+
+- (DKProxy*)proxy
+{
+  return [[[DKProxy alloc] initWithEndpoint: endpoint
+                                 andService: service
+                                    andPath: path] autorelease];
+}
+
+- (void)dealloc
+{
+  DESTROY(endpoint);
+  DESTROY(service);
+  DESTROY(path);
+  [super dealloc];
+}
+@end

@@ -1095,6 +1095,7 @@ static DKProxy *sessionBus;
     sessionBus = self;
   }
 
+  [self DBusBuildMethodCache];
   [busLock unlock];
   return self;
 }

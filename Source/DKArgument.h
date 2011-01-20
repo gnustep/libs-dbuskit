@@ -123,6 +123,13 @@ extern NSString *DKArgumentDirectionOut;
  */
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter;
 
+
+/**
+ * Returns a standin for a proxy for an object path argument. This method is
+ * only needed by the notification center.
+ */
+-(id) unmarshalledProxyStandinFromIterator: (DBusMessageIter*)iter;
+
 /**
  * Marshall a value from an NSInvocation into an D-Bus message iterator set up
  * for writing. index indicates the index of the argument (in the invocation) to

@@ -23,7 +23,7 @@
 
 #import "DKIntrospectionNode.h"
 
-@class DKInterface, DKObjectPathNode, NSMutableArray, NSMutableDictionary;
+@class DKEndpoint, DKInterface, DKObjectPathNode, NSMutableArray, NSMutableDictionary, NSString;
 
 /**
  * The DKObjectPathNode protocol is implemented by classes representing objects
@@ -66,5 +66,23 @@
 /**
  * Returns a proxy representing the object specified by this node.
  */
+- (DKProxy*)proxy;
+@end
+
+
+/**
+ * Intermediary object that can be replaced with a real proxy when needed.
+ */
+@interface DKProxyStandin: DKIntrospectionNode
+{
+  DKEndpoint *endpoint;
+  NSString *service;
+  NSString *path;
+}
+
+- (id)initWithEndpoint: (DKEndpoint*)endpoint
+               service: (NSString*)aService
+                  path: (NSString*)aPath;
+
 - (DKProxy*)proxy;
 @end
