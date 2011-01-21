@@ -28,6 +28,7 @@
 #import "DKProxy+Private.h"
 
 #import "DKEndpoint.h"
+#import "DKEndpointManager.h"
 
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
@@ -629,7 +630,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   }
   // Trigger initialization of the bus proxy:
   [DKDBus busWithBusType: type];
-  endpoint = [[DKEndpoint alloc] initWithWellKnownBus: (DBusBusType)type];
+  ASSIGN(endpoint,[[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: (DBusBusType)type]);
 
   if (nil == endpoint)
   {

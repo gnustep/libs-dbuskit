@@ -72,7 +72,7 @@ typedef struct {
   DKRingBufferElement *ringBuffer;
 
   /**
-   * Free-running counter for the producer thread
+   * Free-running counter for the producer threads
    */
   uint32_t producerCounter;
 
@@ -114,6 +114,20 @@ typedef struct {
                     mergingInfo: (NSDictionary*)info;
 
 /**
+ * Returns an endpoint connected to an arbitrary address. This is only useful
+ * for specific cases where you don't want to use one of the standard message
+ * busses. Use -endpointForWellKnownBus: to get a connection for one of those.
+ */
+- (DKEndpoint*)endpointForConnectionTo: (NSString*)address;
+
+/**
+ * Returns an endpoint connected to one of the well-known message busses as per
+ * D-Bus documentation (i.e. DBUS_BUS_SYSTEM, DBUS_BUS_SESSION or
+ * DBUS_BUS_STARTER).
+ */
+- (DKEndpoint*)endpointForWellKnownBus: (DBusBusType)type;
+
+/**
  * Method to be called by endpoints that are being deallocated.
  */
 - (void)removeEndpointForDBusConnection: (DBusConnection*)connection;
@@ -132,9 +146,9 @@ typedef struct {
 
 /**
  * Inserts the request into the ring buffer and schedules it for draining in the
- * worker thread. This method is a synchonisation point and will spin until the
- * request is completed. It should only be used when a return value is required
- * by the libdbus API.
+ * worker thread. With <var>doWait</var> set to YES this method becomes a
+ * synchonisation point: It will spin until the request has completed. This
+ * should only be used when a return value is required by the libdbus API.
  */
 - (BOOL)boolReturnForPerformingSelector: (SEL)selector
                                  target: (id)target

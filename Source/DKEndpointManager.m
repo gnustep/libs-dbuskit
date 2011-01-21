@@ -31,6 +31,7 @@
 #import <Foundation/NSRunLoop.h>
 #import <Foundation/NSThread.h>
 #import <Foundation/NSTimer.h>
+#import <Foundation/NSValue.h>
 
 #include <sched.h>
 
@@ -76,7 +77,7 @@ static DKEndpointManager *sharedManager;
  * 6. Insert the new request into the buffer.
  * 7. Increment the producer counter.
  * 8. Unlock the producer lock.
- * 9. If the consumer thread has not been  instructed to start draining the
+ * 9. If the consumer thread has not been instructed to start draining the
  *    buffer, do so.
  */
 #define DKRingInsert(x) do {\
@@ -253,6 +254,104 @@ static DKEndpointManager *sharedManager;
   return [endpoint autorelease];
 }
 
+/**
+ * For use with non-well-known buses, not exteremly useful, but generic.
+ */
+- (DKEndpoint*)endpointForConnectionTo: (NSString*)endpointName
+{
+  DBusError err;
+  /* Note: dbus_connection_open_private() would be an option here, but would
+   * require us to take care of the connections ourselves. Right now, this does
+   * not seem to be worth the effort, so we let D-Bus do this for us (hence we
+   * call dbus_connection_unref() and not dbus_connection_close() in -cleanup).
+   */
+  DBusConnection *conn = NULL;
+  NSDictionary *theInfo = [[NSDictionary alloc] initWithObjectsAndKeys: endpointName,
+    @"address", nil];
+  DKEndpoint *endpoint = nil;
+  dbus_error_init(&err);
+
+  conn = dbus_connection_open([endpointName UTF8String], &err);
+  if (NULL == conn)
+  {
+    [theInfo release];
+    NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
+      err.name,
+      err.message);
+    dbus_error_free(&err);
+    return nil;
+  }
+  dbus_error_free(&err);
+
+  NS_DURING
+  {
+    endpoint = [self endpointForDBusConnection: conn
+                                   mergingInfo: theInfo];
+  }
+  NS_HANDLER
+  {
+    [theInfo release];
+    dbus_connection_unref(conn);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  [theInfo release];
+
+  // -_initWithConnection did increase the refcount, we release ownership of the
+  // connection:
+  dbus_connection_unref(conn);
+  return endpoint;
+}
+
+- (DKEndpoint*)endpointForWellKnownBus: (DBusBusType)type
+{
+  DBusError err;
+  DBusConnection *conn = NULL;
+  NSDictionary *theInfo = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: type],
+    @"wellKnownBus", nil];
+  DKEndpoint *endpoint = nil;
+  dbus_error_init(&err);
+  conn = dbus_bus_get(type, &err);
+  if (NULL == conn)
+  {
+    [theInfo release];
+    NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
+      err.name,
+      err.message);
+    dbus_error_free(&err);
+    return nil;
+  }
+  dbus_error_free(&err);
+
+  /*
+   * dbus_bus_get() will cause _exit() to be called when the bus goes away.
+   * Since we are library code, we don't want to confuse the user with that.
+   *
+   * TODO: Instead, we will need to watch for the "Disconnected" signal from
+   * DBUS_PATH_LOCAL in DBUS_INTERFACE_LOCAL and invalidate all DBus ports.
+   */
+  dbus_connection_set_exit_on_disconnect(conn, NO);
+
+  NS_DURING
+  {
+  endpoint = [self endpointForDBusConnection: conn
+                                 mergingInfo: theInfo];
+  }
+  NS_HANDLER
+  {
+    [theInfo release];
+    dbus_connection_unref(conn);
+  }
+  NS_ENDHANDLER
+
+  [theInfo release];
+  // -initWithConnection did increase the refcount, we release ownership of the
+  // connection:
+  dbus_connection_unref(conn);
+  return endpoint;
+}
+
 - (void)removeEndpointForDBusConnection: (DBusConnection*)connection
 {
   [connectionStateLock lock];
@@ -332,7 +431,7 @@ static DKEndpointManager *sharedManager;
     NSAssert2(performRequest, @"Could not perform selector %@ on %@",
       selector,
       target);
-    if (doWait)
+    if (YES == doWait)
     {
       return (BOOL)(intptr_t)performRequest(target, selector, data);
     }
@@ -345,7 +444,7 @@ static DKEndpointManager *sharedManager;
   DKRingInsert(request);
   while ((-1 == retVal) && (YES == doWait))
   {
-    if (count % 16)
+    if (0 == (++count % 16))
     {
       sched_yield();
     }
@@ -365,7 +464,7 @@ static DKEndpointManager *sharedManager;
     IMP performRequest = [element.target methodForSelector: element.selector];
     returnPointer = element.returnPointer;
     NSAssert2(performRequest, @"Could not perform selector %@ on %@",
-      element.selector,
+      NSStringFromSelector(element.selector),
       element.target);
     if (NULL != returnPointer)
     {

@@ -23,6 +23,7 @@
 
 #import "DKArgument.h"
 #import "DKEndpoint.h"
+#import "DKEndpointManager.h"
 #import "DKInterface.h"
 #import "DKIntrospectionParserDelegate.h"
 #import "DKMethod.h"
@@ -974,7 +975,7 @@ static DKProxy *sessionBus;
     [busLock lock];
     if (sessionBus == nil)
     {
-      DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION] autorelease];
+      DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SESSION];
       sessionBus = [[DKDBus alloc] initWithEndpoint: ep
                                          andService: @"org.freedesktop.DBus"
                                             andPath: @"/org/freedesktop/DBus"];
@@ -991,7 +992,7 @@ static DKProxy *sessionBus;
     [busLock lock];
     if (systemBus == nil)
     {
-      DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SYSTEM] autorelease];
+      DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SYSTEM];
       systemBus = [[DKDBus alloc] initWithEndpoint: ep
                                         andService: @"org.freedesktop.DBus"
                                            andPath: @"/"];

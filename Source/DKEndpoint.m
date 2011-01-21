@@ -205,80 +205,6 @@ DKRelease(void *ptr);
 }
 
 
-/**
- * For use with non-well-known buses, not exteremly useful, but generic.
- */
-- (id) initWithConnectionTo: (NSString*)endpoint
-{
-  DBusError err;
-  /* Note: dbus_connection_open_private() would be an option here, but would
-   * require us to take care of the connections ourselves. Right now, this does
-   * not seem to be worth the effort, so we let D-Bus do this for us (hence we
-   * call dbus_connection_unref() and not dbus_connection_close() in -cleanup).
-   */
-  DBusConnection *conn = NULL;
-  NSDictionary *theInfo = [[NSDictionary alloc] initWithObjectsAndKeys: endpoint,
-    @"address", nil];
-  dbus_error_init(&err);
-
-  conn = dbus_connection_open([endpoint UTF8String], &err);
-  if (NULL == conn)
-  {
-    [theInfo release];
-    NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
-      err.name,
-      err.message);
-    dbus_error_free(&err);
-    return nil;
-  }
-  dbus_error_free(&err);
-
-  self = [self initWithConnection: conn
-                             info: theInfo];
-  [theInfo release];
-
-  // -_initWithConnection did increase the refcount, we release ownership of the
-  // connection:
-  dbus_connection_unref(conn);
-  return self;
-}
-
-- (id) initWithWellKnownBus: (DBusBusType)type
-{
-  DBusError err;
-  DBusConnection *conn = NULL;
-  NSDictionary *theInfo = [[NSDictionary alloc] initWithObjectsAndKeys: [NSNumber numberWithInt: type],
-    @"wellKnownBus", nil];
-  dbus_error_init(&err);
-  conn = dbus_bus_get(type, &err);
-  if (NULL == conn)
-  {
-    [theInfo release];
-    NSWarnMLog(@"Could not open D-Bus connection. Error: %s. (%s)",
-      err.name,
-      err.message);
-    dbus_error_free(&err);
-    return nil;
-  }
-  dbus_error_free(&err);
-
-  /*
-   * dbus_bus_get() will cause _exit() to be called when the bus goes away.
-   * Since we are library code, we don't want to confuse the user with that.
-   *
-   * TODO: Instead, we will need to watch for the "Disconnected" signal from
-   * DBUS_PATH_LOCAL in DBUS_INTERFACE_LOCAL and invalidate all DBus ports.
-   */
-  dbus_connection_set_exit_on_disconnect(conn, NO);
-
-  self = [self initWithConnection: conn
-                             info: theInfo];
-  [theInfo release];
-  // -initWithConnection did increase the refcount, we release ownership of the
-  // connection:
-  dbus_connection_unref(conn);
-  return self;
-}
 
 - (id) initWithCoder: (NSCoder*)coder
 {
@@ -337,15 +263,16 @@ DKRelease(void *ptr);
    id newEndpoint = nil;
    if (nil != (data = [info objectForKey: @"wellKnownBus"]))
    {
-     newEndpoint = [[DKEndpoint alloc] initWithWellKnownBus: [(NSNumber*)data intValue]];
+     newEndpoint = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: [(NSNumber*)data intValue]];
    }
    else
    {
      data = [info objectForKey: @"address"];
-     newEndpoint = [[DKEndpoint alloc] initWithConnectionTo: (NSString*)data];
+     newEndpoint = [[DKEndpointManager sharedEndpointManager] endpointForConnectionTo: (NSString*)data];
    }
    [self release];
-   return newEndpoint;
+   // We need to retain the endpoint because we got an autorelease one back:
+   return [newEndpoint retain];
 }
 
 /**
@@ -670,8 +597,25 @@ DKRelease(void *ptr);
 }
 @end
 
-@implementation DKRunLoopContext
+static DKEndpointManager *theManager;
+static IMP performOnWorkerThread;
 
+#define performOnWorkerThreadSelector @selector(boolReturnForPerformingSelector:target:data:waitForReturn:)
+
+#define doPerformOnWorkerThread(target,selector,data,doWait) \
+  performOnWorkerThread(theManager, performOnWorkerThreadSelector, selector, target, data, doWait)
+
+#define ctxPerformOnWorkerThread(selector,data) doPerformOnWorkerThread(ctx,selector,data, NO)
+#define syncCtxPerformOnWorkerThread(selector,data) (BOOL)(uintptr_t)doPerformOnWorkerThread(ctx,selector,data, YES)
+@implementation DKRunLoopContext
++ (void)initialize
+{
+  if ([DKRunLoopContext class] == self)
+  {
+    theManager = [DKEndpointManager sharedEndpointManager];
+    performOnWorkerThread = [theManager methodForSelector: performOnWorkerThreadSelector];
+  }
+}
 - (id) _initWithConnection: (DBusConnection*)conn
 {
   if (nil == (self = [super init]))
@@ -841,12 +785,11 @@ DKRelease(void *ptr);
 /**
  * Called by libdbus to drain the message queue.
  */
-- (void)dispatchForConnection: (NSValue*)value
+- (void)dispatchForConnection: (DBusConnection*)conn
 {
-  DBusConnection *conn = (DBusConnection*)[value pointerValue];
   DBusDispatchStatus status;
   // If called with nil, we dispatch for the default connection:
-  if ((value != nil) && (conn != connection))
+  if ((conn != NULL) && (conn != connection))
   {
     // This should not happen and could be a sign of some corruption.
     NSWarnMLog(@"Called to dispatch for non-local connection durng D-Bus event handling.");
@@ -928,7 +871,7 @@ DKTimeoutAdd(DBusTimeout *timeout, void *data)
   {
     return TRUE;
   }
-  return (dbus_bool_t)[ctx addTimeout: timeout];
+  return (dbus_bool_t)syncCtxPerformOnWorkerThread(@selector(addTimeout:),timeout);
 }
 
 static void
@@ -937,7 +880,7 @@ DKTimeoutRemove(DBusTimeout *timeout, void *data)
   CTX(data);
   NSCAssert(timeout, @"Missing timeout data during D-Bus event handling.");
   NSDebugMLog(@"Timeout removed");
-  [ctx removeTimeout: timeout];
+  ctxPerformOnWorkerThread(@selector(removeTimeout:),timeout);
 }
 
 static void
@@ -949,6 +892,8 @@ DKTimeoutToggled(DBusTimeout *timeout, void *data)
    */
   NSDebugMLog(@"Timeout toggled");
   DKTimeoutRemove(timeout, data);
+  // DKTimeoutRemove immediately returns, but the ringbuffer perserves the
+  // ordering
   DKTimeoutAdd(timeout, data);
 }
 
@@ -962,7 +907,7 @@ DKWatchAdd(DBusWatch *watch, void *data)
   {
     return YES;
   }
-  return (dbus_bool_t)[ctx addWatch: watch];
+  return (dbus_bool_t)syncCtxPerformOnWorkerThread(@selector(addWatch:),watch);
 }
 
 static void
@@ -971,7 +916,7 @@ DKWatchRemove(DBusWatch *watch, void *data)
   CTX(data);
   NSCAssert(watch, @"Missing watch data during D-Bus event handling.");
   NSDebugMLog(@"Removed watch");
-  [ctx removeWatch: watch];
+  ctxPerformOnWorkerThread(@selector(removeWatch:),watch);
 }
 
 static void
@@ -999,11 +944,7 @@ DKWakeUp(void *data)
   CTX(data);
   NSDebugMLog(@"Starting runLoop on D-Bus request");
   // If we are woken up, we surely need to dispatch new messages:
-  [[ctx runLoop] performSelector: @selector(dispatchForConnection:)
-                          target: ctx
-                        argument: nil
-                           order: 0
-                           modes: [NSArray arrayWithObject: [ctx runLoopMode]]];
+  ctxPerformOnWorkerThread(@selector(dispatchForConnection:),NULL);
 }
 
 static void
@@ -1011,7 +952,6 @@ DKUpdateDispatchStatus(DBusConnection *conn,
   DBusDispatchStatus status,
   void *data)
 {
-  NSValue *connectionPointer;
   CTX(data);
   NSCAssert(conn, @"Missing connection data during D-Bus event handling");
   NSDebugMLog(@"Dispatch status changed to %d", status);
@@ -1026,10 +966,5 @@ DKUpdateDispatchStatus(DBusConnection *conn,
     case DBUS_DISPATCH_DATA_REMAINS:
       NSDebugMLog(@"Will schedule handling of messages.");
   }
-  connectionPointer = [NSValue valueWithPointer: conn];
-  [[ctx runLoop] performSelector: @selector(dispatchForConnection:)
-                          target: ctx
-                        argument: connectionPointer
-                           order: 0
-                           modes: [NSArray arrayWithObject: [ctx runLoopMode]]];
+  ctxPerformOnWorkerThread(@selector(dispatchForConnection:), conn);
 }

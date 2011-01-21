@@ -24,6 +24,7 @@
 #import "DBusKit/DKNotificationCenter.h"
 #import "DKProxy+Private.h"
 #import "DKEndpoint.h"
+#import "DKEndpointManager.h"
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSConnection.h>
@@ -123,14 +124,10 @@ enum {
   if (nil == anEndpoint)
   {
     // Default to an endpoint to the session bus if none is given.
-    anEndpoint = [[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION];
-    ASSIGN(endpoint, anEndpoint);
-    [anEndpoint release];
+    anEndpoint = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SESSION];
   }
-  else
-  {
-    ASSIGN(endpoint, anEndpoint);
-  }
+
+  ASSIGN(endpoint, anEndpoint);
   ASSIGNCOPY(remote, aRemote);
 
   /*
@@ -168,7 +165,7 @@ enum {
 - (id) initWithRemote: (NSString*)aRemote
                 onBus: (DKDBusBusType)type
 {
-  DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: type] autorelease];
+  DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: type];
   return [self initWithRemote: aRemote
                    atEndpoint: ep];
 }
