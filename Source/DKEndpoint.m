@@ -104,13 +104,11 @@ DKRelease(void *ptr);
   NSMapTable *watchers;
   NSString *runLoopMode;
   NSRunLoop *runLoop;
-  NSLock *lock;
 }
 
 - (id)_initWithConnection: (DBusConnection*)connection;
 - (NSRunLoop*)runLoop;
 - (NSString*)runLoopMode;
-- (void)reschedule;
 @end
 
 /**
@@ -392,17 +390,6 @@ DKRelease(void *ptr);
 /* Methods to manipulate the behavior of the endpoint: */
 
 /**
- * Use this method to make the run loop context reschedule all its timers and
- * watchers in the current runloop. Since D-Bus is in thread-safe mode, this
- * will only cause defined behavior.
- */
-- (void)scheduleInCurrentThread
-{
-  NSWarnMLog(@"Calling -scheduleInCurrentThread has been deprecated and no longer operational.");
-  return;
-}
-
-/**
  * Flushes all pending messages from the connection.
  */
 - (void) flush
@@ -548,19 +535,6 @@ DKRelease(void *ptr);
 
 
 /**
- * Reschedule monitoring the file descriptor in the current run loop.
- */
-- (void)reschedule
-{
-  while (callbackInProgress)
-  {
-    //No-Op, let the callback complete.
-  }
-  [self unmonitorForEvents];
-  [self monitorForEvents];
-}
-
-/**
  * Delegate method for event delivery by the run loop.
  */
 - (void)receivedEvent: (void*)data
@@ -631,7 +605,6 @@ static IMP performOnWorkerThread;
   watchers = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
     NSObjectMapValueCallBacks,
     10);
-  lock = [[NSLock alloc] init];
   return self;
 }
 
@@ -663,57 +636,11 @@ static IMP performOnWorkerThread;
   }
 }
 
-/**
- * Reschedule all timers and watchers in the current run loop. This will
- * potentially add the timers and watchers to more than one run loop.
- */
-- (void)reschedule
-{
-  NSMapEnumerator watchEnum;
-  NSMapEnumerator timerEnum;
-  NSTimer *aTimer = nil;
-  DKWatcher *aWatcher = nil;
-  NSRunLoop *rl = nil;
-  NSString *rlMode = nil;
-  void *watch = NULL;
-  void *timeout = NULL;
-  [lock lock];
-  NS_DURING
-  {
-    watchEnum = NSEnumerateMapTable(watchers);
-    timerEnum = NSEnumerateMapTable(timers);
-    rlMode = [self runLoopMode];
-    rl = [self runLoop];
-    while (NSNextMapEnumeratorPair(&watchEnum, &timeout, (void**)&aWatcher))
-    {
-      [aWatcher reschedule];
-    }
-
-    while (NSNextMapEnumeratorPair(&timerEnum, &watch, (void**)&aTimer))
-    {
-      if ([aTimer isValid])
-      {
-        [rl addTimer: aTimer
-             forMode: rlMode];
-      }
-    }
-    NSEndMapTableEnumeration(&watchEnum);
-    NSEndMapTableEnumeration(&timerEnum);
-  }
-  NS_HANDLER
-  {
-    [lock unlock];
-    [localException raise];
-  }
-  NS_ENDHANDLER
-  [lock unlock];
-}
 
 - (void)dealloc
 {
   NSFreeMapTable(watchers);
   NSFreeMapTable(timers);
-  [lock release];
   [runLoopMode release];
   [super dealloc];
 }
@@ -785,7 +712,7 @@ static IMP performOnWorkerThread;
 /**
  * Called by libdbus to drain the message queue.
  */
-- (void)dispatchForConnection: (DBusConnection*)conn
+- (BOOL)dispatchForConnection: (DBusConnection*)conn
 {
   DBusDispatchStatus status;
   // If called with nil, we dispatch for the default connection:
@@ -793,7 +720,7 @@ static IMP performOnWorkerThread;
   {
     // This should not happen and could be a sign of some corruption.
     NSWarnMLog(@"Called to dispatch for non-local connection durng D-Bus event handling.");
-    return;
+    return NO;
   }
 
   do
@@ -801,6 +728,7 @@ static IMP performOnWorkerThread;
     // We drain all messages instead of waiting for the next run loop iteration:
     status = dbus_connection_dispatch(connection);
   } while (DBUS_DISPATCH_DATA_REMAINS == status);
+  return YES;
 }
 
 /**
@@ -966,5 +894,9 @@ DKUpdateDispatchStatus(DBusConnection *conn,
     case DBUS_DISPATCH_DATA_REMAINS:
       NSDebugMLog(@"Will schedule handling of messages.");
   }
-  ctxPerformOnWorkerThread(@selector(dispatchForConnection:), conn);
+  /* FIXME: libdbus has issues unless synchronise on connection dispatch. */
+  if (syncCtxPerformOnWorkerThread(@selector(dispatchForConnection:), conn))
+  {
+    return;
+  };
 }

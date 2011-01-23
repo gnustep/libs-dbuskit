@@ -24,6 +24,7 @@
 #import "DKMethodCall.h"
 #import "DKProxy+Private.h"
 #import "DKEndpoint.h"
+#import "DKEndpointManager.h"
 #import "DKMethod.h"
 
 #import <Foundation/NSDate.h>
@@ -35,6 +36,7 @@
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#include <sched.h>
 #include <string.h>
 
 @interface DKMethodCall (Private)
@@ -45,6 +47,16 @@
 - (id) initWithProxy: (DKProxy*)aProxy
               method: (DKMethod*)aMethod
           invocation: (NSInvocation*)anInvocation
+{
+  return [self initWithProxy: aProxy
+                      method: aMethod
+                  invocation: anInvocation
+                     timeout: 0];
+}
+- (id) initWithProxy: (DKProxy*)aProxy
+              method: (DKMethod*)aMethod
+          invocation: (NSInvocation*)anInvocation
+             timeout: (NSTimeInterval)aTimeout
 {
   DBusMessage *theMessage = NULL;
   DKEndpoint *theEndpoint = [aProxy _endpoint];
@@ -85,6 +97,18 @@
 
   ASSIGN(invocation,anInvocation);
   ASSIGN(method,aMethod);
+  if (0 == aTimeout)
+  {
+    // Default timeout
+    timeout = -1;
+  }
+
+  /*
+   * Convert NSTimeInterval (seconds, floating point) into D-Bus representation
+   * (milliseconds, integer).
+   */
+  timeout = (NSInteger)(aTimeout * 1000.0);
+
   if (NO == [self serialize])
   {
     [self release];
@@ -254,52 +278,54 @@
   }
 }
 
-- (void)sendAsynchronouslyExpectingReplyUntil: (NSTimeInterval)interval
+/**
+ * Helper method to schedule sending of the message on the worker thread.
+ */
+- (BOOL)sendWithPendingCallAt: (DBusPendingCall**)pending
+{
+  return (BOOL)dbus_connection_send_with_reply([endpoint DBusConnection],
+    msg,
+    pending,
+    timeout);
+
+}
+- (void)sendAsynchronously
 {
   //TODO: Implement asynchronous behaviour.
 }
 
-- (void)sendSynchronouslyAndWaitUntil: (NSTimeInterval)interval
+- (void)sendSynchronously
 {
-  DBusPendingCall *pending;
+  DBusPendingCall *pending = NULL;
   // -1 means default timeout
-  uint32_t timeout = -1;
   BOOL couldSend = NO;
-  // TODO: Once we allow the runloop to be changed, we need to do locking here.
-  NSRunLoop *runLoop = [endpoint runLoop];
-  NSString *runLoopMode = [endpoint runLoopMode];
+  NSInteger count = 0;
 
-  if (0 != interval)
-  {
-    // NSTimeInterval specifies seconds, we need milli-seconds
-    timeout = (uint32_t)(interval * 1000.0);
-  }
-  couldSend = (BOOL)dbus_connection_send_with_reply([endpoint DBusConnection],
-    msg,
-    &pending,
-    timeout);
+  couldSend = [[DKEndpointManager sharedEndpointManager] boolReturnForPerformingSelector:  @selector(sendWithPendingCallAt:)
+                                                                                  target: self
+                                                                                    data: (void*)&pending
+                                                                           waitForReturn: YES];
   if (NO == couldSend)
   {
     [NSException raise: @"DKDBusOutOfMemoryException"
                 format: @"Out of memory when sending D-Bus message."];
 
   }
+
   if (NULL == pending)
   {
     [NSException raise: @"DKDBusDisconnectedException"
                 format: @"Disconnected from D-Bus when sending message."];
 
   }
-  /*
-   * TODO: We might need to flush the connection:
-   * [endpoint flush];
-   */
 
   do
   {
-    // Run the runloop until we get our result back
-    [runLoop runMode: runLoopMode
-          beforeDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
+    // We can do a lot of sleeping while the call completes.
+    if ((++count % 16) == 0)
+    {
+      sched_yield();
+    }
   } while (NO == (BOOL)dbus_pending_call_get_completed(pending));
 
   //Now we are sure that we don't need the message any more.

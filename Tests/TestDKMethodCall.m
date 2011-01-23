@@ -59,7 +59,7 @@
                                       method: [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)]
                                   invocation: inv];
   UKNotNil(call);
-  [call sendSynchronouslyAndWaitUntil: 0];
+  [call sendSynchronously];
 
   UKDoesNotRaiseException([inv getReturnValue: &returnValue]);
   UKNotNil(returnValue);

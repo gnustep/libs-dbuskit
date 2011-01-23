@@ -40,6 +40,11 @@
    * also store the return value in it.
    */
    NSInvocation *invocation;
+
+  /**
+   * The timeout for the call;
+   */
+   NSInteger timeout;
 }
 
 /**
@@ -49,18 +54,30 @@
  */
 - (id) initWithProxy: (DKProxy*)aProxy
               method: (DKMethod*)aMethod
+          invocation: (NSInvocation*)anInvocation
+             timeout: (NSTimeInterval)interval;
+
+/**
+ * Initializes the method call to be sent to the object represented by the
+ * proxy. This involves serializing the arguments from the invocation into D-Bus
+ * format, but does include sending the message. This method sets up a default
+ * timeout.
+ */
+- (id) initWithProxy: (DKProxy*)aProxy
+              method: (DKMethod*)aMethod
           invocation: (NSInvocation*)anInvocation;
 
 /**
  * Sends the method call asynchronously via D-Bus. User code should retrieve
  * the DKPendingCall object corresponding to this method call in order to get
  * the return value.
+ * FIXME: Not yet implemented
  */
-- (void)sendAsynchronouslyExpectingReplyUntil: (NSTimeInterval)interval;
+- (void)sendAsynchronously;
 
 /**
- * Sends the method call via D-Bus and runs the run loop until the return value
- * has been retrieved or the message has timed out.
+ * Sends the method call via D-Bus and waits until it completes (i.e. the result
+ * of the call is deserialized as the return value of the invocation.)
  */
-- (void)sendSynchronouslyAndWaitUntil: (NSTimeInterval)interval;
+- (void)sendSynchronously;
 @end

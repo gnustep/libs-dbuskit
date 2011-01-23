@@ -647,13 +647,8 @@ static void DKInitIntrospectionThread(void *data);
                                       method: method
                                   invocation: inv];
 
-  // Reschedule the endpoint so that the call does not spin infinitely when a
-  // different thread is trying to invoke a D-Bus method and the main thread is
-  // blocked.
-  [DK_PORT_ENDPOINT scheduleInCurrentThread];
-
   //TODO: Implement asynchronous method calls using futures
-  [call sendSynchronouslyAndWaitUntil: 0];
+  [call sendSynchronously];
   [call release];
 }
 
