@@ -49,6 +49,12 @@ typedef struct {
    */
   NSThread *workerThread;
   @private
+
+  /**
+   * Tracks whether the thread has been started.
+   */
+  BOOL threadStarted;
+
   /**
    * Maps active DBusConnections to the corresponding DKEndpoints.
    */
@@ -90,10 +96,35 @@ typedef struct {
   uint32_t consumerCounter;
 
   /**
-   * This variable will be set when a producer thread has requested the
-   * ring-buffer to be drained.
+   * Counter to track how many callers are calling into the endpoint-manager
+   * from +initialize.
    */
-   BOOL willDrain;
+   NSUInteger initializeRefCount;
+
+   /**
+    * Lock to protect the change from multi-threaded to single-threaded
+    * operation.
+    */
+    NSLock *threadStateChangeLock;
+
+
+  /**
+   * The <ivar>syncedWatchers</ivar> map table keeps track of watchers that were
+   * created while the endpoint manager is in synchronised mode. Each is mapped
+   * to the thread it was created in. When the last +initialize call using the
+   * manager finishes, the manager will reap these watchers and reschedule them
+   * on the worker thread.
+   */
+   NSMapTable *syncedWatchers;
+
+  /**
+   * The <ivar>syncedTimers</ivar> map table keeps track of watchers that were
+   * created while the endpoint manager is in synchronised mode. Each is mapped
+   * to the thread it was created in. When the last +initialize call using the
+   * manager finishes, the manager will invalidate these timers and reschedule
+   * then on the worker thread.
+   */
+   NSMapTable *syncedTimers;
 }
 
 /**
@@ -160,5 +191,24 @@ typedef struct {
  * buffer.
  */
 - (void)drainBuffer: (id)ignored;
+
+
+/**
+ * Will be called by DBusKit classes that require usage of the bus in their
+ * +initialize method.
+ */
+- (void)enterInitialize;
+
+/**
+ * Will be called by DBusKit classes that require usage of the bus in their
+ * +initialize method.
+ */
+- (void)leaveInitialize;
+
+/**
+ * This methods can be used to determine whether the manager is in synchronized
+ * mode due to being called from an initialize method.
+ */
+- (BOOL)isSynchronizing;
 @end
 

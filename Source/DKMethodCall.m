@@ -291,6 +291,12 @@
 }
 - (void)sendAsynchronously
 {
+  // If the endpoint manager is in synchronizing mode, we don't bother doing an
+  // asynchronous call.
+  if ([[DKEndpointManager sharedEndpointManager] isSynchronizing])
+  {
+    [self sendSynchronously];
+  }
   //TODO: Implement asynchronous behaviour.
 }
 
@@ -300,11 +306,12 @@
   // -1 means default timeout
   BOOL couldSend = NO;
   NSInteger count = 0;
-
-  couldSend = [[DKEndpointManager sharedEndpointManager] boolReturnForPerformingSelector:  @selector(sendWithPendingCallAt:)
-                                                                                  target: self
-                                                                                    data: (void*)&pending
-                                                                           waitForReturn: YES];
+  DKEndpointManager *manager = [DKEndpointManager sharedEndpointManager];
+  IMP isSynchronizing = [manager methodForSelector: @selector(isSynchronizing)];
+  couldSend = [manager boolReturnForPerformingSelector: @selector(sendWithPendingCallAt:)
+                                                target: self
+                                                  data: (void*)&pending
+                                         waitForReturn: YES];
   if (NO == couldSend)
   {
     [NSException raise: @"DKDBusOutOfMemoryException"
@@ -321,10 +328,21 @@
 
   do
   {
-    // We can do a lot of sleeping while the call completes.
-    if ((++count % 16) == 0)
+    // Determine wether the manager is in synchronized mode and we need to use
+    // the runloop.
+    BOOL useCurrentRunLoop = (BOOL)(uintptr_t)isSynchronizing(manager, @selector(isSynchronizing));
+
+    // If we are using the worker thread, we can yield aggressively until the
+    // call completes.
+    if (((++count % 16) == 0)
+      && (NO == useCurrentRunLoop))
     {
       sched_yield();
+    }
+    else if (useCurrentRunLoop)
+    {
+      // Otherwise, we need to the runloop to complete our request.
+      [[NSRunLoop currentRunLoop] runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.1]];
     }
   } while (NO == (BOOL)dbus_pending_call_get_completed(pending));
 
@@ -332,7 +350,6 @@
   dbus_message_unref(msg);
   msg = NULL;
 
-  //TODO: Once we allow the runLoop to be changed, we need to unlock here.
   NS_DURING
   {
     [self handleReplyFromPendingCall: pending

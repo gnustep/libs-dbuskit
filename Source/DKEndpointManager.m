@@ -67,21 +67,25 @@ static DKEndpointManager *sharedManager;
 
 /*
  * This works the following way:
- * 1. Check whether the buffer is full
- * 2. If so, spin for a short while to allow it to drain or yield to other
- *    threads if it's taking to long.
- * 3. Lock the producer lock since multiple threads might want to write to the
- *    buffer.
- * 4. Check again if the buffer hasn't filled in the meantime.
- * 5. Retain the target for its trip to the other thread.
- * 6. Insert the new request into the buffer.
- * 7. Increment the producer counter.
- * 8. Unlock the producer lock.
- * 9. If the consumer thread has not been instructed to start draining the
- *    buffer, do so.
+ * 1.  Start the worker thread if it is not yet running.
+ * 2.  Check whether the buffer is full
+ * 3.  If so, spin for a short while to allow it to drain or yield to other
+ *     threads if it's taking to long.
+ * 4.  Lock the producer lock since multiple threads might want to write to the
+ *     buffer.
+ * 5.  Check again if the buffer hasn't filled in the meantime.
+ * 6.  Retain the target for its trip to the other thread.
+ * 7.  Insert the new request into the buffer.
+ * 8.  Increment the producer counter.
+ * 9.  Unlock the producer lock.
+ * 10. Schedule draining the buffer.
  */
 #define DKRingInsert(x) do {\
   NSUInteger count = 0; \
+  if (__sync_bool_compare_and_swap(&threadStarted, 0, 1) && (0 == initializeRefCount))\
+  {\
+    [workerThread start];\
+  }\
   while (DKRingFull)\
   {\
     if ((++count % 16) == 0)\
@@ -177,6 +181,7 @@ static DKEndpointManager *sharedManager;
      NSNonRetainedObjectMapValueCallBacks,
      3);
    connectionStateLock = [NSRecursiveLock new];
+   threadStateChangeLock = [NSLock new];
    workerThread = [[NSThread alloc] initWithTarget: self
                                           selector: @selector(start:)
                                             object: nil];
@@ -406,6 +411,7 @@ static DKEndpointManager *sharedManager;
   NSInteger *retValPointer = NULL;
   NSUInteger count = 0;
   static DKRingBufferElement request;
+  BOOL performSynchronized = NO;
   if (doWait)
   {
     // If we are waiting for the return value, we pass the return value pointer.
@@ -420,11 +426,14 @@ static DKEndpointManager *sharedManager;
   request = (DKRingBufferElement){target, selector, (id)data, retValPointer};
 
   /*
-   * In case of the unlikely event that we are being called from within the
-   * worker thread, we want to directly execute the request (at least when we
-   * are supposed to wait for it.
+   * Under two conditions we want to execute the request directly: a) we are
+   * being called from within the worker thread and are supposed to wait for the
+   * result. b) We are being called from within an +initialize method and thus
+   * cannot use the worker thread.
    */
-  if ([workerThread isEqual: [NSThread currentThread]])
+  performSynchronized = (0 != initializeRefCount);
+  if (([workerThread isEqual: [NSThread currentThread]])
+    || (YES == performSynchronized))
   {
     IMP performRequest = [target methodForSelector: selector];
     NSDebugMLog(@"Performing on current thread");
@@ -434,6 +443,11 @@ static DKEndpointManager *sharedManager;
     if (YES == doWait)
     {
       return (BOOL)(intptr_t)performRequest(target, selector, data);
+    }
+    else if (performSynchronized)
+    {
+      performRequest(target, selector, data);
+      return YES;
     }
   }
 
@@ -498,23 +512,48 @@ static DKEndpointManager *sharedManager;
       *returnPointer = 0;
     }
   }
+}
 
-  /*
-   * If there are further elements to remove, we will reschedule draining the
-   * buffer.
-   */
-/*  if ((NO == DKRingEmpty))
+- (void)enterInitialize
+{
+  if (0 == initializeRefCount)
   {
-    NSDebugMLog(@"Elements remain in buffer, rescheduling draining");
-    __sync_bool_compare_and_swap(&willDrain, NO, YES);
-    [self performSelector: @selector(drainBuffer:)
-                 onThread: workerThread
-	       withObject: nil
-            waitUntilDone: NO];
+    [threadStateChangeLock lock];
+     __sync_fetch_and_add(&initializeRefCount, 1);
+     [threadStateChangeLock unlock];
   }
   else
   {
-    __sync_bool_compare_and_swap(&willDrain, YES, NO);
-  }*/
+     __sync_fetch_and_add(&initializeRefCount, 1);
+  }
 }
+
+- (void)leaveInitialize
+{
+  if (1 == initializeRefCount)
+  {
+    [threadStateChangeLock lock];
+    if (1 == initializeRefCount)
+    {
+      //TODO: Cleanup and move stuff to the worker thread.
+    }
+    __sync_fetch_and_sub(&initializeRefCount, 1);
+    // Start the worker thread if it is not yet running.
+    if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))
+    {
+      [workerThread start];
+    }
+    [threadStateChangeLock unlock];
+  }
+  else
+  {
+    __sync_fetch_and_sub(&initializeRefCount, 1);
+  }
+}
+
+- (BOOL)isSynchronizing
+{
+  return (0 != initializeRefCount);
+}
+
 @end

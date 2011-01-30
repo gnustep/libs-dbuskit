@@ -573,8 +573,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 {
   if ([DKNotificationCenter class] == self)
   {
+    DKEndpointManager *manager = [DKEndpointManager sharedEndpointManager];
+    [manager enterInitialize];
     systemCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSystemBus];
     sessionCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSessionBus];
+    [manager leaveInitialize];
   }
 }
 
