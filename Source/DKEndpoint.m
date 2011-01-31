@@ -673,6 +673,7 @@ static IMP performOnWorkerThread;
   else
   {
     NSMapInsert(timers,timeout,timer);
+    [theManager registerTimer: timer];
     [[self runLoop] addTimer: timer
                      forMode: [self runLoopMode]];
     return YES;
@@ -690,6 +691,7 @@ static IMP performOnWorkerThread;
   if (nil != timer)
   {
     [timer invalidate];
+    [theManager unregisterTimer: timer];
     NSMapRemove(timers,timeout);
   }
 }
@@ -761,8 +763,10 @@ static IMP performOnWorkerThread;
       return NO;
     }
     NSMapInsert(watchers, watch, watcher);
+
     // The map table has retained the watcher, we can release it:
     [watcher release];
+    [theManager registerWatcher: watcher];
   }
   return YES;
 }
@@ -779,6 +783,7 @@ static IMP performOnWorkerThread;
   if (nil != watcher)
   {
     [watcher unmonitorForEvents];
+    [theManager unregisterWatcher: watcher];
     NSMapRemove(watchers, watch);
   }
 }
@@ -894,7 +899,7 @@ DKUpdateDispatchStatus(DBusConnection *conn,
     case DBUS_DISPATCH_DATA_REMAINS:
       NSDebugMLog(@"Will schedule handling of messages.");
   }
-  /* FIXME: libdbus has issues unless synchronise on connection dispatch. */
+  /* FIXME: libdbus has issues unless we synchronise on connection dispatch. */
   if (syncCtxPerformOnWorkerThread(@selector(dispatchForConnection:), conn))
   {
     return;

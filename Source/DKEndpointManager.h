@@ -41,6 +41,12 @@ typedef struct {
  * DKEndpointManager is a singleton class that maintains a thread to interact
  * with D-Bus. It is responsible for creating and tracking the endpoints to
  * the specific busses and will attempt to recover from connection failures.
+ *
+ * DKEndpointManager also provides a synchronized mode so that it can be safely
+ * called from +initialize methods. In that case, the caller is expected to wrap
+ * method calls that might trigger the manager (especially to DKEndpoint,
+ * DKPort, DKPortNameServer, DKProxy, or DKNotificationCenter) with calls to
+ * -enterInitialize and -leaveInitialize.
  */
 @interface DKEndpointManager: NSObject
 {
@@ -102,10 +108,9 @@ typedef struct {
    NSUInteger initializeRefCount;
 
    /**
-    * Lock to protect the change from multi-threaded to single-threaded
-    * operation.
+    * Lock to protect changes to the accounting tables in synchronised mode.
     */
-    NSLock *threadStateChangeLock;
+    NSLock *synchronizationStateLock;
 
 
   /**
@@ -206,9 +211,40 @@ typedef struct {
 - (void)leaveInitialize;
 
 /**
- * This methods can be used to determine whether the manager is in synchronized
+ * This method can be used to determine whether the manager is in synchronized
  * mode due to being called from an initialize method.
  */
 - (BOOL)isSynchronizing;
+
+/**
+ * This method will be used by instances of <class>DKRunLoopContext</class> to
+ * inform the endpoint manager of timers it is presently using. If the manager
+ * is in synchronized mode (i.e. being called from +initialize), a reference to
+ * the timer will be tracked until it either no longer needed or has
+ * successfully been rescheduled on the worker thread.
+ */
+- (void)registerTimer: (id)timer;
+
+/**
+ * This method will be used by instances of <class>DKRunLoopContext</class> to
+ * inform the endpoint manager of <class>DKWatcher</class> instances it is
+ * presently using to monitor file descriptors on behalf of libdbus. If the manager
+ * is in synchronized mode (i.e. being called from +initialize), a reference to
+ * the watcher will be tracked until it either no longer needed or has
+ * successfully been rescheduled on the worker thread.
+ */
+- (void)registerWatcher: (id)watcher;
+
+/**
+ * If the receiver is in synchronized mode, this removes the reference to the
+ * timer object.
+ */
+- (void)unregisterTimer: (id)timer;
+
+/**
+ * If the receiver is in synchronized mode, this removes the reference to the
+ * watcher object.
+ */
+- (void)unregisterWatcher: (id)watcher;
 @end
 

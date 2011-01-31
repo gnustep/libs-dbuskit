@@ -181,16 +181,23 @@ static DKEndpointManager *sharedManager;
      NSNonRetainedObjectMapValueCallBacks,
      3);
    connectionStateLock = [NSRecursiveLock new];
-   threadStateChangeLock = [NSLock new];
    workerThread = [[NSThread alloc] initWithTarget: self
                                           selector: @selector(start:)
                                             object: nil];
    [workerThread setName: @"DBusKit worker thread"];
-   [workerThread start];
    ringBuffer = calloc(sizeof(DKRingBufferElement), DKRingSize);
    producerLock = [NSLock new];
-   if (NO == (activeConnections && faultedConnections && connectionStateLock &&
-     workerThread && ringBuffer && producerLock))
+
+   synchronizationStateLock = [NSLock new];
+   syncedWatchers = [[NSMapTable alloc] initWithKeyOptions: NSMapTableStrongMemory
+                                              valueOptions: NSMapTableStrongMemory
+                                                  capacity: 5];
+   syncedTimers = [[NSMapTable alloc] initWithKeyOptions: NSMapTableStrongMemory
+                                            valueOptions: NSMapTableStrongMemory
+                                                capacity: 5];
+   if (NO == (activeConnections && faultedConnections && connectionStateLock
+     && workerThread && ringBuffer && producerLock && synchronizationStateLock
+     && syncedWatchers && syncedTimers))
    {
      [self release];
      return nil;
@@ -518,9 +525,9 @@ static DKEndpointManager *sharedManager;
 {
   if (0 == initializeRefCount)
   {
-    [threadStateChangeLock lock];
+    [synchronizationStateLock lock];
      __sync_fetch_and_add(&initializeRefCount, 1);
-     [threadStateChangeLock unlock];
+     [synchronizationStateLock unlock];
   }
   else
   {
@@ -532,7 +539,7 @@ static DKEndpointManager *sharedManager;
 {
   if (1 == initializeRefCount)
   {
-    [threadStateChangeLock lock];
+    [synchronizationStateLock lock];
     if (1 == initializeRefCount)
     {
       //TODO: Cleanup and move stuff to the worker thread.
@@ -541,9 +548,18 @@ static DKEndpointManager *sharedManager;
     // Start the worker thread if it is not yet running.
     if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))
     {
-      [workerThread start];
+      NS_DURING
+      {
+        [workerThread start];
+      }
+      NS_HANDLER
+      {
+	[synchronizationStateLock unlock];
+	[localException raise];
+      }
+      NS_ENDHANDLER
     }
-    [threadStateChangeLock unlock];
+    [synchronizationStateLock unlock];
   }
   else
   {
@@ -554,6 +570,88 @@ static DKEndpointManager *sharedManager;
 - (BOOL)isSynchronizing
 {
   return (0 != initializeRefCount);
+}
+
+/**
+ * If the endpoint manger is in synchronized mode, this method will register
+ * objects scheduled on the runloop by libdbus so that they can be savely
+ * moved to the worker thread later on.
+ */
+- (void)_registerObject: (id)object
+                inTable: (NSMapTable*)table
+{
+  if (0 != initializeRefCount)
+  {
+    [synchronizationStateLock lock];
+    if (0 != initializeRefCount)
+    {
+      NS_DURING
+      {
+	NSMapInsert(table, object, [NSThread currentThread]);
+      }
+      NS_HANDLER
+      {
+	[synchronizationStateLock unlock];
+	[localException raise];
+      }
+      NS_ENDHANDLER
+    }
+    [synchronizationStateLock unlock];
+  }
+}
+
+
+/**
+ * If the endpoint manger is in synchronized mode, this method will unregister
+ * objects that previously were scheduled on the local runloop. This makes sure
+ * that no left-over objects get moved around when leaving synchronized mode.
+ */
+- (void)_unregisterObject: (id)object
+                fromTable: (NSMapTable*)table
+{
+  if (0 != initializeRefCount)
+  {
+    [synchronizationStateLock lock];
+    if (0 != initializeRefCount)
+    {
+      NS_DURING
+      {
+	NSMapRemove(table, object);
+      }
+      NS_HANDLER
+      {
+	[synchronizationStateLock unlock];
+	[localException raise];
+      }
+      NS_ENDHANDLER
+    }
+    [synchronizationStateLock unlock];
+  }
+}
+
+
+- (void)registerTimer: (id)timer
+{
+  [self _registerObject: timer
+                inTable: syncedTimers];
+}
+
+- (void)registerWatcher: (id)watcher
+{
+  [self _registerObject: watcher
+                inTable: syncedWatchers];
+}
+
+- (void)unregisterTimer: (id)timer
+{
+  [self _unregisterObject: timer
+                fromTable: syncedTimers];
+}
+
+- (void)unregisterWatcher: (id)watcher
+{
+  [self _unregisterObject: watcher
+                fromTable: syncedWatchers];
 }
 
 @end
