@@ -39,6 +39,13 @@
 @interface DKEndpoint (Private)
 - (void)_mergeInfo: (NSDictionary*)info;
 @end
+
+@interface NSObject (DKContextPrivateMethods)
+- (void)monitorForEvents;
+- (void)unmonitorForEvents;
+- (void)handleTimeout: (NSTimer*)timer;
+@end
+
 static DKEndpointManager *sharedManager;
 
 #define DKTheManager getManager(managerClass, getManagerSelector)
@@ -534,31 +541,169 @@ static DKEndpointManager *sharedManager;
      __sync_fetch_and_add(&initializeRefCount, 1);
   }
 }
+- (void)_transferWatchersToWorkerThread
+{
+  // Note: The caller obtains the synchronizationStateLock
+  NSMapEnumerator theEnum = NSEnumerateMapTable(syncedWatchers);
+  NS_DURING
+  {
+    // Set up enumerator and associated variables:
+    id thisWatcher = nil;
+    NSThread *thisThread = nil;
+
+    // First, we iterate over all watchers:
+    while (NSNextMapEnumeratorPair(&theEnum, (void**)thisWatcher, (void**)thisThread))
+    {
+      if ([thisThread isExecuting])
+      {
+        /*
+         * Remove them from the thread they were created in (if it is still
+         * running).
+         */
+        [thisWatcher performSelector: @selector(unmonitorForEvents)
+	                    onThread: thisThread
+	                  withObject: nil
+	               waitUntilDone: YES];
+      }
+      /*
+       * Schedule it for monitoring the fd on the worker thread.
+       */
+      [thisWatcher performSelector: @selector(monitorForEvents)
+	                  onThread: workerThread
+	                withObject: nil
+	             waitUntilDone: NO];
+    }
+  }
+  NS_HANDLER
+  {
+    NSEndMapTableEnumeration(&theEnum);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  NSEndMapTableEnumeration(&theEnum);
+  NSResetMapTable(syncedWatchers);
+  // Note: The caller unlocks the synchronizationStateLock
+}
+
+- (void)_injectTimer: (NSTimer*)timer
+{
+  if (nil == timer)
+  {
+    // It's silly to inject non-existant timers.
+    return;
+  }
+
+  if (NO == [workerThread isEqual: [NSThread currentThread]])
+  {
+    // We only inject timers into the worker thread;
+    return;
+  }
+
+  [[NSRunLoop currentRunLoop] addTimer: timer
+                               forMode: NSDefaultRunLoopMode];
+
+}
+
+- (void)_transferTimersToWorkerThread
+{
+  // Note: The caller obtains the synchronizationStateLock
+  NSMapEnumerator theEnum = NSEnumerateMapTable(syncedTimers);
+  NS_DURING
+  {
+    // Set up enumerator and associated variables:
+    NSTimer *thisTimer = nil;
+    NSDictionary *metadata = nil;
+
+    // First, we iterate over all watchers:
+    while (NSNextMapEnumeratorPair(&theEnum, (void**)thisTimer, (void**)metadata))
+    {
+      // Set up variables:
+      id userInfo = nil;
+      NSDate *fireDate = nil;
+      const NSTimeInterval timeInterval = [thisTimer timeInterval];
+      id target = nil;
+      NSThread *thisThread = nil;
+      NSTimer *newTimer = nil;
+
+      if (NO == [thisTimer isValid])
+      {
+	// Don't do anything with invalid timers
+	continue;
+      }
+
+      // Collect info about the timer in order to reschedule it on the worker
+      // thread:
+      userInfo = [thisTimer userInfo];
+      fireDate = [thisTimer fireDate];
+      target = [metadata objectForKey: @"context"];
+      newTimer = [NSTimer timerWithTimeInterval: timeInterval
+                                         target: target
+                                       selector: @selector(handleTimeout:)
+                                       userInfo: userInfo
+                                        repeats: YES];
+      [newTimer setFireDate: fireDate];
+
+      thisThread = [metadata objectForKey: @"thread"];
+      if ([thisThread isExecuting])
+      {
+	/*
+	 * If the thread the timer was scheduled for is still running,
+	 * invalidate the timer.
+	 */
+	[thisTimer performSelector: @selector(invalidate)
+	                  onThread: thisThread
+	                withObject: nil
+	             waitUntilDone: YES];
+      }
+      /*
+       * Inject the timer to the worker thread:
+       */
+      [self performSelector: @selector(_injectTimer:)
+                   onThread: workerThread
+		 withObject: newTimer
+	      waitUntilDone: NO];
+    }
+  }
+  NS_HANDLER
+  {
+    NSEndMapTableEnumeration(&theEnum);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  NSEndMapTableEnumeration(&theEnum);
+  NSResetMapTable(syncedTimers);
+  // Note: The caller unlocks the synchronizationStateLock
+}
 
 - (void)leaveInitialize
 {
   if (1 == initializeRefCount)
   {
     [synchronizationStateLock lock];
-    if (1 == initializeRefCount)
+    NS_DURING
     {
-      //TODO: Cleanup and move stuff to the worker thread.
+      if (1 == initializeRefCount)
+      {
+        // Start the worker thread if necessary:
+        if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))
+        {
+          [workerThread start];
+        }
+
+        // Move the watchers to the worker thread
+        [self _transferWatchersToWorkerThread];
+        // Move the timers as well:
+        [self _transferTimersToWorkerThread];
+      }
     }
+    NS_HANDLER
+    {
+      __sync_fetch_and_sub(&initializeRefCount, 1);
+      [synchronizationStateLock unlock];
+      [localException raise];
+    }
+    NS_ENDHANDLER
     __sync_fetch_and_sub(&initializeRefCount, 1);
-    // Start the worker thread if it is not yet running.
-    if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))
-    {
-      NS_DURING
-      {
-        [workerThread start];
-      }
-      NS_HANDLER
-      {
-	[synchronizationStateLock unlock];
-	[localException raise];
-      }
-      NS_ENDHANDLER
-    }
     [synchronizationStateLock unlock];
   }
   else
@@ -579,6 +724,7 @@ static DKEndpointManager *sharedManager;
  */
 - (void)_registerObject: (id)object
                 inTable: (NSMapTable*)table
+           withMetadata: (id)meta
 {
   if (0 != initializeRefCount)
   {
@@ -587,7 +733,11 @@ static DKEndpointManager *sharedManager;
     {
       NS_DURING
       {
-	NSMapInsert(table, object, [NSThread currentThread]);
+	if (nil == meta)
+	{
+	  meta = [NSThread currentThread];
+	}
+	NSMapInsert(table, object, meta);
       }
       NS_HANDLER
       {
@@ -631,15 +781,31 @@ static DKEndpointManager *sharedManager;
 
 
 - (void)registerTimer: (id)timer
+          fromContext: (id)context;
 {
-  [self _registerObject: timer
-                inTable: syncedTimers];
+  // Create a dictionary to store metadata about the timer:
+  NSDictionary *meta = [[NSDictionary alloc] initWithObjectsAndKeys: [NSThread currentThread], @"thread",
+    context, @"context"];
+  NS_DURING
+  {
+    [self _registerObject: timer
+                  inTable: syncedTimers
+	     withMetadata: meta];
+  }
+  NS_HANDLER
+  {
+    [meta release];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [meta release];
 }
 
 - (void)registerWatcher: (id)watcher
 {
   [self _registerObject: watcher
-                inTable: syncedWatchers];
+                inTable: syncedWatchers
+	   withMetadata: nil];
 }
 
 - (void)unregisterTimer: (id)timer

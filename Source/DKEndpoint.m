@@ -673,7 +673,8 @@ static IMP performOnWorkerThread;
   else
   {
     NSMapInsert(timers,timeout,timer);
-    [theManager registerTimer: timer];
+    [theManager registerTimer: timer
+                  fromContext: self];
     [[self runLoop] addTimer: timer
                      forMode: [self runLoopMode]];
     return YES;

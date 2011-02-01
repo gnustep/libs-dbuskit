@@ -221,9 +221,11 @@ typedef struct {
  * inform the endpoint manager of timers it is presently using. If the manager
  * is in synchronized mode (i.e. being called from +initialize), a reference to
  * the timer will be tracked until it either no longer needed or has
- * successfully been rescheduled on the worker thread.
+ * successfully been rescheduled on the worker thread. In order to track all
+ * data required, the <var>context</var> the timer comes from must be specified.
  */
-- (void)registerTimer: (id)timer;
+- (void)registerTimer: (id)timer
+          fromContext: (id)context;
 
 /**
  * This method will be used by instances of <class>DKRunLoopContext</class> to
