@@ -51,6 +51,7 @@
 - (NSString*)Introspect;
 - (NSString*)GetId;
 - (NSString*)Hello;
+- (NSString*)ListNames;
 - (char*)GetNameOwner: (char*)name;
 - (BOOL)NameHasOwner: (NSString*)name;
 @end
@@ -196,7 +197,9 @@
                                         sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.Hal"
                                                                             onBus: DKDBusSystemBus] autorelease]];
   aProxy = [conn proxyAtPath: @"/org/freedesktop/Hal"];
-  returnValue = [aProxy Introspect];
+
+  UKDoesNotRaiseException(returnValue = [aProxy Introspect]);
+
 
   UKNotNil(returnValue);
   UKTrue([returnValue isKindOfClass: [NSString class]]);
@@ -236,4 +239,28 @@
   }
 }
 
+
+@end
+
+@interface TestDKDBus: NSObject <UKTest>
+@end
+@implementation TestDKDBus
+- (void)testGetSessionBus
+{
+  UKNotNil([DKDBus sessionBus]);
+}
+- (void)testGetSystemBus
+{
+  UKNotNil([DKDBus systemBus]);
+}
+
+- (void)useSessionBus
+{
+  UKNotNil([[DKDBus sessionBus] GetId]);
+}
+
+- (void)useSystemBus
+{
+  UKNotNil([[DKDBus systemBus] GetId]);
+}
 @end
