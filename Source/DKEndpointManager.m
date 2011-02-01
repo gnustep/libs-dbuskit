@@ -785,7 +785,7 @@ static DKEndpointManager *sharedManager;
 {
   // Create a dictionary to store metadata about the timer:
   NSDictionary *meta = [[NSDictionary alloc] initWithObjectsAndKeys: [NSThread currentThread], @"thread",
-    context, @"context"];
+    context, @"context", nil];
   NS_DURING
   {
     [self _registerObject: timer
