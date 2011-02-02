@@ -33,6 +33,7 @@
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSRunLoop.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSThread.h>
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
@@ -293,7 +294,8 @@
 {
   // If the endpoint manager is in synchronizing mode, we don't bother doing an
   // asynchronous call.
-  if ([[DKEndpointManager sharedEndpointManager] isSynchronizing])
+  if (([[DKEndpointManager sharedEndpointManager] isSynchronizing])
+    || ([[NSThread currentThread] isEqual: [[DKEndpointManager sharedEndpointManager] workerThread]]))
   {
     [self sendSynchronously];
   }
@@ -330,7 +332,8 @@
   {
     // Determine wether the manager is in synchronized mode and we need to use
     // the runloop.
-    BOOL useCurrentRunLoop = (BOOL)(uintptr_t)isSynchronizing(manager, @selector(isSynchronizing));
+    BOOL useCurrentRunLoop = ((BOOL)(uintptr_t)isSynchronizing(manager, @selector(isSynchronizing))
+    || ([[NSThread currentThread] isEqual: [manager workerThread]]));
 
     // If we are using the worker thread, we can yield aggressively until the
     // call completes.

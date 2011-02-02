@@ -391,10 +391,7 @@ enum {
 
 - (void)dealloc
 {
-  if ([self isValid])
-  {
-    [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
-  }
+  [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
   [endpoint release];
   [remote release];
   [super dealloc];

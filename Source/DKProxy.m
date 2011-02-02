@@ -564,14 +564,29 @@ static void DKInitIntrospectionThread(void *data);
   SEL retrievalSelector = @selector(DBusMethodForSelector:);
   IMP retrieveDBusMethod = class_getMethodImplementation([DKInterface class],
     retrievalSelector);
+  NSRunLoop *rl = nil;
+  BOOL inWorkerThread = DKInWorkerThread;
   NSAssert(retrieveDBusMethod, @"No method retrieval implementation in DKInterface.");
+  if (inWorkerThread)
+  {
+    rl = [NSRunLoop currentRunLoop];
+  }
   [condition lock];
   if (doWait)
   {
     // Wait until it is signaled that the cache has been built:
     while (CACHE_READY != state)
     {
-      [condition wait];
+      if (inWorkerThread)
+      {
+	[condition unlock];
+	[rl runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.01]];
+        [condition lock];
+      }
+      else
+      {
+	[condition wait];
+      }
     }
   }
 
@@ -1122,6 +1137,15 @@ static DKProxy *sessionBus;
    * No-Op. This is a shared object, we cannot let one caller change stuff the
    * other callers won't know about.
    */
-   NSWarnMLog(@"'-setPrimaryDBusInterface:' called for a shared DKDBus object.");
+   NSWarnMLog(@"'%@' called for a shared DKDBus object.", NSStringFromSelector(_cmd));
+}
+
+- (NSString*)_uniqueName
+{
+  /* Overriding this is a significiant optimisation. We already know that only
+   * one bus object exists per bus and that it is named org.freedesktop.DBus. We
+   * do not need to do any roundtrips to D-Bus to find out about this.
+   */
+  return @"org.freedesktop.DBus";
 }
 @end

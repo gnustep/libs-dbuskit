@@ -110,7 +110,7 @@ typedef struct {
    /**
     * Lock to protect changes to the accounting tables in synchronised mode.
     */
-    NSLock *synchronizationStateLock;
+    NSRecursiveLock *synchronizationStateLock;
 
 
   /**
@@ -250,3 +250,7 @@ typedef struct {
 - (void)unregisterWatcher: (id)watcher;
 @end
 
+/**
+ * Macro to check whether the code is presently executing in the worker thread
+ */
+#define DKInWorkerThread (BOOL)[[[DKEndpointManager sharedEndpointManager] workerThread] isEqual: [NSThread currentThread]];

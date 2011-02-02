@@ -26,6 +26,7 @@
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
+#import <Foundation/NSInvocation.h>
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSRunLoop.h>
@@ -62,7 +63,7 @@ static DKEndpointManager *sharedManager;
 /* Definitions for the ring buffer, designwise inspired by EtoileThread */
 
 // Needs to be 2^n
-#define DKRingSize 8
+#define DKRingSize 32
 
 #define DKRingMask (DKRingSize - 1)
 
@@ -195,7 +196,7 @@ static DKEndpointManager *sharedManager;
    ringBuffer = calloc(sizeof(DKRingBufferElement), DKRingSize);
    producerLock = [NSLock new];
 
-   synchronizationStateLock = [NSLock new];
+   synchronizationStateLock = [NSRecursiveLock new];
    syncedWatchers = [[NSMapTable alloc] initWithKeyOptions: NSMapTableStrongMemory
                                               valueOptions: NSMapTableStrongMemory
                                                   capacity: 5];
@@ -426,6 +427,7 @@ static DKEndpointManager *sharedManager;
   NSUInteger count = 0;
   static DKRingBufferElement request;
   BOOL performSynchronized = NO;
+  BOOL workerThreadIsCurrent = [workerThread isEqual: [NSThread currentThread]];
   if (doWait)
   {
     // If we are waiting for the return value, we pass the return value pointer.
@@ -445,9 +447,24 @@ static DKEndpointManager *sharedManager;
    * result. b) We are being called from within an +initialize method and thus
    * cannot use the worker thread.
    */
+
   performSynchronized = (0 != initializeRefCount);
-  if (([workerThread isEqual: [NSThread currentThread]])
-    || (YES == performSynchronized))
+  if (performSynchronized)
+  {
+    [synchronizationStateLock lock];
+    if (0 != initializeRefCount)
+    {
+      performSynchronized = YES;
+    }
+    else
+    {
+      performSynchronized = NO;
+      [synchronizationStateLock unlock];
+    }
+  }
+  // Note the following if statement will be executed under lock if
+  // preformSynchronized == YES
+  if (workerThreadIsCurrent || (YES == performSynchronized))
   {
     IMP performRequest = [target methodForSelector: selector];
     NSDebugMLog(@"Performing on current thread");
@@ -456,12 +473,39 @@ static DKEndpointManager *sharedManager;
       target);
     if (YES == doWait)
     {
-      return (BOOL)(intptr_t)performRequest(target, selector, data);
+      retVal = (BOOL)(intptr_t)performRequest(target, selector, data);
     }
     else if (performSynchronized)
     {
       performRequest(target, selector, data);
+      retVal = YES;
+      [synchronizationStateLock unlock];
+    }
+    else if (DKRingFull)
+    {
+      /*
+       * Special case for when we are in the worker thread and the ring buffer
+       * is filling. In this case, we must wrap the call in an NSInvocation
+       * object and dispatch the call via the run loop.
+       */
+      NSMethodSignature *sig = [target methodSignatureForSelector: selector];
+      NSInvocation *inv = [NSInvocation invocationWithMethodSignature: sig];
+      [inv setSelector: selector];
+      [inv setArgument: &data
+               atIndex: 2];
+      NSWarnMLog(@"Warning, ring buffer full when called from within worker thread. Will handle call through NSInvocation.");
+      [[NSRunLoop currentRunLoop] performSelector: @selector(invokeWithTarget:)
+                                           target: inv
+                                         argument: target
+                                            order: 0
+                                            modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
+
       return YES;
+    }
+
+    if (doWait || performSynchronized)
+    {
+      return retVal;
     }
   }
 
@@ -469,6 +513,7 @@ static DKEndpointManager *sharedManager;
    * Otherwise, we insert the request and spin until the worker thread completes
    * the request.
    */
+
   DKRingInsert(request);
   while ((-1 == retVal) && (YES == doWait))
   {
@@ -552,7 +597,7 @@ static DKEndpointManager *sharedManager;
     NSThread *thisThread = nil;
 
     // First, we iterate over all watchers:
-    while (NSNextMapEnumeratorPair(&theEnum, (void**)thisWatcher, (void**)thisThread))
+    while (NSNextMapEnumeratorPair(&theEnum, (void**)&thisWatcher, (void**)&thisThread))
     {
       if ([thisThread isExecuting])
       {
@@ -615,7 +660,7 @@ static DKEndpointManager *sharedManager;
     NSDictionary *metadata = nil;
 
     // First, we iterate over all watchers:
-    while (NSNextMapEnumeratorPair(&theEnum, (void**)thisTimer, (void**)metadata))
+    while (NSNextMapEnumeratorPair(&theEnum, (void**)&thisTimer, (void**)&metadata))
     {
       // Set up variables:
       id userInfo = nil;
