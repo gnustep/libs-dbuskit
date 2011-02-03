@@ -58,32 +58,6 @@ fi
 
 AC_SUBST(WARN_FLAGS)
 
-
-#--------------------------------------------------------------------
-# Check whether we have libtoydispatch for asynchronous table management.
-#--------------------------------------------------------------------
-HAVE_TOYDISPATCH=0
-saved_CFLAGS="$CFLAGS"
-saved_CPPFLAGS="$CPPFLAGS$"
-saved_LDFLAGS="$LDFLAGS"
-GS_OBJCFLAGS=`gnustep-config --objc-flags`
-CFLAGS="$CFLAGS $GS_OBJCFLAGS"
-CPPFLAGS="$CPPFLAGS $GS_OBJCFLAGS"
-GS_LDFLAGS=`gnustep-config --objc-libs`
-LDFLAGS="$LDFLAGS $GS_LDFLAGS"
-
-AC_CHECK_HEADERS(toydispatch/toydispatch.h,have_toydispatch=yes,have_toydispatch=no)
-if test "$have_toydispatch" = "yes"; then
-  AC_CHECK_LIB(toydispatch, toy_dispatch_queue_create, have_toydispatch=yes, have_toydispatch=no)
-  if test "$have_toydispatch" = "yes"; then
-    HAVE_TOYDISPATCH=1
-    MORE_LIBS="$MORE_LIBS -ltoydispatch"
-  fi
-fi
-
-AC_SUBST(HAVE_TOYDISPATCH)
-
-
 #--------------------------------------------------------------------
 # Check whether we can use typed selectors
 #--------------------------------------------------------------------
@@ -95,6 +69,19 @@ if test "$have_typed_selectors" = "yes"; then
 fi
 
 AC_SUBST(HAVE_TYPED_SELECTORS)
+
+# Setup variables:
+
+saved_CFLAGS="$CFLAGS"
+saved_CPPFLAGS="$CPPFLAGS$"
+saved_LDFLAGS="$LDFLAGS"
+GS_OBJCFLAGS=`gnustep-config --objc-flags`
+CFLAGS="$CFLAGS $GS_OBJCFLAGS"
+CPPFLAGS="$CPPFLAGS $GS_OBJCFLAGS"
+GS_LDFLAGS=`gnustep-config --objc-libs`
+LDFLAGS="$LDFLAGS $GS_LDFLAGS"
+
+
 
 #--------------------------------------------------------------------
 # Check whether we get runtime.h from libobjc2 or from the ObjectiveC2

@@ -350,8 +350,11 @@
   } while (NO == (BOOL)dbus_pending_call_get_completed(pending));
 
   //Now we are sure that we don't need the message any more.
-  dbus_message_unref(msg);
-  msg = NULL;
+  if (NULL != msg)
+  {
+    dbus_message_unref(msg);
+    msg = NULL;
+  }
 
   NS_DURING
   {
@@ -361,12 +364,18 @@
   NS_HANDLER
   {
     // Throw away the pending call
-    dbus_pending_call_unref(pending);
-    pending = NULL;
+    if (NULL != pending)
+    {
+      dbus_pending_call_unref(pending);
+      pending = NULL;
+    }
     [localException raise];
   }
   NS_ENDHANDLER
-  dbus_pending_call_unref(pending);
-  pending = NULL;
+  if (NULL != pending)
+  {
+    dbus_pending_call_unref(pending);
+    pending = NULL;
+  }
 }
 @end

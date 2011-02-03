@@ -22,14 +22,6 @@
    */
 
 /*
- * Having libtoydispatch enables some asynchronous behaviour.
- */
-
-#ifndef HAVE_TOYDISPATCH
-#  define HAVE_TOYDISPATCH @HAVE_TOYDISPATCH@
-#endif
-
-/*
  * Typed selectors enable automatic distinction between boxed and unboxed
  * variants of D-Bus method calls.
  */
