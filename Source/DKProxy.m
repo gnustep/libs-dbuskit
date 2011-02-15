@@ -23,6 +23,7 @@
 
 #import "DKArgument.h"
 #import "DKEndpoint.h"
+#import "DKEndpointManager.h"
 #import "DKInterface.h"
 #import "DKIntrospectionParserDelegate.h"
 #import "DKMethod.h"
@@ -32,10 +33,6 @@
 #define INCLUDE_RUNTIME_H
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
-
-#undef HAVE_TOYDISPATCH
-#define HAVE_TOYDISPATCH 0
-#include "AsyncBehavior.h"
 
 #import <Foundation/NSCoder.h>
 #import <Foundation/NSData.h>
@@ -101,14 +98,7 @@ enum
 - (void) _setAcceptHTML: (BOOL)yesno;
 @end
 
-static inline void DKBuildMethodCacheForProxy(void *p);
-
 DKInterface *_DKInterfaceIntrospectable;
-
-#if HAVE_TOYDISPATCH == 1
-dispatch_queue_t introspectionQueue;
-static void DKInitIntrospectionThread(void *data);
-#endif
 
 @implementation DKProxy
 
@@ -133,8 +123,6 @@ static void DKInitIntrospectionThread(void *data);
                                   forSelector: @selector(Introspect)];
     [introspect release];
     [xmlOutArg release];
-    ASYNC_INIT_QUEUE(introspectionQueue, "Introspection parser queue");
-    IF_ASYNC(dispatch_async_f(introspectionQueue, NULL, DKInitIntrospectionThread));
     getEndpointSelector = @selector(endpoint);
     getEndpoint = class_getMethodImplementation([DKPort class],
       getEndpointSelector);
@@ -285,10 +273,9 @@ static void DKInitIntrospectionThread(void *data);
 }
 
 /**
- * Triggers generation of the method cache. This will use ASYNC_IF_POSSIBLE to
- * make  -_buildMethodCache run in a separate thread if libtoydispatch is
- * available. Otherwise, DKBuildMethodCache may be inlined by the compiler and
- * -_buildMethodCache will be executed in the present thread.
+ * Triggers generation of the method cache. This will schedule generation of the
+ * cache on the worker thread or execute it locally if this code is already
+ * being executed on the worker thread.
  *
  * This is not that much useful if cache generation is requested directly by
  * -methodSignatureForSelector (it will go on and block right away because it
@@ -302,11 +289,11 @@ static void DKInitIntrospectionThread(void *data);
   if (WILL_BUILD_CACHE == state)
   {
     [condition unlock];
-    // If we are doing the cache generation in a separate thread, we need to
-    // retain ourselves to make sure we don't go away while the cache
-    // generation is in progress.
-    IF_ASYNC([self retain]);
-    ASYNC_IF_POSSIBLE(introspectionQueue, DKBuildMethodCacheForProxy, self);
+
+    [[DKEndpointManager sharedEndpointManager] boolReturnForPerformingSelector: @selector(_buildMethodCache:)
+                                                                        target: self
+                                                                          data: NULL
+                                                                 waitForReturn: NO];
   }
   else
   {
@@ -327,18 +314,15 @@ static void DKInitIntrospectionThread(void *data);
     return nil;
   }
 
-  // Normalize the selector to its untyped version:
-  selName = sel_getName(selector);
-  selector = sel_getUid(selName);
 
   /*
    * We need the "Introspect" selector to build the method cache and gurantee
    * that there is a method available for it. Hence, we won't wait for the cache
    * to be build when looking it up.
    */
-  if (0 == strcmp("Introspect", selName))
+  if (sel_isEqual(@selector(Introspect), selector))
   {
-    m = [self _methodForSelector: selector
+    m = [self _methodForSelector: @selector(Introspect)
                     waitForCache: NO];
   }
 
@@ -360,6 +344,10 @@ static void DKInitIntrospectionThread(void *data);
     {
       [condition unlock];
     }
+
+    // Normalize the selector to its untyped version:
+    selName = sel_getName(selector);
+    selector = sel_getUid(selName);
 
     /* Retry, but this time, block until the introspection data is resolved. */
     m = [self _methodForSelector: selector
@@ -563,14 +551,29 @@ static void DKInitIntrospectionThread(void *data);
   SEL retrievalSelector = @selector(DBusMethodForSelector:);
   IMP retrieveDBusMethod = class_getMethodImplementation([DKInterface class],
     retrievalSelector);
+  NSRunLoop *rl = nil;
+  BOOL inWorkerThread = DKInWorkerThread;
   NSAssert(retrieveDBusMethod, @"No method retrieval implementation in DKInterface.");
+  if (inWorkerThread)
+  {
+    rl = [NSRunLoop currentRunLoop];
+  }
   [condition lock];
   if (doWait)
   {
     // Wait until it is signaled that the cache has been built:
     while (CACHE_READY != state)
     {
-      [condition wait];
+      if (inWorkerThread)
+      {
+	[condition unlock];
+	[rl runUntilDate: [NSDate dateWithTimeIntervalSinceNow: 0.01]];
+        [condition lock];
+      }
+      else
+      {
+	[condition wait];
+      }
     }
   }
 
@@ -644,17 +647,35 @@ static void DKInitIntrospectionThread(void *data);
 
   call = [[DKMethodCall alloc] initWithProxy: self
                                       method: method
-                                  invocation: inv];
-
-  // Reschedule the endpoint so that the call does not spin infinitely when a
-  // different thread is trying to invoke a D-Bus method and the main thread is
-  // blocked.
-  [DK_PORT_ENDPOINT scheduleInCurrentThread];
+                                  invocation: inv
+				     timeout: 5000];
 
   //TODO: Implement asynchronous method calls using futures
-  [call sendSynchronouslyAndWaitUntil: 0];
+  [call sendSynchronously];
   [call release];
 }
+
+/*
+- (NSString*)Introspect
+{
+  DKMethod *introspectMethod = [[interfaces objectForKey: [NSString stringWithUTF8String: DBUS_INTERFACE_INTROSPECTABLE]] DBusMethodForSelector: @selector(Introspect)];
+  NSMethodSignature *sig = [introspectMethod methodSignatureBoxed: YES];
+  NSInvocation *inv = [NSInvocation invocationWithMethodSignature: sig];
+  DKMethodCall *call = nil;
+  NSString *retVal = nil;
+
+  [inv setSelector: @selector(Introspect)];
+  [inv setTarget: self];
+
+  call = [[DKMethodCall alloc] initWithProxy: self
+                                      method: introspectMethod
+				  invocation: inv];
+  [call sendSynchronously];
+  [inv getReturnValue: &retVal];
+  [call release];
+  return retVal;
+}
+*/
 
 - (BOOL)isKindOfClass: (Class)aClass
 {
@@ -840,7 +861,7 @@ static void DKInitIntrospectionThread(void *data);
   }
 }
 
-- (void)_buildMethodCache
+- (void)_buildMethodCache: (id)ignored
 {
   DKIntrospectionParserDelegate *delegate = [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self];
   NSXMLParser *parser = nil;
@@ -924,36 +945,6 @@ static void DKInitIntrospectionThread(void *data);
 
 @end
 
-#if HAVE_TOYDISPATCH == 1
-static void DKInitIntrospectionThread(void *data)
-{
-  /*
-   * Make GNUstep aware of the fact that we are using a thread that it doesn't
-   * yet know about:
-   */
-  GSRegisterCurrentThread();
-}
-#endif
-
-static inline void DKBuildMethodCacheForProxy(void *p)
-{
-  /*
-   * Set up an autorelease pool since we will create quite a few autoreleased
-   * objects on the way. Also, if we are executed in a new thread, we strictly
-   * need to create the pool ourselves.
-   */
-  NSAutoreleasePool *arp = [[NSAutoreleasePool alloc] init];
-  [(DKProxy*)p _buildMethodCache];
-  [arp release];
-
-  /*
-   * In asynchronous mode, we did retain the proxy before triggering cache
-   * generation to keep it from going away while in use. Hence, we need to
-   * release it here.
-   */
-  IF_ASYNC([(DKProxy*)p release]);
-}
-
 static NSRecursiveLock *busLock;
 static DKProxy *systemBus;
 static DKProxy *sessionBus;
@@ -974,7 +965,7 @@ static DKProxy *sessionBus;
     [busLock lock];
     if (sessionBus == nil)
     {
-      DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SESSION] autorelease];
+      DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SESSION];
       sessionBus = [[DKDBus alloc] initWithEndpoint: ep
                                          andService: @"org.freedesktop.DBus"
                                             andPath: @"/org/freedesktop/DBus"];
@@ -991,7 +982,7 @@ static DKProxy *sessionBus;
     [busLock lock];
     if (systemBus == nil)
     {
-      DKEndpoint *ep = [[[DKEndpoint alloc] initWithWellKnownBus: DBUS_BUS_SYSTEM] autorelease];
+      DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SYSTEM];
       systemBus = [[DKDBus alloc] initWithEndpoint: ep
                                         andService: @"org.freedesktop.DBus"
                                            andPath: @"/"];
@@ -1126,6 +1117,15 @@ static DKProxy *sessionBus;
    * No-Op. This is a shared object, we cannot let one caller change stuff the
    * other callers won't know about.
    */
-   NSWarnMLog(@"'-setPrimaryDBusInterface:' called for a shared DKDBus object.");
+   NSWarnMLog(@"'%@' called for a shared DKDBus object.", NSStringFromSelector(_cmd));
+}
+
+- (NSString*)_uniqueName
+{
+  /* Overriding this is a significiant optimisation. We already know that only
+   * one bus object exists per bus and that it is named org.freedesktop.DBus. We
+   * do not need to do any roundtrips to D-Bus to find out about this.
+   */
+  return @"org.freedesktop.DBus";
 }
 @end

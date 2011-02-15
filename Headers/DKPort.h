@@ -70,6 +70,13 @@ typedef NSUInteger DKDBusBusType;
 + (id)systemBusPort;
 
 /**
+ * This method should be called by an application that wants to make use of
+ * the multithreaded features of DBusKit. After this method has been called, it
+ * is no longer safe to call into DBusKit from +initialize methods, which might
+ * result in deadlock from the Objective-C runtime.
+ */
++ (void)enableWorkerThread;
+/**
  * Return a DKPort instance connected to the specified D-Bus peer on the session
  * message bus.
  */

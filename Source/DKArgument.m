@@ -529,6 +529,17 @@ DKDBusTypeForUnboxingObject(id object)
   selectorTypeMapLock = [NSLock new];
   DKInstallDefaultSelectorTypeMapping();
 
+  /*
+   * Take care that all subclasses are being initialized as well, so that we
+   * don't get nasty suprises when multiple threads try to obtain the runtime's
+   * +initialize lock.
+   */
+
+  [[[DKStructTypeArgument alloc] init] release];
+  [[[DKArrayTypeArgument alloc] init] release];
+  [[[DKDictionaryTypeArgument alloc] init] release];
+  [[[DKVariantTypeArgument alloc] init] release];
+  [[[DKDictEntryTypeArgument alloc] init] release];
 
 }
 

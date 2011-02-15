@@ -26,6 +26,7 @@
 
 #import <Foundation/NSConnection.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSException.h>
 #import <Foundation/NSString.h>
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -113,8 +114,19 @@
 
 - (NSString*)translatedString
 {
-  return [translator translate: [self languagePair]
-                              : [self options]
-			      : [self stringToTranslate]];
+  NSString *translation = nil;
+  NS_DURING
+  {
+    translation = [translator translate: [self languagePair]
+                                       : [self options]
+			               : [self stringToTranslate]];
+  }
+  NS_HANDLER
+  {
+    NSWarnMLog(@"Error when translation.");
+    translation = [self stringToTranslate];
+  }
+  NS_ENDHANDLER
+  return translation;
 }
 @end

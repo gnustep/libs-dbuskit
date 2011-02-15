@@ -51,6 +51,7 @@
 - (NSString*)Introspect;
 - (NSString*)GetId;
 - (NSString*)Hello;
+- (NSString*)ListNames;
 - (char*)GetNameOwner: (char*)name;
 - (BOOL)NameHasOwner: (NSString*)name;
 @end
@@ -196,7 +197,9 @@
                                         sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.Hal"
                                                                             onBus: DKDBusSystemBus] autorelease]];
   aProxy = [conn proxyAtPath: @"/org/freedesktop/Hal"];
-  returnValue = [aProxy Introspect];
+
+  UKDoesNotRaiseException(returnValue = [aProxy Introspect]);
+
 
   UKNotNil(returnValue);
   UKTrue([returnValue isKindOfClass: [NSString class]]);
@@ -212,6 +215,7 @@
   NSMutableArray *threads = [NSMutableArray new];
   NSUInteger count = 0;
   NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  [DKPort enableWorkerThread];
   conn = [NSConnection connectionWithReceivePort: [DKPort port]
                                         sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
   aProxy = [conn rootProxy];
@@ -236,4 +240,28 @@
   }
 }
 
+
+@end
+
+@interface TestDKDBus: NSObject <UKTest>
+@end
+@implementation TestDKDBus
+- (void)testGetSessionBus
+{
+  UKNotNil([DKDBus sessionBus]);
+}
+- (void)testGetSystemBus
+{
+  UKNotNil([DKDBus systemBus]);
+}
+
+- (void)useSessionBus
+{
+  UKNotNil([[DKDBus sessionBus] GetId]);
+}
+
+- (void)useSystemBus
+{
+  UKNotNil([[DKDBus systemBus] GetId]);
+}
 @end

@@ -51,19 +51,6 @@
 - (id) initWithConnection: (DBusConnection*)conn
                      info: (NSDictionary*)info;
 
-/**
- * Returns an endpoint connected to an arbitrary address. This is only useful
- * for specific cases where you don't want to use one of the standard message
- * busses. Use -initWithWellKnownBus: to get a connection for one of those.
- */
-- (id) initWithConnectionTo: (NSString*)address;
-
-/**
- * Returns an endpoint connected to one of the well-known message busses as per
- * D-Bus documentation (i.e. DBUS_BUS_SYSTEM, DBUS_BUS_SESSION or
- * DBUS_BUS_STARTER).
- */
-- (id) initWithWellKnownBus: (DBusBusType)type;
 
 /**
  * Returns the libdbus DBusConnection object.
@@ -92,8 +79,4 @@
  */
 - (NSString*)runLoopMode;
 
-/**
- * Will reinstall timers and watchers for the current run loop.
- */
-- (void)scheduleInCurrentThread;
 @end

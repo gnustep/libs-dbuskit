@@ -1,3 +1,13 @@
+2011-02-15 Niels Grewe <niels.grewe@halbordnung.de>
+
+	Merge DBusKit-ThreadRewrite branch. DBusKit now offloads all
+	interactions with libdbus to a separate thread and uses
+	DKEndpointManager as a gateway to do so. The new behaviour is
+	disabled by default and can be enabled by calling [DKPort
+	enableWorkerThread].
+	This also contains various improvements and fixes bugs that
+	were exposed by the new behaviour.
+
 2011-01-10 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.m: Be explicit about the buffer type for

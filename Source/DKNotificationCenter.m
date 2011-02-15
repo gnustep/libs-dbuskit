@@ -28,6 +28,7 @@
 #import "DKProxy+Private.h"
 
 #import "DKEndpoint.h"
+#import "DKEndpointManager.h"
 
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
@@ -122,7 +123,8 @@
 
 - (id)initWithBusType: (DKDBusBusType)aType;
 {
-  NSPointerFunctionsOptions weakObjectOptions = (NSPointerFunctionsObjectPersonality | NSPointerFunctionsZeroingWeakMemory);
+  NSPointerFunctionsOptions strongObjectOptions =
+    (NSPointerFunctionsObjectPersonality | NSPointerFunctionsStrongMemory);
   if (nil == (self = [super init]))
   {
     return nil;
@@ -130,7 +132,7 @@
   // We always observe signals:
   type = aType;
   rules = [[NSMutableDictionary alloc] initWithObjectsAndKeys: @"signal", @"type", nil];
-  observations = [[NSHashTable alloc] initWithOptions: weakObjectOptions
+  observations = [[NSHashTable alloc] initWithOptions: strongObjectOptions
                                              capacity: 5];
   return self;
 }
@@ -144,6 +146,10 @@
 {
   DKObservation *oldObservation = nil;
   if (nil == observation)
+  {
+    return;
+  }
+  if (NO == [observation isKindOfClass: [DKObservation class]])
   {
     return;
   }
@@ -174,17 +180,48 @@
   NSHashEnumerator theEnum = NSEnumerateHashTable(observations);
   // Construct a table to hold the observables to remove because we can't modify
   // the table while enumerating.
-  NSHashTable *removeTable = [NSHashTable hashTableWithWeakObjects];
+  NSHashTable *removeTable = [[NSHashTable alloc] initWithOptions: (NSPointerFunctionsObjectPersonality | NSPointerFunctionsStrongMemory)
+                                                         capacity: 10];
   DKObservation *thisObservation = nil;
-  while (nil != (thisObservation = NSNextHashEnumeratorItem(&theEnum)))
+  NS_DURING
   {
-    if (observer == [thisObservation observer])
+    while (nil != (thisObservation = NSNextHashEnumeratorItem(&theEnum)))
     {
-      NSHashInsert(removeTable,thisObservation);
+      if (observer == [thisObservation observer])
+      {
+        NSHashInsert(removeTable,thisObservation);
+      }
     }
   }
+  NS_HANDLER
+  {
+    NSEndHashTableEnumeration(&theEnum);
+    NS_DURING
+    {
+      [observations minusHashTable: removeTable];
+    }
+    NS_HANDLER
+    {
+      [removeTable release];
+      [localException raise];
+    }
+    NS_ENDHANDLER
+    [removeTable release];
+    [localException raise];
+  }
+  NS_ENDHANDLER
   NSEndHashTableEnumeration(&theEnum);
-  [observations minusHashTable: removeTable];
+  NS_DURING
+  {
+    [observations minusHashTable: removeTable];
+  }
+  NS_HANDLER
+  {
+    [removeTable release];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [removeTable release];
 }
 
 /**
@@ -572,8 +609,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 {
   if ([DKNotificationCenter class] == self)
   {
+    DKEndpointManager *manager = [DKEndpointManager sharedEndpointManager];
+    [manager enterInitialize];
     systemCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSystemBus];
     sessionCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSessionBus];
+    [manager leaveInitialize];
   }
 }
 
@@ -629,7 +669,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   }
   // Trigger initialization of the bus proxy:
   [DKDBus busWithBusType: type];
-  endpoint = [[DKEndpoint alloc] initWithWellKnownBus: (DBusBusType)type];
+  ASSIGN(endpoint,[[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: (DBusBusType)type]);
 
   if (nil == endpoint)
   {
@@ -1033,7 +1073,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 {
   NSHashEnumerator observableEnum;
   NSHashEnumerator cleanupEnum;
-  NSHashTable *cleanupTable = [NSHashTable hashTableWithWeakObjects];
+  NSHashTable *cleanupTable = NSCreateHashTable(NSObjectHashCallBacks, 10);
   NSUInteger initialCount = 0;
   if (nil == observable)
   {
@@ -1072,6 +1112,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   NS_HANDLER
   {
     NSEndHashTableEnumeration(&observableEnum);
+    [cleanupTable release];
     [lock unlock];
     [localException raise];
   }
@@ -1107,11 +1148,13 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   NS_HANDLER
   {
     NSEndHashTableEnumeration(&cleanupEnum);
+    [cleanupTable release];
     [lock unlock];
     [localException raise];
   }
   NS_ENDHANDLER
   NSEndHashTableEnumeration(&cleanupEnum);
+  [cleanupTable release];
   /*
    * Third stage of cleanup: If we have no observables left, also remove the
    * D-Bus message handler until we have further signals to watch.

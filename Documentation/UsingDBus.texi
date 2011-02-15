@@ -267,3 +267,24 @@ these values will be present in keys called @emph{arg0}, @emph{arg1},
 
 Additionally, calling @code{-object} on the notification will return a
 proxy to the object that emitted the signal.
+
+@section Multi-Threading Considerations
+By default, DBusKit runs in single-threaded mode. This means that all
+interaction with the D-Bus daemon happens on the runloop of the calling thread.
+If multiple threads try to send messages D-Bus objects, this model of execution
+cannot guarantee that message delivery from and to the bus daemon are
+successful. The framework should still be thread-safe in the sense that it will
+continue functioning after raising an exception due to timeouts, but the desired
+behaviour can only be acheived by putting DBusKit in multi-threaded mode.
+
+In multi-threaded mode, DBusKit will exchange messages with the D-Bus daemons
+via a dedicated worker-thread. To enable this behaviour the
+@code{+enableWorkerThread} method must be called on @code{DKPort}. All
+processing will then be taking place on the worker thread. Developers should
+note that after doing so, it is no longer safe to call into DBusKit from
+@code{+initialize}-methods. The reason for this is that with present
+Objective-C runtimes, @code{+initialize} will obtain a global lock and
+subsequent initialisations of classes on the worker thread might cause a
+deadlock. This is also the reason multi-threaded operation is not the default.
+But developers are encouraged to use this feature if it does not interfere with
+their application design.

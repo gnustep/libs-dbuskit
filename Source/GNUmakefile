@@ -26,6 +26,7 @@ DBusKit_HEADER_FILES = \
 DBusKit_OBJC_FILES = \
         DKArgument.m \
 	DKEndpoint.m \
+	DKEndpointManager.m \
 	DKInterface.m \
         DKIntrospectionNode.m \
 	DKIntrospectionParserDelegate.m \
