@@ -62,6 +62,11 @@ typedef struct {
   BOOL threadStarted;
 
   /**
+   * Tracks whether we already enabled threading.
+   */
+  BOOL threadEnabled;
+
+  /**
    * Maps active DBusConnections to the corresponding DKEndpoints.
    */
   NSMapTable *activeConnections;
@@ -199,6 +204,11 @@ typedef struct {
 
 
 /**
+ * Will be called in order to enable threaded mode.
+ */
+- (void)enableThread;
+
+/**
  * Will be called by DBusKit classes that require usage of the bus in their
  * +initialize method.
  */
@@ -209,6 +219,9 @@ typedef struct {
  * +initialize method.
  */
 - (void)leaveInitialize;
+
+
+
 
 /**
  * This method can be used to determine whether the manager is in synchronized

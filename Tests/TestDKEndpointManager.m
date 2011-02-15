@@ -24,6 +24,7 @@
 #import <UnitKit/UnitKit.h>
 
 #import "../Source/DKEndpointManager.h"
+#import "../Headers/DKPort.h"
 
 #include <unistd.h>
 
@@ -61,7 +62,6 @@
 @end
 
 @implementation DKTestMultiCaller: NSObject
-
 - (void)run: (DKTestDummy*)dummy
 {
 
@@ -78,6 +78,11 @@
 @end
 
 @implementation TestDKEndpointManager
++ (void)initialize
+{
+  [DKPort enableWorkerThread];
+}
+
 - (void)testGetManager
 {
   UKNotNil([DKEndpointManager sharedEndpointManager]);

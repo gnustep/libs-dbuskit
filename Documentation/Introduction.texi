@@ -120,7 +120,7 @@ object. This will return an instance of @code{NSDistantObject}: A proxy
 that will use @code{NSConnection} and @code{NSPort} to forward messages
 to the remote object.
 @example
-id *remoteObject = [c rootProxy];
+id remoteObject = [c rootProxy];
 @end example
 
 The DO mode of operation has a few notable advantages:

@@ -227,14 +227,37 @@
   }
 }
 
+
 - (DKMethod*) DBusMethodForSelector: (SEL)selector
+                          normalize: (BOOL)doNormalize
 {
+  DKMethod *theMethod = nil;
   if (0 == selector)
   {
     return nil;
   }
-  selector = sel_getUid(sel_getName(selector));
-  return NSMapGet(selectorToMethodMap, selector);
+  if (doNormalize)
+  {
+    selector = sel_getUid(sel_getName(selector));
+    return NSMapGet(selectorToMethodMap, selector);
+  }
+  else
+  {
+    theMethod = NSMapGet(selectorToMethodMap, selector);
+    if (nil == theMethod)
+    {
+      // Second chance, find a normalized method:
+      return [self DBusMethodForSelector: selector
+                               normalize: YES];
+    }
+  }
+  return theMethod;
+}
+
+- (DKMethod*)DBusMethodForSelector: (SEL)selector
+{
+  return [self DBusMethodForSelector: selector
+                           normalize: NO];
 }
 
 - (NSString*)mangledName

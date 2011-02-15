@@ -20,8 +20,16 @@
    Boston, MA 02111 USA.
    */
 
+#import "DKArgument.h"
 #import "DKEndpointManager.h"
 #import "DKEndpoint.h"
+#import "DKIntrospectionParserDelegate.h"
+#import "DKMethodCall.h"
+#import "DKObjectPathNode.h"
+#import "DKSignal.h"
+
+#import "DBusKit/DKProxy.h"
+
 #import <Foundation/NSDate.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
@@ -36,6 +44,7 @@
 
 #include <sched.h>
 
+@class DKWatcher, GSStackTrace;
 
 @interface DKEndpoint (Private)
 - (void)_mergeInfo: (NSDictionary*)info;
@@ -161,12 +170,48 @@ static DKEndpointManager *sharedManager;
    */
    dbus_threads_init_default();
 
+  /*
+   * To sidestep the limitation of handling of +initialize by the gcc and
+   * gnustep runtimes (which use a global lock to protect against multiple calls
+   * to the same +initialize), we make sure that we initialize all classes that
+   * are used on the run loop of the worker thread. This way, we will not
+   * deadlock when user code uses DBusKit objects in +initialize.
+   * NOTE: This only works properly if we send instance methods (maybe
+   * because the meta-class gets initialized otherwise?).
+   */
+  [[[GSStackTrace alloc] init] release];
+  [[[NSException alloc] init] release];
+  [[[NSTimer alloc] init] release];
+  [[[DKWatcher alloc] init] release];
+  [[[DKSignal alloc] init] release];
+
+  // NOTE: DKArgument initializes its own children.
+  [[[DKArgument alloc] init] release];
+  [[[DKProxyStandin alloc] init] release];
+  [[[DKIntrospectionParserDelegate alloc] init] release];
+  [[[DKMethodCall alloc] init] release];
+
   sharedManager = [[DKEndpointManager alloc] init];
+  [sharedManager enterInitialize];
+  // Preload the bus objects:
+  [DKDBus sessionBus];
+  [DKDBus systemBus];
+  [sharedManager leaveInitialize];
 }
 
 + (id)sharedEndpointManager
 {
   return sharedManager;
+}
+
+
++ (id)allocWithZone: (NSZone*)zone
+{
+  if (nil != sharedManager)
+  {
+    return nil;
+  }
+  return [super allocWithZone: zone];
 }
 
 - (id)init
@@ -193,6 +238,12 @@ static DKEndpointManager *sharedManager;
                                           selector: @selector(start:)
                                             object: nil];
    [workerThread setName: @"DBusKit worker thread"];
+   /*
+    * We set this up with a refcout of 1 because we want to start in
+    * non-threaded mode. Otherwise people will get bitten by synchronisation
+    * issues from +initialize.
+    */
+   initializeRefCount = 1;
    ringBuffer = calloc(sizeof(DKRingBufferElement), DKRingSize);
    producerLock = [NSLock new];
 
@@ -211,6 +262,15 @@ static DKEndpointManager *sharedManager;
      return nil;
    }
    return self;
+}
+
+
+- (void)enableThread
+{
+  if (__sync_bool_compare_and_swap(&threadEnabled, 0, 1))
+  {
+    [self leaveInitialize];
+  }
 }
 
 - (NSThread*)workerThread

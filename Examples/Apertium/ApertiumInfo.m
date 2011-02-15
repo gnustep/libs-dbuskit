@@ -31,6 +31,7 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSLocale.h>
+#import <Foundation/NSLock.h>
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -38,7 +39,7 @@
 #include <stdint.h>
 
 static ApertiumInfo *sharedInfo;
-
+static NSLock *infoLock;
 @protocol APInfo
 - (NSArray*) modes;
 @end
@@ -52,7 +53,7 @@ static ApertiumInfo *sharedInfo;
 {
   if (self == [ApertiumInfo class])
   {
-    sharedInfo = [[self alloc] init];
+    infoLock = [NSLock new];
   }
 }
 
@@ -67,11 +68,25 @@ static ApertiumInfo *sharedInfo;
 
 + (ApertiumInfo*)sharedApertiumInfo
 {
+  if (nil == sharedInfo)
+  {
+    [infoLock lock];
+    if (nil == sharedInfo)
+    {
+      sharedInfo = [[ApertiumInfo alloc] init];
+    }
+    [infoLock unlock];
+  }
   return sharedInfo;
 }
 
 - (id) init
 {
+  if (nil != sharedInfo)
+  {
+    [self release];
+    return sharedInfo;
+  }
   if (nil == (self = [super init]))
   {
     return nil;

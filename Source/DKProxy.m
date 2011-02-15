@@ -314,18 +314,15 @@ DKInterface *_DKInterfaceIntrospectable;
     return nil;
   }
 
-  // Normalize the selector to its untyped version:
-  selName = sel_getName(selector);
-  selector = sel_getUid(selName);
 
   /*
    * We need the "Introspect" selector to build the method cache and gurantee
    * that there is a method available for it. Hence, we won't wait for the cache
    * to be build when looking it up.
    */
-  if (0 == strcmp("Introspect", selName))
+  if (sel_isEqual(@selector(Introspect), selector))
   {
-    m = [self _methodForSelector: selector
+    m = [self _methodForSelector: @selector(Introspect)
                     waitForCache: NO];
   }
 
@@ -347,6 +344,10 @@ DKInterface *_DKInterfaceIntrospectable;
     {
       [condition unlock];
     }
+
+    // Normalize the selector to its untyped version:
+    selName = sel_getName(selector);
+    selector = sel_getUid(selName);
 
     /* Retry, but this time, block until the introspection data is resolved. */
     m = [self _methodForSelector: selector
@@ -646,12 +647,35 @@ DKInterface *_DKInterfaceIntrospectable;
 
   call = [[DKMethodCall alloc] initWithProxy: self
                                       method: method
-                                  invocation: inv];
+                                  invocation: inv
+				     timeout: 5000];
 
   //TODO: Implement asynchronous method calls using futures
   [call sendSynchronously];
   [call release];
 }
+
+/*
+- (NSString*)Introspect
+{
+  DKMethod *introspectMethod = [[interfaces objectForKey: [NSString stringWithUTF8String: DBUS_INTERFACE_INTROSPECTABLE]] DBusMethodForSelector: @selector(Introspect)];
+  NSMethodSignature *sig = [introspectMethod methodSignatureBoxed: YES];
+  NSInvocation *inv = [NSInvocation invocationWithMethodSignature: sig];
+  DKMethodCall *call = nil;
+  NSString *retVal = nil;
+
+  [inv setSelector: @selector(Introspect)];
+  [inv setTarget: self];
+
+  call = [[DKMethodCall alloc] initWithProxy: self
+                                      method: introspectMethod
+				  invocation: inv];
+  [call sendSynchronously];
+  [inv getReturnValue: &retVal];
+  [call release];
+  return retVal;
+}
+*/
 
 - (BOOL)isKindOfClass: (Class)aClass
 {

@@ -113,6 +113,11 @@ enum {
   return [self portForBusType: DKDBusSystemBus];
 }
 
++ (void)enableWorkerThread
+{
+  [[DKEndpointManager sharedEndpointManager] enableThread];
+}
+
 - (id) initWithRemote: (NSString*)aRemote
            atEndpoint: (DKEndpoint*)anEndpoint
 {
