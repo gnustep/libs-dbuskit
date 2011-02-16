@@ -1,4 +1,9 @@
 2011-02-16 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* configure.ac: Fix sel_getType_np check.
+	* configure: Regenerate.
+
+2011-02-16 Niels Grewe <niels.grewe@halbordnung.de>
 	
 	* Source/DKPortNameServer.m
 	* Headers/DKPortNameServer.h:
