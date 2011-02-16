@@ -220,9 +220,6 @@ typedef struct {
  */
 - (void)leaveInitialize;
 
-
-
-
 /**
  * This method can be used to determine whether the manager is in synchronized
  * mode due to being called from an initialize method.

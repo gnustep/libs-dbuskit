@@ -1,5 +1,13 @@
 2011-02-16 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKEndpointManager.m
+	* Source/DKPortNameServer.m:
+	Add -dealloc methods to the singletons for completeness.
+	* Source/DKPortNameServer.m: Actually initialize the (yet
+	unused) tables.
+	
+2011-02-16 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* configure.ac: Fix sel_getType_np check.
 	* configure: Regenerate.
 

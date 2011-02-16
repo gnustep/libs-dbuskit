@@ -28,6 +28,7 @@
 #import "DKEndpointManager.h"
 
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSHashTable.h>
 #import <Foundation/NSString.h>
 
 #include <stdint.h>
@@ -104,6 +105,10 @@ static DKPortNameServer *sessionBusNameServer;
   }
 
   busType = type;
+  queuedNames  = NSCreateHashTable(NSObjectHashCallBacks, 3);
+  activeNames = NSCreateHashTable(NSObjectHashCallBacks, 3);
+
+
   return self;
 }
 
@@ -150,5 +155,12 @@ static DKPortNameServer *sessionBusNameServer;
 - (id) retain
 {
     return self;
+}
+
+- (void)dealloc
+{
+  NSFreeHashTable(queuedNames);
+  NSFreeHashTable(activeNames);
+  [super dealloc];
 }
 @end

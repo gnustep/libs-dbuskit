@@ -925,4 +925,23 @@ static DKEndpointManager *sharedManager;
                 fromTable: syncedWatchers];
 }
 
+- (void)dealloc
+{
+  [connectionStateLock lock];
+  [synchronizationStateLock lock];
+  [producerLock lock];
+  [workerThread release];
+  NSFreeMapTable(faultedConnections);
+  NSFreeMapTable(activeConnections);
+  NSFreeMapTable(syncedWatchers);
+  NSFreeMapTable(syncedTimers);
+  free(ringBuffer);
+  [producerLock unlock];
+  [synchronizationStateLock unlock];
+  [connectionStateLock unlock];
+  [producerLock release];
+  [synchronizationStateLock release];
+  [connectionStateLock release];
+  [super dealloc];
+}
 @end
