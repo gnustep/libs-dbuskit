@@ -1,3 +1,7 @@
+2011-02-16 Niels Grewe <niels.grewe@halbordnung.de>
+
+	Add missing files.
+
 2011-02-15 Niels Grewe <niels.grewe@halbordnung.de>
 
 	Merge DBusKit-ThreadRewrite branch. DBusKit now offloads all
