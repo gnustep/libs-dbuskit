@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <dbus/dbus.h>
 
-@class DKEndpoint, NSLock, NSMapTable, NSThread, NSRecursiveLock;
+@class DKEndpoint, DKProxy, NSLock, NSMapTable, NSThread, NSRecursiveLock;
 
 
 // The structure members should all be of the same size, so the compiler should
@@ -180,10 +180,12 @@ typedef struct {
 - (void)start: (id)ignored;
 
 /**
- * Schedules periodic recovery attempts for <var>endpoint</var>. Will be used
- * in case of bus failures.
+ * Schedules periodic recovery attempts for  <var>endpoint/var>. Will be used in
+ * case of bus failures. If recovery is successful, <var>aProxy</var> will be
+ * notified.
  */
-- (void)attemptRecoveryForEndpoint: (DKEndpoint*)endpoint;
+- (void)attemptRecoveryForEndpoint: (DKEndpoint*)endpoint
+                             proxy: (DKProxy*)aProxy;
 
 /**
  * Inserts the request into the ring buffer and schedules it for draining in the

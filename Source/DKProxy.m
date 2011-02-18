@@ -30,6 +30,8 @@
 #import "DKMethodCall.h"
 #import "DKProxy+Private.h"
 
+#import "DBusKit/DKNotificationCenter.h"
+
 #define INCLUDE_RUNTIME_H
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
@@ -42,9 +44,11 @@
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSNotification.h>
 #import <Foundation/NSRunLoop.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSThread.h>
+#import <Foundation/NSValue.h>
 #import <Foundation/NSXMLParser.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
@@ -655,28 +659,6 @@ DKInterface *_DKInterfaceIntrospectable;
   [call release];
 }
 
-/*
-- (NSString*)Introspect
-{
-  DKMethod *introspectMethod = [[interfaces objectForKey: [NSString stringWithUTF8String: DBUS_INTERFACE_INTROSPECTABLE]] DBusMethodForSelector: @selector(Introspect)];
-  NSMethodSignature *sig = [introspectMethod methodSignatureBoxed: YES];
-  NSInvocation *inv = [NSInvocation invocationWithMethodSignature: sig];
-  DKMethodCall *call = nil;
-  NSString *retVal = nil;
-
-  [inv setSelector: @selector(Introspect)];
-  [inv setTarget: self];
-
-  call = [[DKMethodCall alloc] initWithProxy: self
-                                      method: introspectMethod
-				  invocation: inv];
-  [call sendSynchronously];
-  [inv getReturnValue: &retVal];
-  [call release];
-  return retVal;
-}
-*/
-
 - (BOOL)isKindOfClass: (Class)aClass
 {
   if (aClass == [DKProxy class])
@@ -689,6 +671,11 @@ DKInterface *_DKInterfaceIntrospectable;
 - (DKPort*)_port
 {
   return port;
+}
+
+- (void)_setPort: (DKPort*)aPort
+{
+  ASSIGN(port, aPort);
 }
 
 - (DKEndpoint*)_endpoint
@@ -770,6 +757,34 @@ DKInterface *_DKInterfaceIntrospectable;
   [condition unlock];
 }
 
+- (void) _registerSignalsFromInterface: (DKInterface*)theIf
+{
+  [theIf registerSignals];
+}
+
+- (void)_registerSignalsWithNotificationCenter: (DKNotificationCenter*)center
+{
+
+  NSEnumerator *ifEnum = nil;
+  DKInterface *theIf = nil;
+  [tableLock lock];
+  NS_DURING
+  {
+    ifEnum = [interfaces objectEnumerator];
+    while (nil != (theIf = [ifEnum nextObject]))
+    {
+      [theIf registerSignalsWithNotificationCenter: center];
+    }
+  }
+  NS_HANDLER
+  {
+    [tableLock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [tableLock unlock];
+}
+
 /**
  * Causes all interfaces to generate their dispatch tables.
  */
@@ -788,7 +803,7 @@ DKInterface *_DKInterfaceIntrospectable;
   {
     [theIf installMethods];
     [theIf installProperties];
-    [theIf registerSignals];
+    [self _registerSignalsFromInterface: theIf];
   }
   [tableLock unlock];
 
@@ -1014,7 +1029,7 @@ static DKProxy *sessionBus;
   BOOL willBeSystemBus = NO;
   DBusConnection *testConnection = NULL;
   DBusConnection *endpointConnection = NULL;
-
+  DKNonAutoInvalidatingPort *aPort = nil;
   [busLock lock];
   if (NO == [aService isEqualToString: @"org.freedesktop.DBus"])
   {
@@ -1064,11 +1079,20 @@ static DKProxy *sessionBus;
     dbus_connection_unref(testConnection);
   }
 
-  // we should now be sure that we are being initialized for either the system
-  // or the session bus.
-  if (nil == (self = [super initWithEndpoint: anEndpoint
-                                  andService: aService
-                                     andPath: aPath]))
+  /*
+   * We should now be sure that we are being initialized for either the system
+   * or the session bus. To do that, we create an instance of a special DKPort
+   * subclass that does not perform auto-invalidation. The reason for this is
+   * that auto-invalidation needs to go via the DKNotificationCenter, which in
+   * turn has a dependency on the corresponding bus object (which we are just
+   * initializing). Using an DKNonAutoInvalidatingPort avoids this circular
+   * dependency.
+   */
+  aPort = [[DKNonAutoInvalidatingPort alloc] initWithRemote: aService
+                                                 atEndpoint: anEndpoint];
+
+  if (nil == (self = [super initWithPort: aPort
+                                    path: aPath]))
   {
     return nil;
   }
@@ -1122,10 +1146,55 @@ static DKProxy *sessionBus;
 
 - (NSString*)_uniqueName
 {
-  /* Overriding this is a significiant optimisation. We already know that only
+  /*
+   * Overriding this is a significiant optimisation. We already know that only
    * one bus object exists per bus and that it is named org.freedesktop.DBus. We
-   * do not need to do any roundtrips to D-Bus to find out about this.
+   * do not need to do any roundtrips to D-Bus to find out about this. Since
+   * many things (e.g. the notification center) need to find out about the
+   * unique name, we save quite a lot by overriding the method.
    */
   return @"org.freedesktop.DBus";
+}
+
+
+- (void) _registerSignalsFromInterface: (DKInterface*)theIf
+{
+  // We override this to avoid triggering reentrancy from the notification
+  // center.
+}
+
+- (void)_disconnected: (NSNotification*)n
+{
+  /*
+   * Make sure that we only schedule our reconnection once:
+   */
+  if (__sync_bool_compare_and_swap(&isDisconnected, 0, 1))
+  {
+    [[DKEndpointManager sharedEndpointManager] attemptRecoveryForEndpoint: [self _endpoint]
+                                                                    proxy: self];
+    [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusDisconnectedNotification"
+                                                        object: self
+                                                      userInfo:
+      [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: [[self _endpoint] DBusBusType]],
+      @"busType", nil]];
+    [self _setPort: nil];
+  }
+}
+
+- (void)_reconnectedWithPort: (DKPort*)aPort
+{
+  if (nil == aPort)
+  {
+    return;
+  }
+  if (__sync_bool_compare_and_swap(&isDisconnected, 1, 0))
+  {
+    [self _setPort: aPort];
+    [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusReconnectedNotification"
+                                                        object: self
+                                                      userInfo:
+      [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: [[self _endpoint] DBusBusType]],
+      @"busType", nil]];
+  }
 }
 @end

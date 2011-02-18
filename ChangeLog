@@ -1,3 +1,39 @@
+2011-02-18 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpointManager.h
+	* Source/DKEndpointManager.m:
+	Update prototype of method for scheduling endpoint recovery.
+	Recovery will not yet be attempted, though.
+	* Headers/DKProxy.h: Add ivar to flag disconnected bus objects.
+	* Source/DKProxy.m: Start implementing disconnection handling
+	for the bus objects. Also untangle DKDBus and
+	DKNotificationCenter by overriding a few methods in DKDBus not
+	to call into the notification center and by using a special
+	DKPort subclass.
+	* Source/DKProxy+Private.h: Expose a few more private methods to
+	the sibling classes.
+	* Source/DKPort.m: Invalidate ports on disconnection from the
+	bus. Factor out notification registration into a separate
+	method.
+	* Source/DKInterface.h
+	* Source/DKInterface.m:
+	Support changes to allow postponing signal registration for bus
+	objects.
+	* Source/DKNonAutoInvalidatingPort.h
+	* Source/DKNonAutoInvalidatingPort.m:
+	Add subclass that does not rely on a working notification
+	center. Only used by DKDBus instance.
+	* Source/DKNotificationCenter.m: Untangle dependencies between
+	DKDBus and DKNotificationCenter. DKDBus does no longer require
+	the notification center, hence DKNotificationCenter is now
+	responsible for registering signal definitions from the bus
+	objects and making them watch for the disconnection signal.
+	* Source/GNUmakefile: Add new module.
+
+	Start working on recovery of the bus objects after disconnection
+	from the bus. Also sanitize the dependencies of
+	DKNotificationCenter and DKDBus.
+
 2011-02-16 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKEndpointManager.m

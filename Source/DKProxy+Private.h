@@ -23,8 +23,9 @@
 #import "DBusKit/DKProxy.h"
 
 #import "DKObjectPathNode.h"
+#import "DKNonAutoInvalidatingPort.h"
 
-@class DKInterface;
+@class DKInterface, DKNotificationCenter;
 
 @interface DKProxy (DKProxyPrivate) <DKObjectPathNode>
 - (DKPort*)_port;
@@ -32,6 +33,7 @@
 - (NSString*)_service;
 - (BOOL)_isLocal;
 - (NSString*)_uniqueName;
+- (void)_registerSignalsWithNotificationCenter: (DKNotificationCenter*)center;
 @end
 
 /* FIXME: Once we've got a dbuskit_make_protocol tool, replace this by a proper,

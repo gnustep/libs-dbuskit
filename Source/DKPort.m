@@ -88,6 +88,12 @@ enum {
  */
 - (void)_remoteDisappeared: (NSNotification*)notification;
 
+/**
+ * Called by the notification center when the port was disconnected from the
+ * bus.
+ */
+- (void)_disconnected: (NSNotification*)notification;
+
 - (id)initForBusType: (DKDBusBusType)type;
 @end
 
@@ -118,6 +124,44 @@ enum {
   [[DKEndpointManager sharedEndpointManager] enableThread];
 }
 
+- (void)_registerNotifications
+{
+  DKDBusBusType busType = [endpoint DBusBusType];
+  DKNotificationCenter *center = [DKNotificationCenter centerForBusType: busType];
+  /*
+   * If the port is non-local (i.e. has a specified name), we set up the
+   * notification center to inform us when the remote disappears. The whole
+   * process would be pointless for ports to the org.freedesktop.DBus service,
+   * so we avoid observing its name.
+   */
+  if ((0 != [remote length])
+    && (NO == [@"org.freedesktop.DBus" isEqualToString: remote]))
+  {
+    /*
+     * Setup observation rule: arg0 carries the name, arg2 the new owner, which
+     * is empty if the name disappeared.
+     */
+    [center addObserver: self
+               selector: @selector(_remoteDisappeared:)
+                 signal: @"NameOwnerChanged"
+              interface: @"org.freedesktop.DBus"
+                 sender: [DKDBus busWithBusType: busType]
+            destination: nil
+      filtersAndIndices: remote, 0, @"", 2, nil];
+  }
+  /*
+   * For all ports, we want to watch for the Disconnected signal on the
+   * o.fd.DBus.Local interface. This is a pseudo-signal that will be generated
+   * in-process when libdbus looses the connection to the dbus-daemon.
+   */
+  [center addObserver: self
+             selector: @selector(_disconnected:)
+	       signal: @"Disconnected"
+	    interface: @"org.freedesktop.DBus.Local"
+	       sender: nil
+	  destination: nil];
+}
+
 - (id) initWithRemote: (NSString*)aRemote
            atEndpoint: (DKEndpoint*)anEndpoint
 {
@@ -135,29 +179,8 @@ enum {
   ASSIGN(endpoint, anEndpoint);
   ASSIGNCOPY(remote, aRemote);
 
-  /*
-   * If the port is non-local (i.e. has a specified name), we set up the
-   * notification center to inform us when the remote disappears. The whole
-   * process would be pointless for ports to the org.freedesktop.DBus service,
-   * so we avoid observing its name.
-   */
-  if ((0 != [remote length])
-    && (NO == [@"org.freedesktop.DBus" isEqualToString: remote]))
-  {
-    DKDBusBusType busType = [endpoint DBusBusType];
-    DKNotificationCenter *center = [DKNotificationCenter centerForBusType: busType];
-    /*
-     * Setup observation rule: arg0 carries the name, arg2 the new owner, which
-     * is empty if the name disappeared.
-     */
-    [center addObserver: self
-               selector: @selector(_remoteDisappeared:)
-                 signal: @"NameOwnerChanged"
-              interface: @"org.freedesktop.DBus"
-                 sender: [DKDBus busWithBusType: busType]
-            destination: nil
-      filtersAndIndices: remote, 0, @"", 2, nil];
-  }
+  [self _registerNotifications];
+
   return self;
 }
 
@@ -415,6 +438,11 @@ enum {
   {
     return;
   }
+  [self invalidate];
+}
+
+- (void)_disconnected: (NSNotification*)n
+{
   [self invalidate];
 }
 /**

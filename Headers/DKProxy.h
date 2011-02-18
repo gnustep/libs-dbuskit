@@ -117,6 +117,13 @@
  * shared objects: Calling -setPrimaryDBusInterface: on them has no effect.
  */
 @interface DKDBus: DKProxy
+{
+  /**
+   * The isDisconnected flag is set by a bus object that experiences a bus
+   * failure and tries to reconnect to the bus.
+   */
+  BOOL isDisconnected;
+}
 
 /**
  * Returns a reference to the org.freedesktop.DBus service on the bus specified

@@ -469,8 +469,15 @@ static DKEndpointManager *sharedManager;
 }
 
 - (void)attemptRecoveryForEndpoint: (DKEndpoint*)endpoint
+                             proxy: (DKProxy*)proxy
 {
-  //TODO: Implement
+  DBusConnection *connection = NULL;
+  [connectionStateLock lock];
+  connection = [endpoint DBusConnection];
+  NSMapRemove(activeConnections, connection);
+  NSMapInsert(faultedConnections, connection, proxy);
+  // TODO: Implement
+  [connectionStateLock unlock];
 }
 
 - (BOOL)boolReturnForPerformingSelector: (SEL)selector

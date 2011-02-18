@@ -663,12 +663,14 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 
 - (id)initWithBusType: (DKDBusBusType)type
 {
+  DKDBus *theBus = nil;
   if (nil == (self = [super init]))
   {
     return nil;
   }
   // Trigger initialization of the bus proxy:
-  [DKDBus busWithBusType: type];
+  theBus = [DKDBus busWithBusType: type];
+
   ASSIGN(endpoint,[[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: (DBusBusType)type]);
 
   if (nil == endpoint)
@@ -685,6 +687,19 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                                            capacity: 5];
   observables = NSCreateHashTable(NSObjectHashCallBacks, 5);
 
+  // Install the observer for the Disconnected signal on the bus object. We need
+  // to do that here, because DKNotificationCenter depends on the existance of
+  // the bus object and doing it from the bus object would create a circular
+  // dependency.
+  [self addObserver: theBus
+           selector: @selector(_disconnected:)
+	     signal: @"Disconnected"
+	  interface: @"org.freedesktop.DBus.Local"
+	     sender: nil
+	destination: nil];
+
+  // Also trigger installation of the signals:
+  [theBus _registerSignalsWithNotificationCenter: self];
   return self;
 }
 

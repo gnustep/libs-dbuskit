@@ -24,7 +24,7 @@
 
 #import "DKIntrospectionNode.h"
 
-@class NSString, NSMutableDictionary, NSMapTable, DKMethod, DKProperty, DKSignal;
+@class DKNotificationCenter, NSString, NSMutableDictionary, NSMapTable, DKMethod, DKProperty, DKSignal;
 
 /**
  * DKInterface encapsulates information about D-Bus interfaces. Interfaces
@@ -95,9 +95,16 @@
 - (void)installProperties;
 
 /**
- * Registers all signals in the interface for use with DKNotificationCenter.
+ * Registers all signals in the interface for use with the default
+ * DKNotificationCenter.
  */
 - (void)registerSignals;
+
+/**
+ * Registers all signals in the interface for use with the named
+ * DKNotificationCenter.
+ */
+- (void)registerSignalsWithNotificationCenter: (DKNotificationCenter*)center;
 
 /**
  * Returns the method installed for this selector.

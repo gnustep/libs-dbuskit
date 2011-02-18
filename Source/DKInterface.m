@@ -32,12 +32,15 @@
 #include "config.h"
 #undef INCLUDE_RUNTIME_H
 
+#import "DBusKit/DKNotificationCenter.h"
+
 #import "DKMethod.h"
 #import "DKProperty.h"
 #import "DKPropertyMethod.h"
 #import "DKSignal.h"
 #import "DKInterface.h"
-
+#import "DKEndpoint.h"
+#import "DKProxy+Private.h"
 
 @implementation DKInterface
 /**
@@ -214,17 +217,31 @@
     }
   }
 }
-- (void)registerSignals
+
+- (void)registerSignalsWithNotificationCenter: (DKNotificationCenter*)center
 {
   NSEnumerator *signalEnum = [signals objectEnumerator];
   DKSignal *signal = nil;
-  SEL registrationSelector = @selector(registerWithNotificationCenter);
+  SEL registrationSelector = @selector(registerWithNotificationCenter:);
   IMP registerSignal = class_getMethodImplementation([DKSignal class],
     registrationSelector);
   while (nil != (signal = [signalEnum nextObject]))
   {
-    registerSignal(signal, registrationSelector);
+    registerSignal(signal, registrationSelector, center);
   }
+}
+
+
+- (void)registerSignals
+{
+  DKProxy *theProxy = [self proxyParent];
+  DKNotificationCenter *theCenter = nil;
+  if (nil == theProxy)
+  {
+    return;
+  }
+  theCenter = [DKNotificationCenter centerForBusType: [[theProxy _endpoint] DBusBusType]];
+  [self registerSignalsWithNotificationCenter: theCenter];
 }
 
 
