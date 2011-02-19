@@ -890,9 +890,10 @@ DKDBusTypeForUnboxingObject(id object)
   const char *expectedType;
 
   // Check that the method contains the expected type.
-  NSAssert3((dbus_message_iter_get_arg_type(iter) == DBusType),
+  int iterType = dbus_message_iter_get_arg_type(iter);
+  NSAssert3((iterType == DBusType),
     @"Type mismatch between D-Bus message and introspection data. Got '%ld', expected '%ld' in method %@." ,
-      dbus_message_iter_get_arg_type(iter), DBusType, [parent name]);
+      iterType, DBusType, [parent name]);
 
   if (doBox)
   {
@@ -949,11 +950,12 @@ DKDBusTypeForUnboxingObject(id object)
 {
   // All basic types are guaranteed to fit into 64bit.
   uint64_t buffer = 0;
+  int iterType = dbus_message_iter_get_arg_type(iter);
 
   // Check that the method contains the expected type.
-  NSAssert3((dbus_message_iter_get_arg_type(iter) == DBusType),
+  NSAssert3((iterType == DBusType),
     @"Type mismatch between D-Bus message and introspection data. Got '%ld', expected '%ld' in method %@." ,
-      dbus_message_iter_get_arg_type(iter), DBusType, [parent name]);
+      iterType, DBusType, [parent name]);
 
   dbus_message_iter_get_basic(iter, (void*)&buffer);
 
@@ -968,10 +970,12 @@ DKDBusTypeForUnboxingObject(id object)
   DKEndpoint *endpoint = [ancestor _endpoint];
   NSString *path = nil;
   DKProxyStandin *standin = nil;
+  int iterType = dbus_message_iter_get_arg_type(iter);
+
   // Check that the method contains the expected type.
-  NSAssert3((dbus_message_iter_get_arg_type(iter) == DBusType),
+  NSAssert3((iterType == DBusType),
     @"Type mismatch between D-Bus message and introspection data. Got '%ld', expected '%ld' in method %@." ,
-      dbus_message_iter_get_arg_type(iter), DBusType, [parent name]);
+      iterType, DBusType, [parent name]);
 
   dbus_message_iter_get_basic(iter, (void*)&buffer);
   path = [[NSString alloc] initWithUTF8String: buffer];
@@ -1669,7 +1673,7 @@ DKDBusTypeForUnboxingObject(id object)
       obj = theNull;
     }
     [theArray addObject: obj];
-  } while (dbus_message_iter_next(&subIter) && (index < count));
+  } while (dbus_message_iter_next(&subIter) && (++index < count));
 
   returnArray = [NSArray arrayWithArray: theArray];
   [theArray release];

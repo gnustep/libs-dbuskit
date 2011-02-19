@@ -1,5 +1,10 @@
 2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKArgument.m: Fix a bug where the field index for
+	structure was not properly incremented in deserialization.
+
+2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m: Fix a bug where deserializing an empty
 	array would erroneously trigger an assertion failure.
 
