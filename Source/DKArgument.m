@@ -890,8 +890,9 @@ DKDBusTypeForUnboxingObject(id object)
   const char *expectedType;
 
   // Check that the method contains the expected type.
-  NSAssert((dbus_message_iter_get_arg_type(iter) == DBusType),
-    @"Type mismatch between D-Bus message and introspection data.");
+  NSAssert3((dbus_message_iter_get_arg_type(iter) == DBusType),
+    @"Type mismatch between D-Bus message and introspection data. Got '%ld', expected '%ld' in method %@." ,
+      dbus_message_iter_get_arg_type(iter), DBusType, [parent name]);
 
   if (doBox)
   {
@@ -950,8 +951,9 @@ DKDBusTypeForUnboxingObject(id object)
   uint64_t buffer = 0;
 
   // Check that the method contains the expected type.
-  NSAssert((dbus_message_iter_get_arg_type(iter) == DBusType),
-    @"Type mismatch between D-Bus message and introspection data.");
+  NSAssert3((dbus_message_iter_get_arg_type(iter) == DBusType),
+    @"Type mismatch between D-Bus message and introspection data. Got '%ld', expected '%ld' in method %@." ,
+      dbus_message_iter_get_arg_type(iter), DBusType, [parent name]);
 
   dbus_message_iter_get_basic(iter, (void*)&buffer);
 
@@ -967,8 +969,9 @@ DKDBusTypeForUnboxingObject(id object)
   NSString *path = nil;
   DKProxyStandin *standin = nil;
   // Check that the method contains the expected type.
-  NSAssert((dbus_message_iter_get_arg_type(iter) == DBusType),
-    @"Type mismatch between D-Bus message and introspection data.");
+  NSAssert3((dbus_message_iter_get_arg_type(iter) == DBusType),
+    @"Type mismatch between D-Bus message and introspection data. Got '%ld', expected '%ld' in method %@." ,
+      dbus_message_iter_get_arg_type(iter), DBusType, [parent name]);
 
   dbus_message_iter_get_basic(iter, (void*)&buffer);
   path = [[NSString alloc] initWithUTF8String: buffer];
