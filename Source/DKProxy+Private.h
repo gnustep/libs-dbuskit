@@ -36,6 +36,15 @@
 - (void)_registerSignalsWithNotificationCenter: (DKNotificationCenter*)center;
 @end
 
+@interface DKDBus (DKDBusPrivate)
+- (void)_reconnectedWithEndpoint: (DKEndpoint*)endpoint;
+@end
+
+@interface DKPort (DKPortEndpointInitializer)
+- (id) initWithRemote: (NSString*)aRemote
+           atEndpoint: (DKEndpoint*)anEndpoint;
+@end
+
 /* FIXME: Once we've got a dbuskit_make_protocol tool, replace this by a proper,
  * generated header for the org.freedesktop.DBus interface.
  */

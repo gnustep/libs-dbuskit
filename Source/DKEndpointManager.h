@@ -70,11 +70,7 @@ typedef struct {
    * Maps active DBusConnections to the corresponding DKEndpoints.
    */
   NSMapTable *activeConnections;
-  /**
-   * Keeps track of DBusConnections that no longer work but for which recovery
-   * is being attempted.
-   */
-  NSMapTable *faultedConnections;
+
   /**
    * Lock to protect changes to the connection tables.
    */

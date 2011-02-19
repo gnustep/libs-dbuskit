@@ -26,6 +26,7 @@
 #import "DKIntrospectionParserDelegate.h"
 #import "DKMethodCall.h"
 #import "DKObjectPathNode.h"
+#import "DKProxy+Private.h"
 #import "DKSignal.h"
 
 #import "DBusKit/DKProxy.h"
@@ -230,9 +231,6 @@ static DKEndpointManager *sharedManager;
    activeConnections = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
      NSNonRetainedObjectMapValueCallBacks,
      3);
-   faultedConnections = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
-     NSNonRetainedObjectMapValueCallBacks,
-     3);
    connectionStateLock = [NSRecursiveLock new];
    workerThread = [[NSThread alloc] initWithTarget: self
                                           selector: @selector(start:)
@@ -254,7 +252,7 @@ static DKEndpointManager *sharedManager;
    syncedTimers = [[NSMapTable alloc] initWithKeyOptions: NSMapTableStrongMemory
                                             valueOptions: NSMapTableStrongMemory
                                                 capacity: 5];
-   if (NO == (activeConnections && faultedConnections && connectionStateLock
+   if (NO == (activeConnections && connectionStateLock
      && workerThread && ringBuffer && producerLock && synchronizationStateLock
      && syncedWatchers && syncedTimers))
    {
@@ -438,7 +436,6 @@ static DKEndpointManager *sharedManager;
   NS_DURING
   {
     NSMapRemove(activeConnections, connection);
-    NSMapRemove(faultedConnections, connection);
   }
   NS_HANDLER
   {
@@ -467,17 +464,50 @@ static DKEndpointManager *sharedManager;
   [[NSRunLoop currentRunLoop] run];
   [arp release];
 }
+- (void)_performRecovery: (NSTimer*)timer
+{
+  NSDictionary *userInfo = [timer userInfo];
+  DKDBusBusType busType = [(NSNumber*)[userInfo objectForKey: @"busType"] integerValue];
+  DKEndpoint *newEndpoint = [self endpointForWellKnownBus: busType];
+  if (nil != newEndpoint)
+  {
+    [timer invalidate];
+    [(DKDBus*)[userInfo objectForKey: @"proxy"] _reconnectedWithEndpoint: newEndpoint];
+  }
+}
 
 - (void)attemptRecoveryForEndpoint: (DKEndpoint*)endpoint
                              proxy: (DKProxy*)proxy
 {
   DBusConnection *connection = NULL;
+  NSDictionary *infoDict = [NSDictionary dictionaryWithObjectsAndKeys:
+    [NSNumber numberWithInt: [endpoint DBusBusType]], @"busType",
+    proxy, @"proxy", nil];
+  NSTimer *timer = nil;
   [connectionStateLock lock];
   connection = [endpoint DBusConnection];
-  NSMapRemove(activeConnections, connection);
-  NSMapInsert(faultedConnections, connection, proxy);
-  // TODO: Implement
+  if (NULL != connection)
+  {
+    NSMapRemove(activeConnections, connection);
+  }
   [connectionStateLock unlock];
+  timer = [NSTimer timerWithTimeInterval: 0.5
+                                  target: self
+				selector: @selector(_performRecovery:)
+				userInfo: infoDict
+				 repeats: YES];
+  if (0 != initializeRefCount)
+  {
+    [[NSRunLoop currentRunLoop] addTimer: timer
+                                 forMode: NSDefaultRunLoopMode];
+  }
+  else
+  {
+    [self performSelector: @selector(_injectTimer:)
+                 onThread: workerThread
+ 	       withObject: timer
+	    waitUntilDone: NO];
+  }
 }
 
 - (BOOL)boolReturnForPerformingSelector: (SEL)selector
@@ -938,7 +968,6 @@ static DKEndpointManager *sharedManager;
   [synchronizationStateLock lock];
   [producerLock lock];
   [workerThread release];
-  NSFreeMapTable(faultedConnections);
   NSFreeMapTable(activeConnections);
   NSFreeMapTable(syncedWatchers);
   NSFreeMapTable(syncedTimers);

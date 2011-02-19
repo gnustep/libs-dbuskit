@@ -1,5 +1,17 @@
 2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKProxy+Private.h: Expose methods necessary for
+	connection recovery to sibling classes.
+	* Source/DKProxy.m: Make DKDBus reconstruct the port when
+	recovery was successful.
+	* Source/DKEndpointManager.h: Remove faulted connection table.
+	* Source/DKEndpointManager.m: Implement endpoint recovery. Remove
+	faulted connection table.
+
+	Implement recovery of D-Bus connections for the bus objects.
+
+2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m: Fix a bug where the field index for
 	structure was not properly incremented in deserialization.
 

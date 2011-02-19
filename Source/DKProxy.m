@@ -1181,15 +1181,19 @@ static DKProxy *sessionBus;
   }
 }
 
-- (void)_reconnectedWithPort: (DKPort*)aPort
+- (void)_reconnectedWithEndpoint: (DKEndpoint*)anEndpoint
 {
-  if (nil == aPort)
+  if (nil == anEndpoint)
   {
     return;
   }
   if (__sync_bool_compare_and_swap(&isDisconnected, 1, 0))
   {
+    DKPort *aPort = [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"
+                                        atEndpoint: anEndpoint];
     [self _setPort: aPort];
+    [aPort release];
+
     [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusReconnectedNotification"
                                                         object: self
                                                       userInfo:
