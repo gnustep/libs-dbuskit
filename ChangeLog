@@ -1,5 +1,10 @@
 2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKArgument.m: Fix a bug where deserializing an empty
+	array would erroneously trigger an assertion failure.
+
+2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m: Be more verbose when failing assertions.
 
 2011-02-18 Niels Grewe <niels.grewe@halbordnung.de>

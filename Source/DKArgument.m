@@ -1448,7 +1448,13 @@ DKDBusTypeForUnboxingObject(id object)
   dbus_message_iter_recurse(iter, &subIter);
   do
   {
-    id obj = [theChild unmarshalledObjectFromIterator: &subIter];
+    id obj = nil;
+    if (0 == dbus_message_iter_get_arg_type(&subIter))
+    {
+      // If we opened an empty iterator, we just break from the loop
+      break;
+    }
+    obj = [theChild unmarshalledObjectFromIterator: &subIter];
     if (nil == obj)
     {
       obj = theNull;
@@ -1555,7 +1561,11 @@ DKDBusTypeForUnboxingObject(id object)
   {
     id value = nil;
     id key = nil;
-
+    if (0 == dbus_message_iter_get_arg_type(&subIter))
+    {
+      // If we opened an empty iterator, break the loop.
+      break;
+    }
     [theChild unmarshallFromIterator: &subIter
                                value: &value
                                  key: &key];
