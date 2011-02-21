@@ -97,7 +97,6 @@ enum
           atEndpoint: (DKEndpoint*)ep;
 @end
 
-
 @interface NSXMLParser (GSSloppyParserMode)
 - (void) _setAcceptHTML: (BOOL)yesno;
 @end
@@ -1170,14 +1169,18 @@ static DKProxy *sessionBus;
    */
   if (__sync_bool_compare_and_swap(&isDisconnected, 0, 1))
   {
-    [[DKEndpointManager sharedEndpointManager] attemptRecoveryForEndpoint: [self _endpoint]
+    DKEndpoint *ep = [self _endpoint];
+    DKDBusBusType type = [ep DBusBusType];
+    [[DKEndpointManager sharedEndpointManager] attemptRecoveryForEndpoint: ep
                                                                     proxy: self];
+
     [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusDisconnectedNotification"
                                                         object: self
                                                       userInfo:
-      [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: [[self _endpoint] DBusBusType]],
+      [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: type],
       @"busType", nil]];
     [self _setPort: nil];
+    NSDebugMLog(@"Disconnected from D-Bus");
   }
 }
 
@@ -1193,12 +1196,21 @@ static DKProxy *sessionBus;
                                         atEndpoint: anEndpoint];
     [self _setPort: aPort];
     [aPort release];
-
+    NSDebugMLog(@"Reconnected to D-Bus");
     [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusReconnectedNotification"
                                                         object: self
                                                       userInfo:
       [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: [[self _endpoint] DBusBusType]],
       @"busType", nil]];
   }
+}
+
+- (NSMethodSignature*)methodSignatureForSelector: (SEL)aSel
+{
+  if (sel_isEqual(@selector(_disconnected:), aSel))
+  {
+    return [NSMethodSignature signatureWithObjCTypes: "v@:@"];
+  }
+  return [super methodSignatureForSelector: aSel];
 }
 @end

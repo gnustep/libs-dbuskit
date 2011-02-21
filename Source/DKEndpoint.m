@@ -567,6 +567,19 @@ DKRelease(void *ptr);
 
 - (void)dealloc
 {
+  /*
+   * We might be deallocated due to a connection failure. In that case, we
+   * cannot ask libdbus what kind of event we were watching for. Hence, we
+   * remove ourselves from the loop for all event types.
+   */
+  [[ctx runLoop] removeEvent: (void*)(intptr_t)fileDesc
+                        type: ET_RDESC
+                     forMode: [ctx runLoopMode]
+                         all: NO];
+  [[ctx runLoop] removeEvent: (void*)(intptr_t)fileDesc
+                        type: ET_WDESC
+                     forMode: [ctx runLoopMode]
+                         all: NO];
   [super dealloc];
 }
 @end
@@ -717,7 +730,6 @@ static IMP performOnWorkerThread;
  */
 - (BOOL)dispatchForConnection: (DBusConnection*)conn
 {
-  DBusDispatchStatus status;
   // If called with nil, we dispatch for the default connection:
   if ((conn != NULL) && (conn != connection))
   {
@@ -726,11 +738,11 @@ static IMP performOnWorkerThread;
     return NO;
   }
 
-  do
+  while (DBUS_DISPATCH_DATA_REMAINS == dbus_connection_get_dispatch_status(connection))
   {
     // We drain all messages instead of waiting for the next run loop iteration:
-    status = dbus_connection_dispatch(connection);
-  } while (DBUS_DISPATCH_DATA_REMAINS == status);
+    dbus_connection_dispatch(connection);
+  };
   return YES;
 }
 

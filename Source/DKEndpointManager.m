@@ -83,6 +83,16 @@ static DKEndpointManager *sharedManager;
 #define DKRingEmpty ((producerCounter - consumerCounter) == 0)
 #define DKMaskIndex(index) ((index) & DKRingMask)
 
+#define DKRingSchedule \
+if (NO == DKRingEmpty)\
+  {\
+    NSDebugMLog(@"Stuff in buffer: Scheduling buffer draining.");\
+    [self performSelector: @selector(drainBuffer:)\
+                 onThread: workerThread\
+	       withObject: nil\
+            waitUntilDone: NO];\
+  }
+
 /*
  * This works the following way:
  * 1.  Start the worker thread if it is not yet running.
@@ -96,13 +106,15 @@ static DKEndpointManager *sharedManager;
  * 7.  Insert the new request into the buffer.
  * 8.  Increment the producer counter.
  * 9.  Unlock the producer lock.
- * 10. Schedule draining the buffer.
  */
 #define DKRingInsert(x) do {\
   NSUInteger count = 0; \
-  if (__sync_bool_compare_and_swap(&threadStarted, 0, 1) && (0 == initializeRefCount))\
+  if (0 == initializeRefCount)\
   {\
-    [workerThread start];\
+    if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))\
+    {\
+      [workerThread start];\
+    }\
   }\
   while (DKRingFull)\
   {\
@@ -125,14 +137,6 @@ static DKEndpointManager *sharedManager;
   [producerLock unlock];\
   NSDebugMLog(@"Inserting into ringbuffer (remaining capacity: %lu).",\
     DKRingSpace);\
-  if (NO == DKRingEmpty)\
-  {\
-    NSDebugMLog(@"Stuff in buffer: Scheduling buffer draining.");\
-    [self performSelector: @selector(drainBuffer:)\
-                 onThread: workerThread\
-	       withObject: nil\
-            waitUntilDone: NO];\
-  }\
 } while (0)
 
 
@@ -471,8 +475,8 @@ static DKEndpointManager *sharedManager;
   DKEndpoint *newEndpoint = [self endpointForWellKnownBus: busType];
   if (nil != newEndpoint)
   {
-    [timer invalidate];
     [(DKDBus*)[userInfo objectForKey: @"proxy"] _reconnectedWithEndpoint: newEndpoint];
+    [timer invalidate];
   }
 }
 
@@ -508,6 +512,35 @@ static DKEndpointManager *sharedManager;
  	       withObject: timer
 	    waitUntilDone: NO];
   }
+}
+
+- (void)invokeRequest: (const DKRingBufferElement)request
+{
+  NSMethodSignature *sig = nil;
+  NSInvocation *inv = nil;
+  id data = request.object;
+  // We don't handle incomplete requests:
+  if ((nil == request.target) || (0 == request.selector))
+  {
+    return;
+  }
+
+  /*
+   * Special case for when we cannot use the ring buffer for some reason.
+   * This might mean that we are in the worker thread and the buffer is
+   * full. In this case, we must wrap the call in an NSInvocation
+   * object and dispatch the call via the run loop.
+   */
+  sig = [request.target methodSignatureForSelector: request.selector];
+  inv = [NSInvocation invocationWithMethodSignature: sig];
+  [inv setSelector: request.selector];
+  [inv setArgument: &data
+           atIndex: 2];
+  [[NSRunLoop currentRunLoop] performSelector: @selector(invokeWithTarget:)
+                                       target: inv
+                                     argument: request.target
+                                        order: 0
+                                        modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
 }
 
 - (BOOL)boolReturnForPerformingSelector: (SEL)selector
@@ -571,32 +604,21 @@ static DKEndpointManager *sharedManager;
     if (YES == doWait)
     {
       retVal = (BOOL)(intptr_t)performRequest(target, selector, data);
+      if (performSynchronized)
+      {
+        [synchronizationStateLock unlock];
+      }
     }
     else if (performSynchronized)
     {
-      performRequest(target, selector, data);
+      [self invokeRequest: request];
       retVal = YES;
       [synchronizationStateLock unlock];
     }
-    else if (DKRingFull)
+    else if (YES == DKRingFull)
     {
-      /*
-       * Special case for when we are in the worker thread and the ring buffer
-       * is filling. In this case, we must wrap the call in an NSInvocation
-       * object and dispatch the call via the run loop.
-       */
-      NSMethodSignature *sig = [target methodSignatureForSelector: selector];
-      NSInvocation *inv = [NSInvocation invocationWithMethodSignature: sig];
-      [inv setSelector: selector];
-      [inv setArgument: &data
-               atIndex: 2];
       NSWarnMLog(@"Warning, ring buffer full when called from within worker thread. Will handle call through NSInvocation.");
-      [[NSRunLoop currentRunLoop] performSelector: @selector(invokeWithTarget:)
-                                           target: inv
-                                         argument: target
-                                            order: 0
-                                            modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
-
+      [self invokeRequest: request];
       return YES;
     }
 
@@ -612,6 +634,7 @@ static DKEndpointManager *sharedManager;
    */
 
   DKRingInsert(request);
+  DKRingSchedule;
   while ((-1 == retVal) && (YES == doWait))
   {
     if (0 == (++count % 16))
@@ -830,6 +853,7 @@ static DKEndpointManager *sharedManager;
         if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))
         {
           [workerThread start];
+	  NSDebugMLog(@"Worker thread started.");
         }
 
         // Move the watchers to the worker thread

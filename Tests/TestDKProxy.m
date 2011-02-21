@@ -232,8 +232,8 @@
     [aThread start];
     [aThread release];
   }
-  NSLog(@"Sleeping two second to allow threads to terminate:");
-  sleep(2);
+  NSLog(@"Sleeping 6 seconds to allow threads to terminate:");
+  sleep(6);
   for (count = 0;count < 5; count++)
   {
     UKTrue([(NSThread*)[threads objectAtIndex: count] isFinished]);

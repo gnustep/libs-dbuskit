@@ -157,7 +157,7 @@ enum {
   [center addObserver: self
              selector: @selector(_disconnected:)
 	       signal: @"Disconnected"
-	    interface: @"org.freedesktop.DBus.Local"
+	    interface: [NSString stringWithUTF8String: DBUS_INTERFACE_LOCAL]
 	       sender: nil
 	  destination: nil];
 }

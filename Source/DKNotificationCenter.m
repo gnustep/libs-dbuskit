@@ -694,7 +694,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   [self addObserver: theBus
            selector: @selector(_disconnected:)
 	     signal: @"Disconnected"
-	  interface: @"org.freedesktop.DBus.Local"
+	  interface: [NSString stringWithUTF8String: DBUS_INTERFACE_LOCAL]
 	     sender: nil
 	destination: nil];
 
@@ -1477,10 +1477,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (void)_fixupProxyAndNotify: (NSDictionary*)infoDict
 {
   DKSignal *signal = [infoDict objectForKey: @"signal"];
+  DKProxyStandin *standin = [infoDict objectForKey: @"standin"];
   NSDictionary *userInfo = [infoDict objectForKey: @"userInfo"];
   NSMutableDictionary *fixedInfo = [NSMutableDictionary dictionary];
   NSNotification  *notification = nil;
-  DKProxy *senderProxy = [(DKObjectPathNode*)[infoDict objectForKey: @"standin"] proxy];
+  DKProxy *senderProxy = (NO == [[NSNull null] isEqual: standin]) ? [standin proxy] : nil ;
   NSArray *matchingObservables = [infoDict objectForKey: @"matches"];
   NSEnumerator *userInfoEnum = [userInfo keyEnumerator];
   NSString *key = nil;
@@ -1525,27 +1526,15 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   const char *cDestination = dbus_message_get_destination(msg);
   NSString *destination = nil;
   const char *signature = dbus_message_get_signature(msg);
+  NSNull *theNull = [NSNull null];
 
-  if (NULL != cSignal)
-  {
-    signal = [NSString stringWithUTF8String: cSignal];
-  }
-  if (NULL != cInterface)
-  {
-    interface = [NSString stringWithUTF8String: cInterface];
-  }
-  if (NULL != cSender)
-  {
-    sender = [NSString stringWithUTF8String: cSender];
-  }
-  if (NULL != cPath)
-  {
-    path = [NSString stringWithUTF8String: cPath];
-  }
-  if (NULL != cDestination)
-  {
-    destination = [NSString stringWithUTF8String: cDestination];
-  }
+  // We cannot add nil to the userInfo, so we replace empty things with NSNull
+  signal = (NULL != cSignal) ? [NSString stringWithUTF8String: cSignal] : theNull;
+  interface = (NULL != cInterface) ? [NSString stringWithUTF8String: cInterface] : theNull;
+  sender = (NULL != cSender) ? [NSString stringWithUTF8String: cSender] : theNull;
+  path = (NULL != cPath) ? [NSString stringWithUTF8String: cPath]: theNull;
+  destination = (NULL != cDestination) ? [NSString stringWithUTF8String: cDestination] : theNull;
+
 
   [lock lock];
   NS_DURING
@@ -1566,10 +1555,15 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     DKSignal *theSignal = [[origSignal copy] autorelease];
 
     /* Construct a intermediary proxy for the object emitting the signal: */
-    DKProxyStandin *senderNode = [[[DKProxyStandin alloc] initWithEndpoint: endpoint
-                                                                   service: sender
-                                                                      path: path] autorelease];
-    [theSignal setParent: senderNode];
+    DKProxyStandin *senderNode = (id)theNull;
+    if (NO == [theNull isEqual: sender])
+    {
+      // Sender will only be nil for in process signals:
+      senderNode = [[[DKProxyStandin alloc] initWithEndpoint: endpoint
+                                                     service: sender
+                                                        path: path] autorelease];
+      [theSignal setParent: senderNode];
+    }
 
     userInfo = [[NSMutableDictionary alloc] initWithObjectsAndKeys: signal, @"member",
       interface, @"interface",

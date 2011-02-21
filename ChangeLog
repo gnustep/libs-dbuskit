@@ -1,3 +1,28 @@
+2011-02-21 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpointManager.m: Fix the method that fills the ring
+	buffer to actually do the expected thing in single-threaded mode.
+	Previously, it would directly execute the request even if it was
+	requested not to wait, causing unexpected reentrancy for some
+	things. Also factor out the code that implements fallback to
+	NSInvocation into a separate method.
+	* Source/DKPort.m: Use libdbus macro for interface name.
+	* Source/DKEndpoint.m: Actually remove DKWatchers from the
+	runloop when thy are deallocated.
+	* Source/DKProxy.m: Refactor -_disconnected: a bit. Override
+	-methodSignatureForSelector: for DKDBus in order to play nice
+	with notification center that does need to call private methods
+	on DKDBus.
+	* Source/DKNotificationCenter.m: Fix signal handling to take
+	into account situations where no sender object is present.
+	org.freedesktop.DBus.Local.Disconnected is an example.
+	* Tests/TestDKProxy.m: Be more generous when waiting for threads
+	to terminate.
+
+	Bugfixes to get connection recovery to work. It will now work
+	exactly once because the notification center does not yet update
+	the new D-Bus connection to match its local state.
+
 2011-02-19 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKProxy+Private.h: Expose methods necessary for
