@@ -26,6 +26,9 @@ include $(GNUSTEP_MAKEFILES)/common.make
 -include GNUmakefile.preamble
 
 
+# Set for releases:
+nonstrict=yes
+
 PACKAGE_NAME = dbuskit
 PACKAGE_VERSION = 0.1
 SVN_MODULE_NAME = dbuskit
