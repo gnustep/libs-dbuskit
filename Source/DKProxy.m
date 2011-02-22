@@ -85,7 +85,7 @@ enum
 - (void)_setupTables;
 - (DKMethod*)_methodForSelector: (SEL)aSelector
                    waitForCache: (BOOL)doWait;
-- (void)_buildMethodCache;
+- (BOOL)_buildMethodCache: (id)ignored;
 - (void)_installIntrospectionMethod;
 
 /* Define introspect on ourselves. */
@@ -300,7 +300,7 @@ DKInterface *_DKInterfaceIntrospectable;
     [[DKEndpointManager sharedEndpointManager] boolReturnForPerformingSelector: @selector(_buildMethodCache:)
                                                                         target: self
                                                                           data: NULL
-                                                                 waitForReturn: NO];
+                                                                 waitForReturn: YES];
   }
   else
   {
@@ -879,7 +879,7 @@ DKInterface *_DKInterfaceIntrospectable;
   }
 }
 
-- (void)_buildMethodCache: (id)ignored
+- (BOOL)_buildMethodCache: (id)ignored
 {
   DKIntrospectionParserDelegate *delegate = [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self];
   NSXMLParser *parser = nil;
@@ -947,6 +947,7 @@ DKInterface *_DKInterfaceIntrospectable;
   // Cleanup
   [parser release];
   [delegate release];
+  return YES;
 }
 
 - (void) dealloc

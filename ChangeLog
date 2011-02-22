@@ -1,5 +1,10 @@
 2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKProxy.m: Fixed bug with method cache generation in
+	the single-threaded case.
+
+2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* GNUmakefile: Add packaging metadata.
 
 2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
