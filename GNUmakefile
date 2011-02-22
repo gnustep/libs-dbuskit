@@ -25,6 +25,12 @@ include $(GNUSTEP_MAKEFILES)/common.make
 -include config.make
 -include GNUmakefile.preamble
 
+
+PACKAGE_NAME = dbuskit
+PACKAGE_VERSION = 0.1
+SVN_MODULE_NAME = dbuskit
+SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
+
 #No parallel building
 GNUSTEP_USE_PARALLEL_AGGREGATE=no
 

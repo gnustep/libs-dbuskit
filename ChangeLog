@@ -1,5 +1,9 @@
 2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* GNUmakefile: Add packaging metadata.
+
+2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Documentation/UsingDBus.texi: Document failure recovery
 	procedures.
 
