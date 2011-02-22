@@ -1014,6 +1014,35 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return array;
 }
 
+- (BOOL)_addDBusMatchForObservable: (DKObservable*)observable
+                       withErrorAt: (DBusError*)err
+{
+  DBusError internalErr;
+  DBusError *errPtr;
+  if (nil == observable)
+  {
+    return NO;
+  }
+
+  if (NULL == err)
+  {
+    errPtr = &internalErr;
+  }
+  else
+  {
+    errPtr = err;
+  }
+  dbus_error_init(errPtr);
+  dbus_bus_add_match([endpoint DBusConnection],
+    [[observable ruleString] UTF8String],
+    errPtr);
+
+  if (dbus_error_is_set(errPtr))
+  {
+    return NO;
+  }
+  return YES;
+}
 /**
  * Installs the necessary entries for observables and observations in the
  * respective tables and adds the D-Bus match rule if necessary.
@@ -1046,11 +1075,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     }
     else
     {
-      dbus_bus_add_match([endpoint DBusConnection],
-        [[observable ruleString] UTF8String],
-        &err);
-
-      if (dbus_error_is_set(&err))
+      if (NO == [self _addDBusMatchForObservable: observable
+                                     withErrorAt: &err])
       {
         NSHashRemove(observables, observable);
 	[NSException raise: @"DKSignalMatchException"
@@ -1619,7 +1645,43 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   }
   NS_ENDHANDLER
   [lock unlock];
+  if ([@"Disconnected" isEqual: signal]
+    && [@"org.freedesktop.DBus.Local" isEqual: interface])
+  {
+    // Special case for the disconnected signal. we can spare the proxy
+    // notifying us about the dropped connection an just throw away our
+    // endpoint:
+    NSDebugMLog(@"Disconnection event: Dropping endpoint from notification center.");
+    ASSIGN(endpoint, nil);
+  }
   return YES;
+}
+
+/**
+ * This method is called when recovering from a bus failure. It will reinstall
+ * the D-Bus signal handler and instruct the daemon do forward signals matching
+ * our observables to us.
+ */
+- (void)_syncStateWithEndpoint: (DKEndpoint*)ep
+{
+  ASSIGN(endpoint, ep);
+  [lock lock];
+  if (0 != NSCountHashTable(observables))
+  {
+    NSHashEnumerator theEnum = NSEnumerateHashTable(observables);
+    DKObservable *thisObs = nil;
+    [self _installHandler];
+    while (nil != (thisObs = NSNextHashEnumeratorItem(&theEnum)))
+    {
+      if (NO == [self _addDBusMatchForObservable: thisObs
+                                    withErrorAt: NULL])
+      {
+	NSWarnMLog(@"Could not reinstall observable '%@'", thisObs);
+      }
+    }
+    NSEndHashTableEnumeration(&theEnum);
+  }
+  [lock unlock];
 }
 
 - (void)dealloc

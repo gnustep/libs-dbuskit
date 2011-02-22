@@ -1,3 +1,17 @@
+2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpoint.m: Fix over-release bug where we didn't take
+	into account the fact that libdbus also takes ownership for the
+	context objects.
+	* Source/DKProxy.m: Let DKDBus objects trigger the state sync
+	between DKNotificationCenter and the D-Bus connection.
+	* Source/DKNotificationCenter.m: Correctly replace the endpoint
+	after reconnect. Implement state sync with the new D-Bus
+	connection.
+
+	Finish implementing reconnection logic for bus objects and
+	notification centers.
+
 2011-02-21 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKEndpointManager.m: Fix the method that fills the ring

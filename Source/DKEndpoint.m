@@ -160,7 +160,7 @@ DKRelease(void *ptr);
       DKTimeoutAdd,
       DKTimeoutRemove,
       DKTimeoutToggled,
-      (void*)ctx,
+      (void*)[ctx retain],
       DKRelease);
   }
 
@@ -170,7 +170,7 @@ DKRelease(void *ptr);
       DKWatchAdd,
       DKWatchRemove,
       DKWatchToggled,
-      (void*)ctx,
+      (void*)[ctx retain],
       DKRelease);
   }
 
@@ -178,11 +178,11 @@ DKRelease(void *ptr);
   {
     dbus_connection_set_wakeup_main_function(connection,
       DKWakeUp,
-      (void*)ctx,
+      (void*)[ctx retain],
       DKRelease);
     dbus_connection_set_dispatch_status_function(connection,
       DKUpdateDispatchStatus,
-      (void*)ctx,
+      (void*)[ctx retain],
       DKRelease);
   }
 
@@ -652,6 +652,7 @@ static IMP performOnWorkerThread;
 
 - (void)dealloc
 {
+  NSDebugMLog(@"Destroying run loop context for libdbus.");
   NSFreeMapTable(watchers);
   NSFreeMapTable(timers);
   [runLoopMode release];

@@ -101,6 +101,10 @@ enum
 - (void) _setAcceptHTML: (BOOL)yesno;
 @end
 
+@interface DKNotificationCenter (DKNotificationCenterStateSync)
+- (void)_syncStateWithEndpoint: (DKEndpoint*)ep;
+@end
+
 DKInterface *_DKInterfaceIntrospectable;
 
 @implementation DKProxy
@@ -1194,15 +1198,18 @@ static DKProxy *sessionBus;
   {
     DKPort *aPort = [[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"
                                         atEndpoint: anEndpoint];
+    DKDBusBusType type = [anEndpoint DBusBusType];
     [self _setPort: aPort];
     [aPort release];
     NSDebugMLog(@"Reconnected to D-Bus");
     [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusReconnectedNotification"
                                                         object: self
                                                       userInfo:
-      [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: [[self _endpoint] DBusBusType]],
+      [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: type],
       @"busType", nil]];
+    [[DKNotificationCenter centerForBusType: type] _syncStateWithEndpoint: anEndpoint];
   }
+
 }
 
 - (NSMethodSignature*)methodSignatureForSelector: (SEL)aSel
