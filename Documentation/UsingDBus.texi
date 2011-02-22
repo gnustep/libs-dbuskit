@@ -268,6 +268,31 @@ these values will be present in keys called @emph{arg0}, @emph{arg1},
 Additionally, calling @code{-object} on the notification will return a
 proxy to the object that emitted the signal.
 
+@section Recovering from Failure
+There are two common reasons for failure when communicating with objects on
+D-Bus. One is that the service your application is accessing is going away. In
+that case, DBusKit will notify you in a way similar to Distributed Objects. This
+means that when the service disappears from the bus, the @code{DKPort} used will
+post a @code{NSPortDidBecomeInvalidNotification} to the default notification
+center. You can watch for this notification and attempt recovery afterwards. 
+
+A more critical reason for failure is a malfunction or restart of the D-Bus
+daemon. In that case, all affected ports will issue a
+@code{NSPortDidBecomeInvalidNotification} and additionally the @code{DKDBus}
+object for the bus will post a @code{DKBusDisconnectedNotification} with the
+@code{DKDBusBusType} identifier at the @code{busType} key of the userInfo
+dictionary. Afterwards, DBusKit will attempt to recover from the failure in the
+background and you cannot use D-Bus services until you receive a
+@code{DKBusReconnectedNotification}. After receiving the notification, you can
+perform recovery as your application requires.
+
+Please note that usually, such recovery from bus failures will only be
+successful for the system bus, for which one connects to a socket
+address that is persistent across restarts. For the session bus the socket
+address is not persistent, but stored in the @code{DBUS_SESSION_BUS_ADDRESS}
+environment variable. Hence your application should assume that the user session
+died when it looses connection to the session bus. 
+
 @section Multi-Threading Considerations
 By default, DBusKit runs in single-threaded mode. This means that all
 interaction with the D-Bus daemon happens on the runloop of the calling thread.
