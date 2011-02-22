@@ -9,11 +9,15 @@ DBusKit_TEXI_FILES = 	DBusKit.texi \
 
 DBusKit_DOC_INSTALL_DIR = Developer/DBusKit/ProgrammingManual
 
-DOCUMENT_TEXT_NAME = INSTALL README
+DOCUMENT_TEXT_NAME = INSTALL README ANNOUNCE
 
 INSTALL_TEXT_MAIN = install.texi
 INSTALL_TEXI_FILES = install.texi
 INSTALL_DOC_INSTALL_DIR = Developer/DBusKit/ReleaseNotes/$(VERSION)
+
+ANNOUNCE_TEXT_MAIN = announce.$(VERSION).texi
+ANNOUNCE_TEXI_FILES = announce.$(VERSION).texi
+ANNOUNCE_DOC_INSTALL_DIR = Developer/DBusKit/ReleaseNotes/$(VERSION)
 
 README_TEXT_MAIN = readme.texi
 README_TEXI_FILES = readme.texi

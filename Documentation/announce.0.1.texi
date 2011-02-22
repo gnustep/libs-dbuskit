@@ -1,0 +1,59 @@
+@chapter GNUstep DBusKit Framework 0.1
+
+This is the first public release of DBusKit, the GNUstep D-Bus bindings
+framework. The framework allows Objective-C applications to access the
+D-Bus inter-process communication system.
+
+@section Where to get it
+You may obtain the code for this release from the GNUstep subversion
+repository at:
+
+@url{svn://svn.gna.org/svn/gnustep/libs/dbuskit/tags/0.1}
+
+Alternatively, a compressed archive for this release is available at the
+following address:
+
+@url{http://downloads.gna.org/gnustep/dbuskit-0.1.tar.bz2}
+
+The integrity of the archive can be verified using the following
+OpenPGP signature:
+
+@url{http://downloads.gna.org/gnustep/dbuskit-0.1.tar.bz2.asc}
+
+@section How to build it
+For instructions on how to build DBusKit, please refer to the
+@samp{INSTALL} file in the framework source.
+
+@section What is it good for?
+The DBusKit framework offers tight integration of D-Bus services into
+Objective-C applications. It handles all low-level details of
+communication with D-Bus daemons and the services connected to them and
+exposes an interface similar to Distributed Objects to make it easy for
+Objective-C programmers to access D-Bus services. Highlights of the
+initial release include:
+
+@itemize @bullet
+@item Distributed Objects-like API for exchanging messages with D-Bus
+services.
+@item A notification center class for watching signals emitted by D-Bus
+services.
+@item @samp{dk_make_interface} tool to generate Objective-C protocol
+declarations from D-Bus interface files.
+@end itemize
+
+@section Where do I send bug reports?
+
+DBusKit is a relatively new framework and will certaintly contain bugs.
+Reporting them is always appreciated. You can log bug reports on the
+@uref{http://savannah.gnu.org/bugs/?group=gnustep,GNUstep project page}
+or send them to @email{bug-gnustep@@gnu.org}.
+
+
+@ifinfo
+Copyright @copyright{} 2011 Free Software Foundation
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+@end ifinfo
+

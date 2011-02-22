@@ -4,7 +4,6 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # Main framework
 #
 FRAMEWORK_NAME = DBusKit
-VERSION = 0.1
 
 # Include configuration
 

@@ -1,5 +1,14 @@
 2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Documentation/announce.0.1.texi: Add draft release
+	announcement for 0.1.
+	* Documentation/GNUmakefile: Add rules for ANNOUNCE
+	* GNUmakefile.preamble
+	* Source/GNUmakefile:
+	Move version number to the top level.
+
+2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKProxy.m: Fixed bug with method cache generation in
 	the single-threaded case.
 
