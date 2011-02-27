@@ -3,6 +3,11 @@
 <gsdoc base="DBusKit">
   <head>
     <title>Reference Documentation for the DBusKit Framework</title>
+    <author name="Niels Grewe">
+      <email address="niels.grewe@halbordnung.de"/>
+    </author>
+    <copy>2010–2011 Free Software Foundation, Inc.</copy>
+
   </head>
   <body>
     <chapter>

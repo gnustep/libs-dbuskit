@@ -1,3 +1,13 @@
+2011-02-27 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/DBusKit.gsdoc: Documentation improvement.
+	* Headers/DKProxy.h
+	* Source/DKProxy.m:
+	Document bus-state notifications. Turn strings for notification
+	names into globals. 
+	* Source/DKEndpointManager.m: Move thread starting code to the
+	correct place.
+
 2011-02-22 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Documentation/announce.0.1.texi: Add draft release

@@ -85,13 +85,20 @@ static DKEndpointManager *sharedManager;
 
 #define DKRingSchedule \
 if (NO == DKRingEmpty)\
+{\
+  if (0 == initializeRefCount)\
   {\
-    NSDebugMLog(@"Stuff in buffer: Scheduling buffer draining.");\
-    [self performSelector: @selector(drainBuffer:)\
-                 onThread: workerThread\
-	       withObject: nil\
-            waitUntilDone: NO];\
-  }
+    if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))\
+    {\
+      [workerThread start];\
+    }\
+  }\
+  NSDebugMLog(@"Stuff in buffer: Scheduling buffer draining.");\
+  [self performSelector: @selector(drainBuffer:)\
+               onThread: workerThread\
+	     withObject: nil\
+          waitUntilDone: NO];\
+}
 
 /*
  * This works the following way:
@@ -109,13 +116,6 @@ if (NO == DKRingEmpty)\
  */
 #define DKRingInsert(x) do {\
   NSUInteger count = 0; \
-  if (0 == initializeRefCount)\
-  {\
-    if (__sync_bool_compare_and_swap(&threadStarted, 0, 1))\
-    {\
-      [workerThread start];\
-    }\
-  }\
   while (DKRingFull)\
   {\
     if ((++count % 16) == 0)\

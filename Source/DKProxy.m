@@ -968,6 +968,8 @@ static NSRecursiveLock *busLock;
 static DKProxy *systemBus;
 static DKProxy *sessionBus;
 
+NSString* DKBusDisconnectedNotification = @"DKDBusDisconnectedNotification";
+NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
 @implementation DKDBus
 + (void)initialize
 {
@@ -1179,7 +1181,7 @@ static DKProxy *sessionBus;
     [[DKEndpointManager sharedEndpointManager] attemptRecoveryForEndpoint: ep
                                                                     proxy: self];
 
-    [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusDisconnectedNotification"
+    [[NSNotificationCenter defaultCenter] postNotificationName: DKBusDisconnectedNotification
                                                         object: self
                                                       userInfo:
       [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: type],
@@ -1203,7 +1205,7 @@ static DKProxy *sessionBus;
     [self _setPort: aPort];
     [aPort release];
     NSDebugMLog(@"Reconnected to D-Bus");
-    [[NSNotificationCenter defaultCenter] postNotificationName: @"DKBusReconnectedNotification"
+    [[NSNotificationCenter defaultCenter] postNotificationName: DKBusReconnectedNotification
                                                         object: self
                                                       userInfo:
       [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: type],

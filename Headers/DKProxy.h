@@ -110,11 +110,19 @@
 - (void)setPrimaryDBusInterface: (NSString*)anInterface;
 @end
 
+extern NSString* DKBusDisconnectedNotification;
+extern NSString* DKBusReconnectedNotification;
 
 /**
  * The DKDBus class exposes the D-Bus objects specifically (i.e. the
  * "org.freedesktop.DBus" service). The instances returned by this class are
  * shared objects: Calling -setPrimaryDBusInterface: on them has no effect.
+ *
+ * DKDBus instances also emit notifications about the state of the bus they
+ * represent. An application can watch for a
+ * <code>DKBusDisconnectedNotification</code> and
+ * <code>DKBusReconnectedNotification</code> to be notified about state changes
+ * for the bus.
  */
 @interface DKDBus: DKProxy
 {
