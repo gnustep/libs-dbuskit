@@ -52,6 +52,14 @@ ifneq ($(nonstrict), yes)
 DBusKit_OBJCFLAGS += -Werror
 endif
 
+ifneq ($(findstring gcc, $(CC)),)
+  # Make gcc emit the correct code for synchronisation intrinsics
+  ifeq ($(GNUSTEP_TARGET_CPU), ix86)
+    DBusKit_OBJCFLAGS += -march=i586
+  endif
+endif
+
+
 -include ../GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/framework.make
 
