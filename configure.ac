@@ -1,6 +1,9 @@
 # autoconf template for the configure script
 
 AC_INIT
+LT_INIT
+AC_CONFIG_MACRO_DIR([m4])
+AC_CANONICAL_SYSTEM
 AC_PROG_CC(clang gcc cc c1 egcs)
 AC_PROG_CPP
 AC_LANG(Objective C)
@@ -17,6 +20,41 @@ have_atomic=no);
       AC_MSG_RESULT([no]);
       AC_MSG_ERROR([Please use a compiler that supports atomic operations.]);
   fi
+if test "$CC" = "gcc"; then
+  saved_CFLAGS="$CFLAGS";
+  ATOMIC_CFLAGS="";
+  case "$target_cpu" in
+    i586*|i686*|i786*)
+      ATOMIC_CFLAGS="-march=i586";
+      CFLAGS="$saved_CFLAGS $ATOMIC_CFLAGS";
+  esac
+  AC_MSG_CHECKING([checking whether atomic operations require an external library]);
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[typedef int atomic;]],
+      [[atomic x; atomic y; __sync_bool_compare_and_swap(&x, y, y + 1);]])],
+    need_linkage=no,
+  need_linkage=yes);
+
+  if test "$need_linkage" = "no"; then
+    AC_MSG_RESULT([no]);
+  else
+    AC_MSG_RESULT([yes]);
+    saved_LDFLAGS="$LDFLAGS";
+    LDFLAGS="$saved_LDFLAGS -lgcc";
+    AC_MSG_CHECKING([checking for atomic operations from libgcc]);
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([[typedef int atomic;]],
+        [[atomic x; atomic y; __sync_bool_compare_and_swap(&x, y, y + 1);]])],
+      atomic_in_libgcc=yes,
+    atomic_in_libgcc=no);
+    if test "$atomic_in_libgcc" = "yes"; then
+      AC_MSG_RESULT([yes]);
+      MORE_LIBS="$MORE_LIBS -lgcc";
+    else
+      LDFLAGS="$saved_LDFLAGS";
+      AC_MSG_RESULT([no]);
+      AC_MSG_ERROR([Could not find library to link for atomic operations.]);
+    fi
+  fi     
+fi
 AC_LANG_POP(C)
 
 # FIXME: We need a proper test for libobjc2 for some advanced features (e.g.
@@ -57,7 +95,7 @@ else
 fi
 
 AC_SUBST(WARN_FLAGS)
-
+AC_SUBST(ATOMIC_CFLAGS)
 
 # Setup variables:
 

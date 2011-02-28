@@ -1,5 +1,23 @@
 2011-02-28 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* configure.ac: Import a lot of autoconf stuff to detect whether
+	we need to link libgcc for atomic operations.
+	* config.make.in: Add flags for atomic operations.
+	* aclocal.m4
+	* configure:
+	Regenerate
+	* m4/*
+	* config.guess
+	* config.sub
+	* ltmain.sh
+	* libtool
+	* install-sh:
+	Add libtool/autconf related file.
+
+	Fixes to link libgcc for atomic operations when needed.
+
+2011-02-28 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/GNUmakefile: Attempt to fix linkage errors for 32bit
 	intel platforms.
 
