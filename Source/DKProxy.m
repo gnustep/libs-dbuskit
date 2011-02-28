@@ -50,6 +50,7 @@
 #import <Foundation/NSThread.h>
 #import <Foundation/NSValue.h>
 #import <Foundation/NSXMLParser.h>
+#import <GNUstepBase/GSObjCRuntime.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #include <string.h>
@@ -479,13 +480,7 @@ DKInterface *_DKInterfaceIntrospectable;
   DKMethod *method = [self DBusMethodForSelector: aSelector];
   const char *types = NULL;
   NSMethodSignature *theSig = nil;
-# if HAVE_TYPED_SELECTORS == 0
-  // Without typed selectors (i.e. libobjc2 runtime), we have the old gcc
-  // libobjc which has typed selectors but a slightly different API:
-  types = sel_get_type(aSelector);
-# else
-  types = sel_getType_np(aSelector);
-# endif
+  types = GSTypesFromSelector(aSelector);
 
   // Build a signature with the types:
   theSig = [NSMethodSignature signatureWithObjCTypes: types];

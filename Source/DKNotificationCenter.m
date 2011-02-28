@@ -1507,7 +1507,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   NSDictionary *userInfo = [infoDict objectForKey: @"userInfo"];
   NSMutableDictionary *fixedInfo = [NSMutableDictionary dictionary];
   NSNotification  *notification = nil;
-  DKProxy *senderProxy = (NO == [[NSNull null] isEqual: standin]) ? [standin proxy] : nil ;
+  DKProxy *senderProxy = (NO == [[NSNull null] isEqual: standin]) ? (id)[standin proxy] : nil ;
   NSArray *matchingObservables = [infoDict objectForKey: @"matches"];
   NSEnumerator *userInfoEnum = [userInfo keyEnumerator];
   NSString *key = nil;
@@ -1552,7 +1552,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   const char *cDestination = dbus_message_get_destination(msg);
   NSString *destination = nil;
   const char *signature = dbus_message_get_signature(msg);
-  NSNull *theNull = [NSNull null];
+  id theNull = [NSNull null];
 
   // We cannot add nil to the userInfo, so we replace empty things with NSNull
   signal = (NULL != cSignal) ? [NSString stringWithUTF8String: cSignal] : theNull;
