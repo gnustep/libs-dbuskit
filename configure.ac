@@ -92,18 +92,6 @@ fi
 
 AC_SUBST(OBJC_RUNTIME_H)
 
-#--------------------------------------------------------------------
-# Check whether we can use typed selectors
-#--------------------------------------------------------------------
-
-HAVE_TYPED_SELECTORS=0
-AC_CHECK_LIB(objc, sel_getType_np, have_typed_selectors=yes, have_typed_selectors=no)
-if test "$have_typed_selectors" = "yes"; then
-  HAVE_TYPED_SELECTORS=1
-fi
-
-AC_SUBST(HAVE_TYPED_SELECTORS)
-
 CFLAGS="$saved_CFLAGS"
 CPPFLAGS="$saved_CPPFLAGS"
 LDFLAGS="$saved_LDFLAGS"
