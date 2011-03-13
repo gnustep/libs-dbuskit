@@ -1,3 +1,8 @@
+2011-03-13 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/GNUmakefile: Remove redundant fixup for atomic
+	operations linkage errors on 32bit intel platforms.
+
 2011-02-28 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* configure.ac: Import a lot of autoconf stuff to detect whether
