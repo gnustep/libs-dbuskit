@@ -150,7 +150,7 @@
   }
 
   if ((nil == [methods objectForKey: [method name]])
-    && (NO == [method isKindOfClass: [DKPropertyMethod class]]));
+    && (NO == [method isKindOfClass: [DKPropertyMethod class]]))
   {
     [self addMethod: method];
   }

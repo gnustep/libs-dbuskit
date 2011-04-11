@@ -492,7 +492,7 @@ DKDBusTypeForUnboxingObject(id object)
 	  // get a correctly sized return value by invoking the corresponding
 	  // method.
 	  NSMethodSignature *sig = [object methodSignatureForSelector: aSel];
-	  if ((type == DKDBusTypeForObjCType([sig methodReturnType])))
+	  if (type == DKDBusTypeForObjCType([sig methodReturnType]))
 	  {
 	    NSEndMapTableEnumeration(&mapEnum);
 	    [selectorTypeMapLock unlock];

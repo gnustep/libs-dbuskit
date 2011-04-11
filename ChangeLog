@@ -1,3 +1,15 @@
+2011-04-11 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKEndpointManager.m: Use pseudo interfaces instead of
+	@class declarations for private classes that need to be
+	initialized before starting the worker thread. This makes clang
+	happy.
+	* Source/DKArgument.m: Remove extraneous parantheses.
+	* Source/DKInterface.m: Fix a bug that caused property
+	getters/setters to be registered twice.
+
+	Clang compatibility and bugfixes by Sebastian Reitenbach.
+
 2011-03-13 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/GNUmakefile: Remove redundant fixup for atomic
