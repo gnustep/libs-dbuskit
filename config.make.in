@@ -4,3 +4,6 @@ endif
 ADDITIONAL_OBJCFLAGS+=@DBUS_CFLAGS@ @ATOMIC_CFLAGS@
 WARN_FLAGS+=@WARN_FLAGS@
 DBusKit_LDFLAGS+=@DBUS_LIBS@ @MORE_LIBS@
+
+# Set nonstrict mode for releases:
+nonstrict=yes
