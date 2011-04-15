@@ -272,7 +272,7 @@ static NSDictionary *basicSigsAndClasses;
 
   if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
   {
-    UKTrue(0 == strcmp(foo,(char*)buffer));
+    UKTrue(0 == strcmp(foo,(char*)(uintptr_t)buffer));
   }
   else
   {
@@ -388,7 +388,7 @@ static NSDictionary *basicSigsAndClasses;
                                                          name: nil
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
-  UKObjectsEqual([NSNumber numberWithLong: INT64_MAX], boxedFoo);
+  UKObjectsEqual([NSNumber numberWithLongLong: INT64_MAX], boxedFoo);
 
   TEST_UNBOX_INTTYPE(int64_t);
 
@@ -402,7 +402,7 @@ static NSDictionary *basicSigsAndClasses;
                                                          name: nil
                                                        parent: nil];
   id boxedFoo = [arg boxedValueForValueAt: (void*)&foo];
-  UKObjectsEqual([NSNumber numberWithUnsignedLong: UINT64_MAX], boxedFoo);
+  UKObjectsEqual([NSNumber numberWithUnsignedLongLong: UINT64_MAX], boxedFoo);
 
   TEST_UNBOX_INTTYPE(uint64_t);
 
@@ -443,7 +443,7 @@ static NSDictionary *basicSigsAndClasses;
 
   if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
   {
-    UKTrue(0 == strcmp(foo,(char*)buffer));
+    UKTrue(0 == strcmp(foo,(char*)(uintptr_t)buffer));
   }
   else
   {
@@ -474,7 +474,7 @@ static NSDictionary *basicSigsAndClasses;
 
   if ([arg unboxValue: boxedFoo intoBuffer: &buffer])
   {
-    UKTrue(0 == strcmp(foo,(char*)buffer));
+    UKTrue(0 == strcmp(foo,(char*)(uintptr_t)buffer));
   }
   else
   {

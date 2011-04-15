@@ -15,7 +15,7 @@ repository
 
    * gnustep-make (>=2.4.0)
 
-   * gnustep-base (>=1.20.0)
+   * gnustep-base (>=1.22.0)
 
    * libdbus (>=1.2.1)
 

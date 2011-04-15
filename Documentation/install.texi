@@ -14,7 +14,7 @@ repository}.
 @itemize @bullet
 @item gnustep-make (>=2.4.0)
 
-@item gnustep-base (>=1.20.0)
+@item gnustep-base (>=1.22.0)
 
 @item libdbus (>=1.2.1)
 

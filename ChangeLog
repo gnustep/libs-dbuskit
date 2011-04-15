@@ -1,3 +1,10 @@
+2011-04-15 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tests/TestDKArgument.m: Fix word-size issues.
+	* Documentation/install.texi: Bump required gnustep-base
+	version to 1.22.0.
+	* INSTALL: Regenerate.
+
 2011-04-11 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKEndpointManager.m: Use pseudo interfaces instead of
