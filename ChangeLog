@@ -1,3 +1,10 @@
+2011-04-18 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKNotificationCenter.m: Move handling errors on watch
+	generation into the observable, make the worker thread perform
+	adding the watch if possible. This improves reliability when we
+	are operating without synchronization on +initialize.
+
 2011-04-15 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Tests/TestDKArgument.m: Fix word-size issues.

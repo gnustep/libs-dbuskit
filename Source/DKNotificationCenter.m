@@ -78,7 +78,20 @@
    * The bus-type that should be used when making queries to the D-Bus object.
    */
    DKDBusBusType type;
+
+   /**
+    * A D-Bus error structure that can be used to pass along information about
+    * failures.
+    */
+   DBusError err;
 }
+
+- (DBusError)DBusError;
+
+- (DBusError*)DBusErrorRef;
+
+- (void)resetDBusError;
+
 - (void)addObservation: (DKObservation*)observation;
 @end
 
@@ -134,7 +147,23 @@
   rules = [[NSMutableDictionary alloc] initWithObjectsAndKeys: @"signal", @"type", nil];
   observations = [[NSHashTable alloc] initWithOptions: strongObjectOptions
                                              capacity: 5];
+  dbus_error_init(&err);
   return self;
+}
+
+- (void)resetDBusError
+{
+  dbus_error_init(&err);
+}
+
+- (DBusError)DBusError
+{
+  return err;
+}
+
+- (DBusError*)DBusErrorRef
+{
+  return &err;
 }
 
 /**
@@ -569,6 +598,7 @@
 @end
 
 
+
 static DKNotificationCenter *systemCenter;
 static DKNotificationCenter *sessionCenter;
 
@@ -604,12 +634,13 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (void)_removeHandler;
 @end
 
+static DKEndpointManager *manager;
 @implementation DKNotificationCenter
 + (void)initialize
 {
   if ([DKNotificationCenter class] == self)
   {
-    DKEndpointManager *manager = [DKEndpointManager sharedEndpointManager];
+    manager = [DKEndpointManager sharedEndpointManager];
     [manager enterInitialize];
     systemCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSystemBus];
     sessionCenter = [[DKNotificationCenter alloc] initWithBusType: DKDBusSessionBus];
@@ -1015,24 +1046,14 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 }
 
 - (BOOL)_addDBusMatchForObservable: (DKObservable*)observable
-                       withErrorAt: (DBusError*)err
 {
-  DBusError internalErr;
   DBusError *errPtr;
   if (nil == observable)
   {
     return NO;
   }
-
-  if (NULL == err)
-  {
-    errPtr = &internalErr;
-  }
-  else
-  {
-    errPtr = err;
-  }
-  dbus_error_init(errPtr);
+  [observable resetDBusError];
+  errPtr = [observable DBusErrorRef];
   dbus_bus_add_match([endpoint DBusConnection],
     [[observable ruleString] UTF8String],
     errPtr);
@@ -1055,8 +1076,6 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                                               selector: selector];
   DKObservable *oldObservable = nil;
   BOOL firstObservation = NO;
-  DBusError err;
-  dbus_error_init(&err);
   [lock lock];
   NS_DURING
   {
@@ -1075,9 +1094,13 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     }
     else
     {
-      if (NO == [self _addDBusMatchForObservable: observable
-                                     withErrorAt: &err])
+      BOOL success = [manager boolReturnForPerformingSelector: @selector(_addDBusMatchForObservable:)
+                                                       target: self
+                                                         data: (void*)observable
+                                                waitForReturn: YES];
+      if (NO == success)
       {
+	DBusError err = [observable DBusError];
         NSHashRemove(observables, observable);
 	[NSException raise: @"DKSignalMatchException"
                     format: @"Error when trying to add match for signal: %s. (%s)",
@@ -1673,8 +1696,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
     [self _installHandler];
     while (nil != (thisObs = NSNextHashEnumeratorItem(&theEnum)))
     {
-      if (NO == [self _addDBusMatchForObservable: thisObs
-                                    withErrorAt: NULL])
+      BOOL success = [manager boolReturnForPerformingSelector: @selector(_addDBusMatchForObservable:)
+                                                       target: self
+                                                         data: (void*)thisObs
+                                                waitForReturn: YES];
+      if (NO == success)
       {
 	NSWarnMLog(@"Could not reinstall observable '%@'", thisObs);
       }
