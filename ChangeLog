@@ -1,3 +1,7 @@
+2011-04-29 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKNotificationCenter.m: Fix incorrect return statement.
+
 2011-04-18 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKNotificationCenter.m: Move handling errors on watch

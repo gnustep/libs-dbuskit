@@ -1365,9 +1365,10 @@ static DKEndpointManager *manager;
 - (BOOL)_registerNotificationName: (NSString*)notificationName
                          asSignal: (DKSignal*)signal
 {
+  BOOL retVal = NO;
   if ((nil == notificationName) || (nil == signal))
   {
-    return NO;
+    return retVal;
   }
   [lock lock];
   NS_DURING
@@ -1393,7 +1394,7 @@ static DKEndpointManager *manager;
       }
       NS_ENDHANDLER
       [lock unlock];
-      return YES;
+      retVal = YES;
     }
     else
     {
@@ -1410,7 +1411,7 @@ static DKEndpointManager *manager;
   }
   NS_ENDHANDLER
   [lock unlock];
-  return NO;
+  return retVal;
 }
 
 - (BOOL)registerNotificationName: (NSString*)notificationName
