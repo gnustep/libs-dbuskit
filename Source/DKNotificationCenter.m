@@ -1342,9 +1342,10 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (BOOL)_registerNotificationName: (NSString*)notificationName
                          asSignal: (DKSignal*)signal
 {
+  BOOL retVal = NO;
   if ((nil == notificationName) || (nil == signal))
   {
-    return NO;
+    return retVal;
   }
   [lock lock];
   NS_DURING
@@ -1370,7 +1371,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       }
       NS_ENDHANDLER
       [lock unlock];
-      return YES;
+      retVal = YES;
     }
     else
     {
@@ -1387,7 +1388,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   }
   NS_ENDHANDLER
   [lock unlock];
-  return NO;
+  return retVal;
 }
 
 - (BOOL)registerNotificationName: (NSString*)notificationName
