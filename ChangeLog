@@ -1,3 +1,20 @@
+2011-05-12 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* GNUmakefile
+	* GNUmakefile.preamble:
+	Bump version to 0.2.
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Thread safety fixes.
+	* Source/DKArgument.h
+	* Source/DKArgument.m:
+	Start implementing generation of XML introspection data.
+	* Documentation/announce.0.2.texi: Stub release announcement
+	for the next version.
+
+	Thread safety fixes, started working on the generation of D-Bus
+	XML introspection data.
+
 2011-04-29 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKNotificationCenter.m: Fix incorrect return statement.

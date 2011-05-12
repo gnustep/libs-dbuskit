@@ -26,7 +26,7 @@
 
 #include <dbus/dbus.h>
 
-@class NSString, NSInvocation, NSMutableArray, DKProxy;
+@class NSString, NSInvocation, NSMutableArray, NSXMLNode, DKProxy;
 
 extern NSString *DKArgumentDirectionIn;
 extern NSString *DKArgumentDirectionOut;
@@ -146,6 +146,18 @@ extern NSString *DKArgumentDirectionOut;
  */
 - (void) marshallObject: (id)object
            intoIterator: (DBusMessageIter*)iter;
+
+/**
+ * Returns whether the parent of the node is already an DKArgument. This might
+ * matter when serialising the argument into an XML or Objective-C
+ * representation.
+ */
+- (BOOL)isSubArgument;
+
+/**
+ * Returns an XML node representing the argument.
+ */
+- (NSXMLNode*)xmlNode;
 
 @end
 

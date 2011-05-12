@@ -27,7 +27,7 @@ include $(GNUSTEP_MAKEFILES)/common.make
 
 
 PACKAGE_NAME = dbuskit
-PACKAGE_VERSION = 0.1
+PACKAGE_VERSION = 0.2
 SVN_MODULE_NAME = dbuskit
 SVN_BASE_URL = svn+ssh://svn.gna.org/svn/gnustep/libs
 

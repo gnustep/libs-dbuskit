@@ -1,0 +1,10 @@
+@chapter GNUstep DBusKit Framework 0.2
+
+@ifinfo
+Copyright @copyright{} 2011 Free Software Foundation
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+@end ifinfo
+

@@ -80,6 +80,12 @@
   NSHashTable *observables;
 
   /**
+   * Keeps track of the number of observations the notification center is
+   * waiting to be successfully scheduled.
+   */
+  NSUInteger *queueCount;
+
+  /**
    * The signalInfo dictionary holds DKSignal objects indexed by their interface
    * and signal names. Proxies that discover signals during introspection will
    * register them here.

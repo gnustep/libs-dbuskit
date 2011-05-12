@@ -35,6 +35,8 @@
 #import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
+#import <Foundation/NSXMLNode.h>
+
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #import "DKProxy+Private.h"
@@ -636,9 +638,58 @@ DKDBusTypeForUnboxingObject(id object)
 {
   return DKUnboxedObjCTypeSizeForDBusType(DBusType);
 }
-- (BOOL) isContainerType
+- (BOOL)isContainerType
 {
   return NO;
+}
+
+- (BOOL)isSubArgument
+{
+  return [parent isKindOfClass: [DKArgument class]];
+}
+
+- (NSXMLNode*)xmlNodeWithDirectionAttribute: (NSXMLNode*)directionAttr
+{
+  NSMutableArray *annotationNodes = nil;
+
+  NSArray *attributes = nil;
+  NSArray *mandatoryAttributes = [NSArray arrayWithObjects: [NSXMLNode attributeWithName: @"name" stringValue: [self name]],
+    [NSXMLNode attributeWithName: @"type" stringValue: [self DBusTypeSignature]],
+    nil];
+
+  if ([self isSubArgument])
+  {
+    return nil;
+  }
+  if (nil != directionAttr)
+  {
+    attributes = [mandatoryAttributes arrayByAddingObject: directionAttr];
+  }
+  else
+  {
+    attributes = mandatoryAttributes;
+  }
+
+  //FIXME: Emit annotations
+  return [NSXMLNode elementWithName: @"arg"
+                           children: annotationNodes
+                         attributes: attributes];
+
+
+}
+- (NSXMLNode*)xmlNodeForDirection: (NSString*)direction
+{
+  if ((nil == direction) || (0 == [direction length]))
+  {
+    return [self xmlNodeWithDirectionAttribute: nil];
+  }
+  return [self xmlNodeWithDirectionAttribute: [NSXMLNode attributeWithName: @"direction" stringValue: direction]];
+
+}
+- (NSXMLNode*)xmlNode
+{
+  return [self xmlNodeWithDirectionAttribute: nil];
+
 }
 
 - (id)copyWithZone: (NSZone*)zone

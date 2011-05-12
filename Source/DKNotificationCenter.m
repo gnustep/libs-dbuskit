@@ -47,6 +47,7 @@
 
 #include <stdint.h>
 #include <stdarg.h>
+#include <sched.h>
 #include <dbus/dbus.h>
 
 @class DKObservation;
@@ -620,6 +621,9 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
    observeObservable: (DKObservable*)observable
         withSelector: (SEL)selector;
 
+- (void)_createObservation: (DKObservation*)observation
+             forObservable: (DKObservable*)observable;
+
 - (void)_removeObserver: (id)observer
           forObservable: (DKObservable*)observable;
 
@@ -1045,6 +1049,27 @@ static DKEndpointManager *manager;
   return array;
 }
 
+- (BOOL)_removeDBusMatchForObservable: (DKObservable*)observable
+{
+  DBusError *errPtr;
+  if (nil == observable)
+  {
+    return NO;
+  }
+  [observable resetDBusError];
+  errPtr = [observable DBusErrorRef];
+  dbus_bus_remove_match([endpoint DBusConnection],
+    [[observable ruleString] UTF8String],
+    errPtr);
+  // The observable was retained for its trip through the ring buffer.
+  [observable release];
+  if (dbus_error_is_set(errPtr))
+  {
+    return NO;
+  }
+  return YES;
+}
+
 - (BOOL)_addDBusMatchForObservable: (DKObservable*)observable
 {
   DBusError *errPtr;
@@ -1064,19 +1089,89 @@ static DKEndpointManager *manager;
   }
   return YES;
 }
+
+
+- (void) _createObservationForDictionary: (NSDictionary*)dict
+{
+  // We obtain the (recursive lock) in order to make sure that we will succeed
+  // in inserting the observation.
+  if (NO == [lock tryLock])
+  {
+    // if we could not obtain the lock, try again:
+    [manager boolReturnForPerformingSelector: @selector(_createObservationForDictionary:)
+                                      target: self
+                                        data: (void*)dict
+                               waitForReturn: NO];
+    return;
+  }
+  // we still have the (recursive) lock:
+  [self _createObservation: [dict objectForKey: @"observation"]
+             forObservable: [dict objectForKey: @"observable"]];
+
+  // Release the dictionary, it is not needed any more
+  [dict release];
+  // Cast to void to suppress warning
+  (void)__sync_fetch_and_sub(&queueCount, 1);
+  [lock unlock];
+}
+
 /**
- * Installs the necessary entries for observables and observations in the
- * respective tables and adds the D-Bus match rule if necessary.
+ * Schedules creation of the observation:
  */
+- (void)_enqueueObservation: (DKObservation*)observation
+              forObservable: (DKObservable*)observable
+{
+  NSDictionary *obsDict = nil;
+  if ((nil == observation) || (nil == observable))
+  {
+    return;
+  }
+  /*
+   * The dictionary is created with a retain count of 1 because it needs to
+   * survive the trip through the ring buffer.
+   */
+  obsDict = [[NSDictionary alloc] initWithObjectsAndKeys: observation, @"observation",
+    observable, @"observable", nil];
+  // Cast to void to suppress "value computed is not used"-warning:
+  (void)__sync_fetch_and_add(&queueCount, 1);
+
+  // Retain the dictionary so that it doesn't go away while in the ring-buffer.
+  [manager boolReturnForPerformingSelector: @selector(_createObservationForDictionary:)
+                                    target: self
+                                      data: (void*)obsDict
+                             waitForReturn: NO];
+}
+
 - (void)_letObserver: (id)observer
    observeObservable: (DKObservable*)observable
         withSelector: (SEL)selector
 {
-  DKObservation *observation = [[DKObservation alloc] initWithObserver: observer
-                                                              selector: selector];
+  DKObservation *observation = [[[DKObservation alloc] initWithObserver: observer
+                                                               selector:
+							       selector] autorelease];
+  [self _createObservation: observation
+             forObservable: observable];
+}
+
+/**
+ * Installs the necessary entries for observables and observations in the
+ * respective tables and adds the D-Bus match rule if necessary.
+ */
+- (void)_createObservation: (DKObservation*)observation
+             forObservable: (DKObservable*)observable
+{
   DKObservable *oldObservable = nil;
   BOOL firstObservation = NO;
-  [lock lock];
+  if (NO == [lock tryLock])
+  {
+
+    // If we could not obtain the lock, we schedule creation of the observation.
+    [self _enqueueObservation: observation
+                forObservable: observable];
+    return;
+
+  }
+
   NS_DURING
   {
     firstObservation = (0 == NSCountHashTable(observables));
@@ -1094,6 +1189,8 @@ static DKEndpointManager *manager;
     }
     else
     {
+      // NOTE: Because we are waiting for the return value, we need not retain
+      // the observable here.
       BOOL success = [manager boolReturnForPerformingSelector: @selector(_addDBusMatchForObservable:)
                                                        target: self
                                                          data: (void*)observable
@@ -1116,14 +1213,9 @@ static DKEndpointManager *manager;
       [self _removeHandler];
     }
     [lock unlock];
-    [observation release];
     [localException raise];
   }
   NS_ENDHANDLER
-
-  // The observation has been retained by the observable, we can release our
-  // reference to it.
-  [observation release];
 
   [lock unlock];
 }
@@ -1139,12 +1231,32 @@ static DKEndpointManager *manager;
   NSHashEnumerator cleanupEnum;
   NSHashTable *cleanupTable = NSCreateHashTable(NSObjectHashCallBacks, 10);
   NSUInteger initialCount = 0;
+  NSUInteger iteration = 0;
   if (nil == observable)
   {
     return;
   }
+
+  /*
+   * We need for the insertion queue to drain prior to removing the observation.
+   * Otherwise insert-remove sequences might be reordered and notifications
+   * might go to observers that have long been deallocated.
+   */
+  while (queueCount)
+  {
+    if ((++iteration % 16) == 0)
+    {
+      sched_yield();
+    }
+  }
+
+
   [lock lock];
+  // Count the table so we know how many observables there were before we
+  // started removing stuff.
+
   initialCount = NSCountHashTable(observables);
+
   /*
    * First stage of cleanup: Remove references to the observation from the
    * observables that will be matched by the one specified.
@@ -1166,7 +1278,7 @@ static DKEndpointManager *manager;
         [thisObservable removeObservationsForObserver: observer];
 	// If we removed the last observation, add the observable to the cleanup
 	// table because we cannot modify the table we are enumerating.
-	if (0 == [thisObservable observationCount])
+	if (0 == ([thisObservable observationCount]))
 	{
 	  NSHashInsertIfAbsent(cleanupTable, thisObservable);
 	}
@@ -1193,20 +1305,17 @@ static DKEndpointManager *manager;
     cleanupEnum = NSEnumerateHashTable(cleanupTable);
     while(nil != (thisObservable = NSNextHashEnumeratorItem(&cleanupEnum)))
     {
-      DBusError err;
-      dbus_error_init(&err);
+      /*
+       * NOTE: We don't really care if removing the match rule fails. Once we
+       * waive all references to the observable, we will just ignore the
+       * callbacks libdbus generates for the match rule. Also, we need to
+       * retain the observable because it will go through the ring buffer.
+       */
+      [manager boolReturnForPerformingSelector: @selector(_removeDBusMatchForObservable:)
+                                        target: self
+                                          data: (void*)[thisObservable retain]
+                                 waitForReturn: NO];
       NSHashRemove(observables, thisObservable);
-      // remove the match rule from D-Bus.
-      dbus_bus_remove_match([endpoint DBusConnection],
-        [[thisObservable ruleString] UTF8String],
-        &err);
-
-      if (dbus_error_is_set(&err))
-      {
-        [NSException raise: @"DKSignalMatchException"
-                    format: @"Error when trying to remove match for signal: %s. (%s)",
-          err.name, err.message];
-      }
     }
   }
   NS_HANDLER
