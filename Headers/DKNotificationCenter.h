@@ -22,7 +22,7 @@
 
 #import <Foundation/NSObject.h>
 #import <DBusKit/DKPort.h>
-@class DKEndpoint, DKProxy, NSDictionary, NSHashTable, NSRecursiveLock,
+@class DKDBus, DKEndpoint, DKProxy, NSDictionary, NSHashTable, NSRecursiveLock,
   NSMapTable, NSMutableDictionary, NSNotification, NSString;
 
 /**
@@ -68,10 +68,9 @@
 {
   @private
   /**
-   * The endpoint object used by the notification center to communicate with
-   * D-Bus.
+   * The object representing the bus handled by this notification center.
    */
-  DKEndpoint *endpoint;
+  DKDBus *bus;
 
 
   /**

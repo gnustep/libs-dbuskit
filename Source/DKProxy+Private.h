@@ -38,6 +38,7 @@
 
 @interface DKDBus (DKDBusPrivate)
 - (void)_reconnectedWithEndpoint: (DKEndpoint*)endpoint;
+- (BOOL)_isConnected;
 @end
 
 @interface DKPort (DKPortEndpointInitializer)
@@ -50,6 +51,8 @@
  */
 @protocol DKDBusStub
 - (NSString*)GetNameOwner: (NSString*)name;
+- (void)AddMatch: (NSString*)matchRule;
+- (void)RemoveMatch: (NSString*)matchRule;
 @end
 
 /**

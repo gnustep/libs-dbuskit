@@ -79,19 +79,7 @@
    * The bus-type that should be used when making queries to the D-Bus object.
    */
    DKDBusBusType type;
-
-   /**
-    * A D-Bus error structure that can be used to pass along information about
-    * failures.
-    */
-   DBusError err;
 }
-
-- (DBusError)DBusError;
-
-- (DBusError*)DBusErrorRef;
-
-- (void)resetDBusError;
 
 - (void)addObservation: (DKObservation*)observation;
 @end
@@ -148,23 +136,7 @@
   rules = [[NSMutableDictionary alloc] initWithObjectsAndKeys: @"signal", @"type", nil];
   observations = [[NSHashTable alloc] initWithOptions: strongObjectOptions
                                              capacity: 5];
-  dbus_error_init(&err);
   return self;
-}
-
-- (void)resetDBusError
-{
-  dbus_error_init(&err);
-}
-
-- (DBusError)DBusError
-{
-  return err;
-}
-
-- (DBusError*)DBusErrorRef
-{
-  return &err;
 }
 
 /**
@@ -698,17 +670,14 @@ static DKEndpointManager *manager;
 
 - (id)initWithBusType: (DKDBusBusType)type
 {
-  DKDBus *theBus = nil;
   if (nil == (self = [super init]))
   {
     return nil;
   }
   // Trigger initialization of the bus proxy:
-  theBus = [DKDBus busWithBusType: type];
+  bus = [DKDBus busWithBusType: type];
 
-  ASSIGN(endpoint,[[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: (DBusBusType)type]);
-
-  if (nil == endpoint)
+  if (nil == bus)
   {
     [self release];
     return nil;
@@ -726,7 +695,7 @@ static DKEndpointManager *manager;
   // to do that here, because DKNotificationCenter depends on the existance of
   // the bus object and doing it from the bus object would create a circular
   // dependency.
-  [self addObserver: theBus
+  [self addObserver: bus
            selector: @selector(_disconnected:)
 	     signal: @"Disconnected"
 	  interface: [NSString stringWithUTF8String: DBUS_INTERFACE_LOCAL]
@@ -734,7 +703,7 @@ static DKEndpointManager *manager;
 	destination: nil];
 
   // Also trigger installation of the signals:
-  [theBus _registerSignalsWithNotificationCenter: self];
+  [bus _registerSignalsWithNotificationCenter: self];
   return self;
 }
 
@@ -978,7 +947,7 @@ static DKEndpointManager *manager;
   int thisIndex = 0;
   NSString *thisFilter = nil;
   BOOL processNextFilter = NO;
-  DKObservable *observable = [[[DKObservable alloc] initWithBusType: [endpoint DBusBusType]] autorelease];
+  DKObservable *observable = [[[DKObservable alloc] initWithBusType: [[bus _endpoint] DBusBusType]] autorelease];
 
   [observable filterSignalName: signalName];
   [observable filterInterface: interfaceName];
@@ -1048,48 +1017,6 @@ static DKEndpointManager *manager;
   [lock unlock];
   return array;
 }
-
-- (BOOL)_removeDBusMatchForObservable: (DKObservable*)observable
-{
-  DBusError *errPtr;
-  if (nil == observable)
-  {
-    return NO;
-  }
-  [observable resetDBusError];
-  errPtr = [observable DBusErrorRef];
-  dbus_bus_remove_match([endpoint DBusConnection],
-    [[observable ruleString] UTF8String],
-    errPtr);
-  // The observable was retained for its trip through the ring buffer.
-  [observable release];
-  if (dbus_error_is_set(errPtr))
-  {
-    return NO;
-  }
-  return YES;
-}
-
-- (BOOL)_addDBusMatchForObservable: (DKObservable*)observable
-{
-  DBusError *errPtr;
-  if (nil == observable)
-  {
-    return NO;
-  }
-  [observable resetDBusError];
-  errPtr = [observable DBusErrorRef];
-  dbus_bus_add_match([endpoint DBusConnection],
-    [[observable ruleString] UTF8String],
-    errPtr);
-
-  if (dbus_error_is_set(errPtr))
-  {
-    return NO;
-  }
-  return YES;
-}
-
 
 - (void) _createObservationForDictionary: (NSDictionary*)dict
 {
@@ -1162,6 +1089,11 @@ static DKEndpointManager *manager;
 {
   DKObservable *oldObservable = nil;
   BOOL firstObservation = NO;
+  if (NO == [bus _isConnected])
+  {
+    return;
+  }
+
   if (NO == [lock tryLock])
   {
 
@@ -1189,22 +1121,9 @@ static DKEndpointManager *manager;
     }
     else
     {
-      // NOTE: Because we are waiting for the return value, we need not retain
-      // the observable here.
-      BOOL success = [manager boolReturnForPerformingSelector: @selector(_addDBusMatchForObservable:)
-                                                       target: self
-                                                         data: (void*)observable
-                                                waitForReturn: YES];
-      if (NO == success)
-      {
-	DBusError err = [observable DBusError];
-        NSHashRemove(observables, observable);
-	[NSException raise: @"DKSignalMatchException"
-                    format: @"Error when trying to add match for signal: %s. (%s)",
-         err.name, err.message];
-      }
+      [(id<DKDBusStub>)bus AddMatch: [observable ruleString]];
     }
-      [observable addObservation: observation];
+    [observable addObservation: observation];
   }
   NS_HANDLER
   {
@@ -1308,13 +1227,17 @@ static DKEndpointManager *manager;
       /*
        * NOTE: We don't really care if removing the match rule fails. Once we
        * waive all references to the observable, we will just ignore the
-       * callbacks libdbus generates for the match rule. Also, we need to
-       * retain the observable because it will go through the ring buffer.
+       * callbacks libdbus generates for the match rule.
        */
-      [manager boolReturnForPerformingSelector: @selector(_removeDBusMatchForObservable:)
-                                        target: self
-                                          data: (void*)[thisObservable retain]
-                                 waitForReturn: NO];
+      NS_DURING
+      {
+        [(id<DKDBusStub>)bus RemoveMatch: [thisObservable ruleString]];
+      }
+      NS_HANDLER
+      {
+	NSWarnMLog(@"Could not remove match rule from D-Bus: %@", localException);
+      }
+      NS_ENDHANDLER
       NSHashRemove(observables, thisObservable);
     }
   }
@@ -1610,8 +1533,12 @@ static DKEndpointManager *manager;
  */
 - (void)_installHandler
 {
+  if (NO == [bus _isConnected])
+  {
+    return;
+  }
   NSDebugMLog(@"Started monitoring for D-Bus signals.");
-  dbus_connection_add_filter([endpoint DBusConnection],
+  dbus_connection_add_filter([[bus _endpoint] DBusConnection],
     DKHandleSignal,
     (void*)self,
     NULL); // the notification center is static, we'd never actually free it
@@ -1623,8 +1550,12 @@ static DKEndpointManager *manager;
  */
 - (void)_removeHandler
 {
+  if (NO == [bus _isConnected])
+  {
+    return;
+  }
   NSDebugMLog(@"Stopped monitoring for D-Bus signals.");
-  dbus_connection_remove_filter([endpoint DBusConnection],
+  dbus_connection_remove_filter([[bus _endpoint] DBusConnection],
     DKHandleSignal,
     (void*)self);
 }
@@ -1718,7 +1649,7 @@ static DKEndpointManager *manager;
     if (NO == [theNull isEqual: sender])
     {
       // Sender will only be nil for in process signals:
-      senderNode = [[[DKProxyStandin alloc] initWithEndpoint: endpoint
+      senderNode = [[[DKProxyStandin alloc] initWithEndpoint: [bus _endpoint]
                                                      service: sender
                                                         path: path] autorelease];
       [theSignal setParent: senderNode];
@@ -1778,15 +1709,6 @@ static DKEndpointManager *manager;
   }
   NS_ENDHANDLER
   [lock unlock];
-  if ([@"Disconnected" isEqual: signal]
-    && [@"org.freedesktop.DBus.Local" isEqual: interface])
-  {
-    // Special case for the disconnected signal. we can spare the proxy
-    // notifying us about the dropped connection an just throw away our
-    // endpoint:
-    NSDebugMLog(@"Disconnection event: Dropping endpoint from notification center.");
-    ASSIGN(endpoint, nil);
-  }
   return YES;
 }
 
@@ -1795,34 +1717,54 @@ static DKEndpointManager *manager;
  * the D-Bus signal handler and instruct the daemon do forward signals matching
  * our observables to us.
  */
-- (void)_syncStateWithEndpoint: (DKEndpoint*)ep
+- (void)_syncStateWithBus
 {
-  ASSIGN(endpoint, ep);
   [lock lock];
-  if (0 != NSCountHashTable(observables))
+  NS_DURING
   {
-    NSHashEnumerator theEnum = NSEnumerateHashTable(observables);
-    DKObservable *thisObs = nil;
-    [self _installHandler];
-    while (nil != (thisObs = NSNextHashEnumeratorItem(&theEnum)))
+    if (0 != NSCountHashTable(observables))
     {
-      BOOL success = [manager boolReturnForPerformingSelector: @selector(_addDBusMatchForObservable:)
-                                                       target: self
-                                                         data: (void*)thisObs
-                                                waitForReturn: YES];
-      if (NO == success)
+      NSHashEnumerator theEnum = NSEnumerateHashTable(observables);
+      NS_DURING
       {
-	NSWarnMLog(@"Could not reinstall observable '%@'", thisObs);
+        DKObservable *thisObs = nil;
+        [self _installHandler];
+        while (nil != (thisObs = NSNextHashEnumeratorItem(&theEnum)))
+        {
+	  NS_DURING
+	  {
+            [(id<DKDBusStub>)bus AddMatch: [thisObs ruleString]];
+	  }
+	  NS_HANDLER
+	  {
+	    NSWarnMLog(@"Failed to add match for observable: %@", localException);
+	    NSHashRemove(observables, thisObs);
+	  }
+	  NS_ENDHANDLER
+        }
       }
-    }
-    NSEndHashTableEnumeration(&theEnum);
+      NS_HANDLER
+      {
+        NSEndHashTableEnumeration(&theEnum);
+	[localException raise];
+      }
+      NS_ENDHANDLER
+
+      NSEndHashTableEnumeration(&theEnum);
+    } //end of if-statement
   }
+  NS_HANDLER
+  {
+    [lock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
   [lock unlock];
 }
 
 - (void)dealloc
 {
-  [endpoint release];
+  bus = nil;
   [signalInfo release];
   [notificationNames release];
   NSFreeMapTable(notificationNamesBySignal);

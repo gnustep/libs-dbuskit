@@ -103,7 +103,7 @@ enum
 @end
 
 @interface DKNotificationCenter (DKNotificationCenterStateSync)
-- (void)_syncStateWithEndpoint: (DKEndpoint*)ep;
+- (void)_syncStateWithBus;
 @end
 
 DKInterface *_DKInterfaceIntrospectable;
@@ -1157,6 +1157,10 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
   return @"org.freedesktop.DBus";
 }
 
+- (BOOL)_isConnected
+{
+  return (NO == isDisconnected);
+}
 
 - (void) _registerSignalsFromInterface: (DKInterface*)theIf
 {
@@ -1205,7 +1209,7 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
                                                       userInfo:
       [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt: type],
       @"busType", nil]];
-    [[DKNotificationCenter centerForBusType: type] _syncStateWithEndpoint: anEndpoint];
+    [[DKNotificationCenter centerForBusType: type] _syncStateWithBus];
   }
 
 }

@@ -1,3 +1,19 @@
+2011-05-13 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m:
+	Replace libdbus API-calls with DBusKit methods for inserting and
+	removing match rules on the bus. Depend on the bus object to do
+	this.
+	* Source/DKProxy+Private.h
+	* Source/DKProxy.m:
+	Add method to test for disconnection. Changes to support recent
+	fixes in the notification center.
+
+	Eliminate a problematic code-path by not depending on the
+	libdbus API for adding and removing match rules. Turns out we
+	can just call the corresponding methods via the bus objects. 
+
 2011-05-12 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* GNUmakefile
