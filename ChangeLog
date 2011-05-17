@@ -1,3 +1,8 @@
+2011-05-17 Andreas Schik <andreas.schick@web.de>
+
+	* Source/DKNotificationCenter.m: Fix off-by-one error when
+	computing the interface from a notification name.
+
 2011-05-13 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Headers/DKNotificationCenter.h

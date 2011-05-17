@@ -1362,7 +1362,7 @@ static DKEndpointManager *manager;
       [lock unlock];
       return nil;
     }
-    ifName = [stripped substringToIndex: (sepRange.location - 1)];
+    ifName = [stripped substringToIndex: (sepRange.location)];
     signalName = [stripped substringFromIndex: (sepRange.location + 1)];
     [lock unlock];
     return [self _signalWithName: signalName
