@@ -1307,7 +1307,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
       [lock unlock];
       return nil;
     }
-    ifName = [stripped substringToIndex: (sepRange.location - 1)];
+    ifName = [stripped substringToIndex: (sepRange.location)];
     signalName = [stripped substringFromIndex: (sepRange.location + 1)];
     [lock unlock];
     return [self _signalWithName: signalName
