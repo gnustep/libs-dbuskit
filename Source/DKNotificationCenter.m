@@ -1790,7 +1790,7 @@ static DKEndpointManager *manager;
   return self;
 }
 
-- (void)release
+- (oneway void)release
 {
   // No-Op.
 }

@@ -68,6 +68,11 @@
 - (NSDictionary*)annotations;
 
 /**
+ * Returns an array of NSXMLNodes representing the annotations on the receiver.
+ */
+- (NSArray*)annotationXMLNodes;
+
+/**
  * Records metadata for the node.
  */
 - (void) setAnnotationValue: (id)value

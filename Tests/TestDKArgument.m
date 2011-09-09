@@ -222,9 +222,9 @@ static NSDictionary *basicSigsAndClasses;
 - (void) testDictEntryTypeRoundtrip
 {
   // Dict entries don't appear on their own
-  DKContainerTypeArgument *superArg = [[DKArgument alloc] initWithDBusSignature: "a{su}"
-                                                                           name: nil
-                                                                         parent: nil];
+  DKContainerTypeArgument *superArg = (DKContainerTypeArgument*)[[DKArgument alloc] initWithDBusSignature: "a{su}"
+                                                                                                     name: nil
+                                                                                                   parent: nil];
   DKArgument *arg = [[superArg children] objectAtIndex: 0];
   UKObjectsEqual(@"{su}",[arg DBusTypeSignature]);
   [superArg release];
@@ -232,9 +232,9 @@ static NSDictionary *basicSigsAndClasses;
 
 - (void) testDictEntryTypeEquiv
 {
-  DKContainerTypeArgument *superArg = [[DKArgument alloc] initWithDBusSignature: "a{su}"
-                                                                           name: nil
-                                                                         parent: nil];
+  DKContainerTypeArgument *superArg = (DKContainerTypeArgument*)[[DKArgument alloc] initWithDBusSignature: "a{su}"
+                                                                                                     name: nil
+                                                                                                   parent: nil];
   DKArgument *arg = [[superArg children] objectAtIndex: 0];
   // They are also not supposed to carry their own ObjC equivalent class.
   UKNil([arg objCEquivalent]);
@@ -516,7 +516,12 @@ static NSDictionary *basicSigsAndClasses;
   NSNumber *one = [[NSNumber alloc] initWithInt: 89];
   NSNumber *two = [[NSNumber alloc] initWithInt: 5879];
   NSDictionary *object = [[NSDictionary alloc] initWithObjectsAndKeys: one, @"foo", two, @"bar", nil];
+# ifdef __LP64__
+  NSString *theSig = @"a{sx}";
+# else
   NSString *theSig = @"a{si}";
+# endif
+
   DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
                                                                 name: nil
                                                               parent: nil];
@@ -534,7 +539,11 @@ static NSDictionary *basicSigsAndClasses;
   NSArray *arrayOne = [[NSArray alloc] initWithObjects: one, nil];
   NSArray *arrayTwo = [[NSArray alloc] initWithObjects: two, nil];
   NSDictionary *object = [[NSDictionary alloc] initWithObjectsAndKeys: @"foo", arrayOne, @"bar", arrayTwo, nil];
+# ifdef __LP64__
+  NSString *theSig = @"a(axs)";
+# else
   NSString *theSig = @"a(ais)";
+# endif
   DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
                                                                 name: nil
                                                               parent: nil];
@@ -552,7 +561,7 @@ static NSDictionary *basicSigsAndClasses;
 {
   NSNumber *one = [[NSNumber alloc] initWithInt: 89];
   NSNumber *two = [[NSNumber alloc] initWithInt: 5879];
-  NSDictionary *object = [[NSArray alloc] initWithObjects: one, @"foo", two, @"bar", nil];
+  NSArray *object = [[NSArray alloc] initWithObjects: one, @"foo", two, @"bar", nil];
   NSString *theSig = @"av";
   DKArgument *variantArg = [[DKArgument alloc] initWithDBusSignature: "v"
                                                                 name: nil

@@ -25,11 +25,14 @@
 
 #import "DKProxy+Private.h"
 
+#import <Foundation/NSArray.h>
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSNull.h>
 #import <Foundation/NSObject.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLNode.h>
 #import <Foundation/NSXMLParser.h>
 
 @implementation DKIntrospectionNode
@@ -121,6 +124,33 @@
   [newNode setAnnotations: newAnnotations];
   [newAnnotations release];
   return newNode;
+}
+
+
+- (NSArray*)annotationXMLNodes
+{
+  // We are potentially creating quite a few temporary objects if there are
+  // many annotations so it's worth having an extra autorelease pool for them.
+  NSAutoreleasePool *pool = [NSAutoreleasePool new];
+  NSEnumerator *annotationsEnum = [annotations keyEnumerator];
+  NSString *annotationKey = nil;
+  NSMutableArray *annotationNodes = [NSMutableArray new];
+  while (nil != (annotationKey = [annotationsEnum nextObject]))
+  {
+    id rawValue = [annotations objectForKey: annotationKey];
+    // Set to empty string if it is not a string:
+    NSString *stringValue = [rawValue isKindOfClass: [NSString class]] ? rawValue : @"";
+    NSXMLNode *theName = [NSXMLNode attributeWithName: @"name"
+                                       stringValue: annotationKey];
+    NSXMLNode *theValue = [NSXMLNode attributeWithName: @"value"
+                                        stringValue: stringValue];
+    NSXMLNode *theNode = [NSXMLNode elementWithName: @"annotation"
+                                           children: nil
+			                 attributes: [NSArray arrayWithObjects: theName, theValue, nil]];
+    [annotationNodes addObject: theNode];
+  }
+  [pool release];
+  return [NSArray arrayWithArray: [annotationNodes autorelease]];
 }
 
 - (void) dealloc

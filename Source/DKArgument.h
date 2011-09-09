@@ -157,7 +157,7 @@ extern NSString *DKArgumentDirectionOut;
 /**
  * Returns an XML node representing the argument.
  */
-- (NSXMLNode*)xmlNode;
+- (NSXMLNode*)XMLNode;
 
 @end
 

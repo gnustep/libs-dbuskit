@@ -1,3 +1,19 @@
+2011-05-17 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.h
+	* Source/DKArgument.m
+	* Source/DKIntrospectionNode.h
+	* Source/DKIntrospectionNode.m:
+	Little work on emitting introspection data.
+	* Source/DKObjectPathNode.m
+	* Source/DKPortNameServer.m
+	* Source/DKPort.m
+	* Source/DKNotificationCenter.m
+	* Tests/TestDKArgument.m:
+	Un-bitrot and fix warnings spotted by clang.
+
+	Small maintenance changes.
+
 2011-05-17 Andreas Schik <andreas.schick@web.de>
 
 	* Source/DKNotificationCenter.m: Fix off-by-one error when

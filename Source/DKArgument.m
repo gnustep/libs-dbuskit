@@ -650,7 +650,7 @@ DKDBusTypeForUnboxingObject(id object)
 
 - (NSXMLNode*)xmlNodeWithDirectionAttribute: (NSXMLNode*)directionAttr
 {
-  NSMutableArray *annotationNodes = nil;
+  NSArray *annotationNodes = nil;
 
   NSArray *attributes = nil;
   NSArray *mandatoryAttributes = [NSArray arrayWithObjects: [NSXMLNode attributeWithName: @"name" stringValue: [self name]],
@@ -670,14 +670,16 @@ DKDBusTypeForUnboxingObject(id object)
     attributes = mandatoryAttributes;
   }
 
-  //FIXME: Emit annotations
+  if (0 != ([annotations count]))
+  {
+    annotationNodes = [self annotationXMLNodes];
+  }
   return [NSXMLNode elementWithName: @"arg"
                            children: annotationNodes
                          attributes: attributes];
-
-
 }
-- (NSXMLNode*)xmlNodeForDirection: (NSString*)direction
+
+- (NSXMLNode*)XMLNodeForDirection: (NSString*)direction
 {
   if ((nil == direction) || (0 == [direction length]))
   {
@@ -686,7 +688,7 @@ DKDBusTypeForUnboxingObject(id object)
   return [self xmlNodeWithDirectionAttribute: [NSXMLNode attributeWithName: @"direction" stringValue: direction]];
 
 }
-- (NSXMLNode*)xmlNode
+- (NSXMLNode*)XMLNode
 {
   return [self xmlNodeWithDirectionAttribute: nil];
 

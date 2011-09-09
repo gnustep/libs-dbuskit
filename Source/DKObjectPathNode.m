@@ -45,7 +45,7 @@
     return nil;
   }
   children = [NSMutableArray new];
-  interfaces = [NSDictionary new];
+  interfaces = [NSMutableDictionary new];
   return self;
 }
 
