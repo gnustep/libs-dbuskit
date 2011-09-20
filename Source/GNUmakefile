@@ -25,6 +25,7 @@ DBusKit_HEADER_FILES = \
 #
 DBusKit_OBJC_FILES = \
         DKArgument.m \
+	DKBoxingUtils.m \
 	DKEndpoint.m \
 	DKEndpointManager.m \
 	DKInterface.m \

@@ -59,7 +59,7 @@
   return self;
 }
 
-- (char*) returnTypeBoxed: (BOOL)doBox
+- (const char*) returnTypeBoxed: (BOOL)doBox
 {
   NSUInteger count = [outArgs count];
   if (count == 0)
@@ -79,8 +79,8 @@
   }
 }
 
-- (char*) argumentTypeAtIndex: (NSUInteger)index
-                        boxed: (BOOL)doBox
+- (const char*) argumentTypeAtIndex: (NSUInteger)index
+                              boxed: (BOOL)doBox
 {
   if (YES == doBox)
   {
@@ -214,7 +214,7 @@
 
   while (nil != (arg = [en nextObject]))
   {
-    char *typeChar;
+    const char *typeChar;
     if (doBox)
     {
       typeChar = @encode(id);

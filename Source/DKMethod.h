@@ -54,7 +54,7 @@ enum
  * Returns the Objective-C type of the return value from this method. Use doBox
  * to indicate whether the boxed or non-boxed type signature is requested.
  */
-- (char*) returnTypeBoxed: (BOOL)doBox;
+- (const char*) returnTypeBoxed: (BOOL)doBox;
 
 /**
  * Returns whether the method signature sig matches the signature for this

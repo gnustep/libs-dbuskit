@@ -335,7 +335,7 @@
 {
   DKArgument *valueArgument = [inArgs objectAtIndex: 2];
   size_t valueSize = 0;
-  char *valueType = NULL;
+  const char *valueType;
   if (doBox)
   {
     valueSize = sizeof(id);

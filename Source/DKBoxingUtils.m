@@ -1,0 +1,188 @@
+/** Helper functions for boxing and unboxing D-Bus types.
+   Copyright (C) 2011 Free Software Foundation, Inc.
+
+   Written by:  Niels Grewe <niels.grewe@halbordnung.de>
+   Created: September 2011
+
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2 of the License, or (at your option) any later version.
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with this library; if not, write to the Free
+   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02111 USA.
+
+   */
+
+#import "DKBoxingUtils.h"
+#import "DKArgument.h"
+
+#import <Foundation/NSValue.h>
+#import <dbus/dbus.h>
+
+Class
+DKBuiltinObjCClassForDBusType(int type)
+{
+  switch (type)
+  {
+    case DBUS_TYPE_BYTE:
+    case DBUS_TYPE_BOOLEAN:
+    case DBUS_TYPE_INT16:
+    case DBUS_TYPE_UINT16:
+    case DBUS_TYPE_INT32:
+    case DBUS_TYPE_UINT32:
+    case DBUS_TYPE_INT64:
+    case DBUS_TYPE_UINT64:
+    case DBUS_TYPE_DOUBLE:
+      return [NSNumber class];
+    case DBUS_TYPE_STRING:
+      return [NSString class];
+    case DBUS_TYPE_OBJECT_PATH:
+      return [DKProxy class];
+    case DBUS_TYPE_SIGNATURE:
+      return [DKArgument class];
+    // Some DBUS_TYPE_ARRAYs will actually be dictionaries if they contain
+    // DBUS_TYPE_DICT_ENTRies.
+    case DBUS_TYPE_ARRAY:
+    case DBUS_TYPE_STRUCT:
+      return [NSArray class];
+    // The following types have no explicit representation, they will either not
+    // be handled at all, or their boxing is determined by the container resp.
+    // the contained type.
+    case DBUS_TYPE_INVALID:
+    case DBUS_TYPE_VARIANT:
+    case DBUS_TYPE_DICT_ENTRY:
+    default:
+      break;
+  }
+  return Nil;
+}
+
+
+int
+DKDBusTypeForObjCType(const char* code)
+{
+  switch (*code)
+  {
+    case _C_BOOL:
+      return DBUS_TYPE_BOOLEAN;
+    case _C_CHR:
+    case _C_SHT:
+      return DBUS_TYPE_INT16;
+    case _C_INT:
+      return DBUS_TYPE_INT32;
+    case _C_LNG_LNG:
+      return DBUS_TYPE_INT64;
+    case _C_UCHR:
+      return DBUS_TYPE_BYTE;
+    case _C_USHT:
+      return DBUS_TYPE_UINT16;
+    case _C_UINT:
+      return DBUS_TYPE_UINT32;
+    case _C_ULNG_LNG:
+      return DBUS_TYPE_UINT64;
+    case _C_FLT:
+    case _C_DBL:
+      return DBUS_TYPE_DOUBLE;
+    case _C_CHARPTR:
+      return DBUS_TYPE_STRING;
+    case _C_ID:
+      return DBUS_TYPE_OBJECT_PATH;
+    case _C_ARY_B:
+      return DBUS_TYPE_ARRAY;
+    case _C_STRUCT_B:
+      return DBUS_TYPE_STRUCT;
+    default:
+      return DBUS_TYPE_INVALID;
+  }
+  return DBUS_TYPE_INVALID;
+}
+
+const char*
+DKUnboxedObjCTypeForDBusType(int type)
+{
+  switch (type)
+  {
+    case DBUS_TYPE_BYTE:
+      return @encode(unsigned char);
+    case DBUS_TYPE_BOOLEAN:
+      return @encode(BOOL);
+    case DBUS_TYPE_INT16:
+      return @encode(int16_t);
+    case DBUS_TYPE_UINT16:
+      return @encode(uint16_t);
+    case DBUS_TYPE_INT32:
+      return @encode(int32_t);
+    case DBUS_TYPE_UINT32:
+      return @encode(uint32_t);
+    case DBUS_TYPE_INT64:
+      return @encode(int64_t);
+    case DBUS_TYPE_UINT64:
+      return @encode(uint64_t);
+    case DBUS_TYPE_DOUBLE:
+      return @encode(double);
+    case DBUS_TYPE_STRING:
+      return @encode(char*);
+    // We always box the following types:
+    case DBUS_TYPE_OBJECT_PATH:
+    case DBUS_TYPE_ARRAY:
+    case DBUS_TYPE_STRUCT:
+    case DBUS_TYPE_VARIANT:
+      return @encode(id);
+    // And because we do, the following types will never appear in a signature:
+    case DBUS_TYPE_INVALID:
+    case DBUS_TYPE_SIGNATURE:
+    case DBUS_TYPE_DICT_ENTRY:
+    default:
+      return '\0';
+  }
+  return '\0';
+}
+
+size_t
+DKUnboxedObjCTypeSizeForDBusType(int type)
+{
+  switch (type)
+  {
+    case DBUS_TYPE_BYTE:
+      return sizeof(char);
+    case DBUS_TYPE_BOOLEAN:
+      return sizeof(BOOL);
+    case DBUS_TYPE_INT16:
+      return sizeof(int16_t);
+    case DBUS_TYPE_UINT16:
+      return sizeof(uint16_t);
+    case DBUS_TYPE_INT32:
+      return sizeof(int32_t);
+    case DBUS_TYPE_UINT32:
+      return sizeof(uint32_t);
+    case DBUS_TYPE_INT64:
+      return sizeof(int64_t);
+    case DBUS_TYPE_UINT64:
+      return sizeof(uint64_t);
+    case DBUS_TYPE_DOUBLE:
+      return sizeof(double);
+    case DBUS_TYPE_STRING:
+      return sizeof(char*);
+    // We always box the following types:
+    case DBUS_TYPE_OBJECT_PATH:
+    case DBUS_TYPE_ARRAY:
+    case DBUS_TYPE_STRUCT:
+    case DBUS_TYPE_VARIANT:
+      return sizeof(id);
+    // And because we do, the following types will never appear in a signature:
+    case DBUS_TYPE_INVALID:
+    case DBUS_TYPE_SIGNATURE:
+    case DBUS_TYPE_DICT_ENTRY:
+    default:
+      return 0;
+  }
+  return 0;
+}

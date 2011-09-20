@@ -44,6 +44,7 @@
 #import "DKObjectPathNode.h"
 #import "DKOutgoingProxy.h"
 #import "DKArgument.h"
+#import "DKBoxingUtils.h"
 
 #define INCLUDE_RUNTIME_H
 #include "config.h"
@@ -84,173 +85,6 @@ NSString *DKArgumentDirectionOut = @"out";
   }\
 } while (0)
 
-static Class
-DKObjCClassForDBusType(int type)
-{
-  switch (type)
-  {
-    case DBUS_TYPE_BYTE:
-    case DBUS_TYPE_BOOLEAN:
-    case DBUS_TYPE_INT16:
-    case DBUS_TYPE_UINT16:
-    case DBUS_TYPE_INT32:
-    case DBUS_TYPE_UINT32:
-    case DBUS_TYPE_INT64:
-    case DBUS_TYPE_UINT64:
-    case DBUS_TYPE_DOUBLE:
-      return [NSNumber class];
-    case DBUS_TYPE_STRING:
-      return [NSString class];
-    case DBUS_TYPE_OBJECT_PATH:
-      return [DKProxy class];
-    case DBUS_TYPE_SIGNATURE:
-      return [DKArgument class];
-    // Some DBUS_TYPE_ARRAYs will actually be dictionaries if they contain
-    // DBUS_TYPE_DICT_ENTRies.
-    case DBUS_TYPE_ARRAY:
-    case DBUS_TYPE_STRUCT:
-      return [NSArray class];
-    // The following types have no explicit representation, they will either not
-    // be handled at all, or their boxing is determined by the container resp.
-    // the contained type.
-    case DBUS_TYPE_INVALID:
-    case DBUS_TYPE_VARIANT:
-    case DBUS_TYPE_DICT_ENTRY:
-    default:
-      break;
-  }
-  return Nil;
-}
-
-/*
- * Conversion from Objective-C types to D-Bus types. NOTE: This is not meant to
- * be complete. It is just used to give some hints for the boxing of D-Bus
- * variant types. (NSValue responds to -objCType, so we can use the information
- * to construct a correctly typed DKArgument at least some of the time.)
- */
-static int
-DKDBusTypeForObjCType(const char* code)
-{
-  switch (*code)
-  {
-    case _C_BOOL:
-      return DBUS_TYPE_BOOLEAN;
-    case _C_CHR:
-    case _C_SHT:
-      return DBUS_TYPE_INT16;
-    case _C_INT:
-      return DBUS_TYPE_INT32;
-    case _C_LNG_LNG:
-      return DBUS_TYPE_INT64;
-    case _C_UCHR:
-      return DBUS_TYPE_BYTE;
-    case _C_USHT:
-      return DBUS_TYPE_UINT16;
-    case _C_UINT:
-      return DBUS_TYPE_UINT32;
-    case _C_ULNG_LNG:
-      return DBUS_TYPE_UINT64;
-    case _C_FLT:
-    case _C_DBL:
-      return DBUS_TYPE_DOUBLE;
-    case _C_CHARPTR:
-      return DBUS_TYPE_STRING;
-    case _C_ID:
-      return DBUS_TYPE_OBJECT_PATH;
-    case _C_ARY_B:
-      return DBUS_TYPE_ARRAY;
-    case _C_STRUCT_B:
-      return DBUS_TYPE_STRUCT;
-    default:
-      return DBUS_TYPE_INVALID;
-  }
-  return DBUS_TYPE_INVALID;
-}
-
-/*
- * Map D-Bus types to corresponding Objective-C types. Assumes that complex
- * types are always boxed.
- */
-static char*
-DKUnboxedObjCTypeForDBusType(int type)
-{
-  switch (type)
-  {
-    case DBUS_TYPE_BYTE:
-      return @encode(unsigned char);
-    case DBUS_TYPE_BOOLEAN:
-      return @encode(BOOL);
-    case DBUS_TYPE_INT16:
-      return @encode(int16_t);
-    case DBUS_TYPE_UINT16:
-      return @encode(uint16_t);
-    case DBUS_TYPE_INT32:
-      return @encode(int32_t);
-    case DBUS_TYPE_UINT32:
-      return @encode(uint32_t);
-    case DBUS_TYPE_INT64:
-      return @encode(int64_t);
-    case DBUS_TYPE_UINT64:
-      return @encode(uint64_t);
-    case DBUS_TYPE_DOUBLE:
-      return @encode(double);
-    case DBUS_TYPE_STRING:
-      return @encode(char*);
-    // We always box the following types:
-    case DBUS_TYPE_OBJECT_PATH:
-    case DBUS_TYPE_ARRAY:
-    case DBUS_TYPE_STRUCT:
-    case DBUS_TYPE_VARIANT:
-      return @encode(id);
-    // And because we do, the following types will never appear in a signature:
-    case DBUS_TYPE_INVALID:
-    case DBUS_TYPE_SIGNATURE:
-    case DBUS_TYPE_DICT_ENTRY:
-    default:
-      return '\0';
-  }
-  return '\0';
-}
-static size_t
-DKUnboxedObjCTypeSizeForDBusType(int type)
-{
-  switch (type)
-  {
-    case DBUS_TYPE_BYTE:
-      return sizeof(char);
-    case DBUS_TYPE_BOOLEAN:
-      return sizeof(BOOL);
-    case DBUS_TYPE_INT16:
-      return sizeof(int16_t);
-    case DBUS_TYPE_UINT16:
-      return sizeof(uint16_t);
-    case DBUS_TYPE_INT32:
-      return sizeof(int32_t);
-    case DBUS_TYPE_UINT32:
-      return sizeof(uint32_t);
-    case DBUS_TYPE_INT64:
-      return sizeof(int64_t);
-    case DBUS_TYPE_UINT64:
-      return sizeof(uint64_t);
-    case DBUS_TYPE_DOUBLE:
-      return sizeof(double);
-    case DBUS_TYPE_STRING:
-      return sizeof(char*);
-    // We always box the following types:
-    case DBUS_TYPE_OBJECT_PATH:
-    case DBUS_TYPE_ARRAY:
-    case DBUS_TYPE_STRUCT:
-    case DBUS_TYPE_VARIANT:
-      return sizeof(id);
-    // And because we do, the following types will never appear in a signature:
-    case DBUS_TYPE_INVALID:
-    case DBUS_TYPE_SIGNATURE:
-    case DBUS_TYPE_DICT_ENTRY:
-    default:
-      return 0;
-  }
-  return 0;
-}
 
 /*
  * Private Container argument subclasses:
@@ -578,7 +412,7 @@ DKDBusTypeForUnboxingObject(id object)
                                                         name: _name
                                                       parent: _parent];
   }
-  objCEquivalent = DKObjCClassForDBusType(DBusType);
+  objCEquivalent = DKBuiltinObjCClassForDBusType(DBusType);
   return self;
 }
 
@@ -629,7 +463,7 @@ DKDBusTypeForUnboxingObject(id object)
 
 }
 
-- (char*) unboxedObjCTypeChar
+- (const char*) unboxedObjCTypeChar
 {
   return DKUnboxedObjCTypeForDBusType(DBusType);
 }

@@ -1,4 +1,17 @@
-2011-05-17 Niels Grewe <niels.grewe@halbordnung.de>
+2011-09-09 Niels Grewe <niels.grewe@halbordnung.de>
+
+        * Source/DKBoxingUtils.h
+        * Source/DKBoxingUtils.m:
+	Factor out some type conversion logic.
+	* Source/DKMethod.h
+        * Source/DKArgument.h
+        * Source/DKMethod.m
+        * Source/DKArgument.m
+        * Source/DKPropertyMethod.m
+        * Source/GNUmakefile:
+	Follow-Up changes for DKBoxingUtils.
+
+2011-09-09 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.h
 	* Source/DKArgument.m

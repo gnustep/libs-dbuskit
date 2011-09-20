@@ -69,7 +69,7 @@ extern NSString *DKArgumentDirectionOut;
  * Return the type char to be used if the argument is not boxed to an
  * Objective-C type.
  */
-- (char*) unboxedObjCTypeChar;
+- (const char*) unboxedObjCTypeChar;
 
 /**
  * Return the size of the unboxed type.
