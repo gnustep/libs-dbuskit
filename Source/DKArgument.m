@@ -27,6 +27,7 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSEnumerator.h>
+#import <Foundation/NSFileHandle.h>
 #import <Foundation/NSHashTable.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSLock.h>
@@ -225,6 +226,9 @@ DKInstallDefaultSelectorTypeMapping()
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_BOOLEAN, @selector(boolValue));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_DOUBLE, @selector(doubleValue));
   DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_DOUBLE, @selector(floatValue));
+# ifdef DBUS_TYPE_UNIX_FD
+  DK_INSTALL_TYPE_SELECTOR_PAIR(DBUS_TYPE_UNIX_FD, @selector(fileDescriptor));
+# endif
   [selectorTypeMapLock unlock];
 }
 
@@ -671,6 +675,15 @@ DKDBusTypeForUnboxingObject(id object)
          }
       }
       break;
+#ifdef DBUS_TYPE_UNIX_FD
+      case DBUS_TYPE_UNIX_FD:
+      if ([value respondsToSelector: @selector(fileDescriptor)])
+      {
+	*buffer = (intptr_t)[value fileDescriptor];
+	return YES;
+      }
+      break;
+#endif
     case DBUS_TYPE_SIGNATURE:
       if ([value respondsToSelector: @selector(DBusTypeSignature)])
       {
@@ -736,6 +749,10 @@ DKDBusTypeForUnboxingObject(id object)
       return [objCEquivalent numberWithDouble: *(double*)buffer];
     case DBUS_TYPE_STRING:
       return [objCEquivalent stringWithUTF8String: *(char**)buffer];
+#   ifdef DBUS_TYPE_UNIX_FD
+    case DBUS_TYPE_UNIX_FD:
+      return [[(NSFileHandle*)[objCEquivalent alloc] initWithFileDescriptor: *(int*)buffer] autorelease];
+#   endif
     case DBUS_TYPE_OBJECT_PATH:
     {
       /*

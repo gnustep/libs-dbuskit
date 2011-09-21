@@ -24,8 +24,12 @@
 #import "DKBoxingUtils.h"
 #import "DKArgument.h"
 
+#import "config.h"
+
 #import <Foundation/NSValue.h>
-#import <dbus/dbus.h>
+#import <Foundation/NSFileHandle.h>
+
+#include <dbus/dbus.h>
 
 Class
 DKBuiltinObjCClassForDBusType(int type)
@@ -53,6 +57,10 @@ DKBuiltinObjCClassForDBusType(int type)
     case DBUS_TYPE_ARRAY:
     case DBUS_TYPE_STRUCT:
       return [NSArray class];
+#ifdef  DBUS_TYPE_UNIX_FD
+    case DBUS_TYPE_UNIX_FD:
+      return [NSFileHandle class];
+#endif
     // The following types have no explicit representation, they will either not
     // be handled at all, or their boxing is determined by the container resp.
     // the contained type.
@@ -130,6 +138,11 @@ DKUnboxedObjCTypeForDBusType(int type)
       return @encode(double);
     case DBUS_TYPE_STRING:
       return @encode(char*);
+#   ifdef DBUS_TYPE_UNIX_FD
+    // Qua POSIX, file descriptors are integer sized.
+    case DBUS_TYPE_UNIX_FD:
+      return @encode(int);
+#   endif
     // We always box the following types:
     case DBUS_TYPE_OBJECT_PATH:
     case DBUS_TYPE_ARRAY:
@@ -171,6 +184,10 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
       return sizeof(double);
     case DBUS_TYPE_STRING:
       return sizeof(char*);
+#   ifdef DBUS_TYPE_UNIX_FD
+    case DBUS_TYPE_UNIX_FD:
+      return sizeof(int);
+#   endif
     // We always box the following types:
     case DBUS_TYPE_OBJECT_PATH:
     case DBUS_TYPE_ARRAY:

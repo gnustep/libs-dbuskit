@@ -1,5 +1,11 @@
 2011-09-21 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKBoxingUtils.m
+	* Source/DKArgument.m:
+	Add support for boxing DBUS_TYPE_UNIX_FD as NSFileHandle.
+
+2011-09-21 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKBoxingUtils.m: Implement more type information extraction.
 	* Source/type_encoding_cases.h: Import from libobjc2
 	* Documentation/readme.texi: Mention MIT licensed file from libobjc2
