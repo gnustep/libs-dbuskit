@@ -33,7 +33,9 @@ This means you can use it in any program (even non-free programs). If
 you distribute the library along with your program, you must make the
 improvements you have made freely available. You should read the
 COPYING file in the root directory of the framework distribution for
-more information. All files in the `Source', `Headers', and `Tests'
+more information. The file `Source/type_encoding_cases.h' is originally
+part of the GNUstep Objective-C runtime and licensed under the MIT
+license. All other files in the `Source', `Headers', and `Tests'
 directories are covered under the LGPL.
 
    The associated tools and examples are covered under the GNU Public

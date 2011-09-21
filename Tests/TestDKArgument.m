@@ -31,10 +31,11 @@
 #import "DBusKit/DKProxy.h"
 #import "DBusKit/DKPort.h"
 #import "../Source/DKArgument.h"
+#import "../Source/DKBoxingUtils.h"
 
 #include <stdint.h>
 #include <math.h>
-
+#include <dbus/dbus.h>
 
 @interface DKArgument (ExposeForTest)
 /*
@@ -96,6 +97,51 @@ static NSDictionary *basicSigsAndClasses;
       [DKArgument class], @"g", nil];
   }
 
+}
+
+
+- (void)testBoxingHelperFunctions
+{
+  // Equal types fitting (examplary):
+  UKTrue(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_STRING,"*"));
+  UKTrue(DKObjCTypeFitsIntoDBusType("*",DBUS_TYPE_STRING));
+  UKTrue(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_BYTE,"C"));
+  UKTrue(DKObjCTypeFitsIntoDBusType("C",DBUS_TYPE_BYTE));
+
+  // Smaller integers fitting into larger ones:
+  UKTrue(DKObjCTypeFitsIntoDBusType("l",DBUS_TYPE_INT64));
+  UKTrue(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_INT32,"q"));
+  UKTrue(DKObjCTypeFitsIntoDBusType("c",DBUS_TYPE_INT32));
+  UKTrue(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_INT16, "q"));
+
+  // Larger integers do not fit into smaller ones:
+  UKFalse(DKObjCTypeFitsIntoDBusType("q",DBUS_TYPE_INT32));
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_INT64,"i"));
+  UKFalse(DKObjCTypeFitsIntoDBusType("i",DBUS_TYPE_INT16));
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_INT16, "c"));
+
+  // Smaller unsigned integers fitting into larger signed ones:
+  UKTrue(DKObjCTypeFitsIntoDBusType("I",DBUS_TYPE_INT64));
+  UKTrue(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_UINT32,"q"));
+  UKTrue(DKObjCTypeFitsIntoDBusType("C",DBUS_TYPE_INT32));
+  UKTrue(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_UINT16, "q"));
+
+  // Unsigned integers do not fit those only differing in signedness:
+  UKFalse(DKObjCTypeFitsIntoDBusType("Q",DBUS_TYPE_INT64));
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_UINT64,"q"));
+  UKFalse(DKObjCTypeFitsIntoDBusType("i",DBUS_TYPE_UINT32));
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_INT32, "I"));
+
+  // Floating point values fit into larger ones, but not vice versa (NOTE: D-Bus
+  // only has a double type.
+  UKTrue(DKObjCTypeFitsIntoDBusType("f",DBUS_TYPE_DOUBLE));
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_DOUBLE,"f"));
+
+  // Floating point types cannot be converted to integers or vice versa:
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_DOUBLE,"q"));
+  UKFalse(DKObjCTypeFitsIntoDBusType("d", DBUS_TYPE_INT64));
+  UKFalse(DKDBusTypeFitsIntoObjCType(DBUS_TYPE_INT16,"d"));
+  UKFalse(DKObjCTypeFitsIntoDBusType("s", DBUS_TYPE_DOUBLE));
 }
 
 /*

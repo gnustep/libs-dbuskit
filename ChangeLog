@@ -1,4 +1,14 @@
-2011-09-09 Niels Grewe <niels.grewe@halbordnung.de>
+2011-09-21 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKBoxingUtils.m: Implement more type information extraction.
+	* Source/type_encoding_cases.h: Import from libobjc2
+	* Documentation/readme.texi: Mention MIT licensed file from libobjc2
+	* Tests/TestDKArgument.m: Add some tests for the new type info functions.
+	* README: Regenerate
+
+	More preliminaries for type conversion improvements.
+
+2011-09-20 Niels Grewe <niels.grewe@halbordnung.de>
 
         * Source/DKBoxingUtils.h
         * Source/DKBoxingUtils.m:

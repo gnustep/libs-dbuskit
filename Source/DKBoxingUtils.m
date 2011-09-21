@@ -186,3 +186,305 @@ DKUnboxedObjCTypeSizeForDBusType(int type)
   }
   return 0;
 }
+
+size_t
+DKPrimitiveObjCTypeSize(const char* code)
+{
+  // Guard against NULL pointers
+  if (NULL == code)
+  {
+    return 0;
+  }
+
+  // Guard against empty strings
+  if ('\0' == *code)
+  {
+    return 0;
+  }
+
+  switch (*code)
+  {
+#   define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+    case encodingChar: \
+      return sizeof(typeName);
+#   define NON_INTEGER_TYPES 1
+#   include "type_encoding_cases.h"
+    default:
+      return 0;
+  }
+}
+
+BOOL
+DKDBusTypeIsIntegerType(int type)
+{
+  switch (type)
+  {
+    case DBUS_TYPE_BYTE:
+    case DBUS_TYPE_BOOLEAN:
+    case DBUS_TYPE_INT16:
+    case DBUS_TYPE_UINT16:
+    case DBUS_TYPE_INT32:
+    case DBUS_TYPE_UINT32:
+    case DBUS_TYPE_INT64:
+    case DBUS_TYPE_UINT64:
+      return YES;
+    default:
+      return NO;
+  }
+  return NO;
+}
+
+
+BOOL
+DKObjCTypeIsIntegerType(const char* code)
+{
+  // Guard against NULL pointers
+  if (NULL == code)
+  {
+    return NO;
+  }
+
+  // Guard against empty strings
+  if ('\0' == *code)
+  {
+    return NO;
+  }
+
+  switch (*code)
+  {
+    case 'c':
+    case 's':
+    case 'i':
+    case 'l':
+    case 'q':
+    case 'C':
+    case 'B':
+    case 'S':
+    case 'I':
+    case 'L':
+    case 'Q':
+      return YES;
+    default:
+      return NO;
+  }
+  return NO;
+}
+
+BOOL
+DKDBusTypeIsUnsigned(int type)
+{
+  switch (type)
+  {
+    case DBUS_TYPE_UINT16:
+    case DBUS_TYPE_UINT32:
+    case DBUS_TYPE_UINT64:
+      return YES;
+    default:
+      return NO;
+  }
+}
+
+BOOL
+DKObjCTypeIsUnsigned(const char* code)
+{
+  // Guard against NULL pointers
+  if (NULL == code)
+  {
+    return NO;
+  }
+
+  // Guard against empty strings
+  if ('\0' == *code)
+  {
+    return NO;
+  }
+
+  switch (*code)
+  {
+    case 'C':
+    case 'S':
+    case 'I':
+    case 'L':
+    case 'Q':
+      return YES;
+    default:
+      return NO;
+  }
+  return NO;
+}
+
+
+BOOL
+DKDBusTypeIsFPType(int type)
+{
+  return (DBUS_TYPE_DOUBLE == type);
+}
+
+BOOL
+DKObjCTypeIsFPType(const char* code)
+{
+  // Guard against NULL pointers
+  if (NULL == code)
+  {
+    return NO;
+  }
+
+  // Guard against empty strings
+  if ('\0' == *code)
+  {
+    return NO;
+  }
+
+  switch (*code)
+  {
+    case 'd':
+    case 'f':
+      return YES;
+    default:
+      return NO;
+  }
+  return NO;
+}
+
+static inline BOOL
+DKObjCTypeFitsIntoObjCType(const char *sourceType, const char *targetType)
+{
+  // NOTE This function is only ever called from functions that already did
+  // sanity checks on the arguments.
+  BOOL sourceIsInteger = NO;
+  BOOL targetIsInteger = NO;
+  BOOL sourceIsFP = NO;
+  BOOL targetIsFP = NO;
+  BOOL sourceIsUnsigned = NO;
+  BOOL targetIsUnsigned = NO;
+  size_t sourceSize = 0;
+  size_t targetSize = 0;
+
+
+  // First test: Conversion between equal types always works.
+  if (*sourceType == *targetType)
+  {
+    return YES;
+  }
+
+  /*
+   * More complex cases. We need to gather information about the types. Of that,
+   * we will always need the size.
+   */
+  sourceSize = DKPrimitiveObjCTypeSize(sourceType);
+  targetSize = DKPrimitiveObjCTypeSize(targetType);
+  sourceIsInteger = DKObjCTypeIsIntegerType(sourceType);
+  targetIsInteger = DKObjCTypeIsIntegerType(targetType);
+
+  if (sourceIsInteger && targetIsInteger)
+  {
+    /*
+     * Both types are integers. Find out whether they are signed.
+     */
+
+    sourceIsUnsigned = DKObjCTypeIsUnsigned(sourceType);
+    targetIsUnsigned = DKObjCTypeIsUnsigned(targetType);
+    if (targetSize > sourceSize)
+    {
+      /*
+       * If the type we are converting to needs more storage space than the
+       * source, we're save, even if we are converting from an unsigned to a
+       * signed value. But we don't claim that we can convert a signed value
+       * to an unsigned.
+       * FIXME: Of course we could try to examine the concrete value in every
+       * case and only fail when it actually doesn't fit.
+       */
+      if ((sourceIsUnsigned == targetIsUnsigned)
+	|| (sourceIsUnsigned && (NO == targetIsUnsigned)))
+      {
+	return YES;
+      }
+    }
+
+    /* If both types are of equal size, we also require equal signedness. */
+    if ((targetSize == sourceSize) && (sourceIsUnsigned == targetIsUnsigned))
+    {
+      return YES;
+    }
+  }
+
+  sourceIsFP = DKObjCTypeIsFPType(sourceType);
+  targetIsFP = DKObjCTypeIsFPType(targetType);
+
+  if (sourceIsFP && targetIsFP)
+  {
+    /* This is easier if only floating point values are involved. */
+    if (targetSize >= sourceSize)
+    {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+BOOL
+DKDBusTypeFitsIntoObjCType(int origType, const char* objCType)
+{
+  const char* convertedDBusType;
+  // Guard against NULL pointers
+  if (NULL == objCType)
+  {
+    return NO;
+  }
+
+  // Guard against empty strings
+  if ('\0' == *objCType)
+  {
+    return NO;
+  }
+
+  if (DBUS_TYPE_INVALID == origType)
+  {
+    return NO;
+  }
+  convertedDBusType = DKUnboxedObjCTypeForDBusType(origType);
+
+  if (convertedDBusType == NULL)
+  {
+    return NO;
+  }
+  if (*convertedDBusType == '\0')
+  {
+    return NO;
+  }
+  return DKObjCTypeFitsIntoObjCType(convertedDBusType, objCType);
+}
+
+BOOL
+DKObjCTypeFitsIntoDBusType(const char *origType, int DBusType)
+{
+  const char* convertedDBusType;
+  // Guard against NULL pointers
+  if (NULL == origType)
+  {
+    return NO;
+  }
+
+  // Guard against empty strings
+  if ('\0' == *origType)
+  {
+    return NO;
+  }
+
+  if (DBUS_TYPE_INVALID == DBusType)
+  {
+    return NO;
+  }
+  convertedDBusType = DKUnboxedObjCTypeForDBusType(DBusType);
+
+  if (convertedDBusType == NULL)
+  {
+    return NO;
+  }
+  if (*convertedDBusType == '\0')
+  {
+    return NO;
+  }
+  return DKObjCTypeFitsIntoObjCType(origType, convertedDBusType);
+}
+
