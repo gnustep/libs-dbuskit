@@ -1,3 +1,7 @@
+2011-09-22 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/UsingDBus.texi: Document file descriptor support.
+
 2011-09-21 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKBoxingUtils.m
