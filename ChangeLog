@@ -1,5 +1,11 @@
 2011-09-24 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKMethod.m
+	* Source/DKPropertyMethod.m:
+	Fix generation of declarations for property accessors/mutators.
+
+2011-09-24 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Documentation/UsingDBus.texi: Updated information about runtime
 	interaction.
 

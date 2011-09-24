@@ -256,6 +256,12 @@
                       messageType: type];
   }
 }
+
+
+- (NSUInteger)userVisibleArguments
+{
+  return 0;
+}
 @end
 
 @implementation DKPropertyMutator
@@ -522,5 +528,10 @@
                               atIndex: 2
                                boxing: doBox];
   }
+}
+
+- (NSUInteger)userVisibleArguments
+{
+  return 1;
 }
 @end
