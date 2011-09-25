@@ -54,6 +54,7 @@
 - (NSString*)ListNames;
 - (char*)GetNameOwner: (char*)name;
 - (BOOL)NameHasOwner: (NSString*)name;
+- (int64_t)GetConnectionUnixUser: (NSString*)name;
 @end
 
 @implementation DKProxy (ArpWrapping)
@@ -119,6 +120,22 @@
   UKTrue([returnValue isKindOfClass: [NSString class]]);
   UKTrue([returnValue length] > 0);
 }
+
+-(void)testTypeConvertingMessageSend
+{
+
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  int64_t returnValue = 0;
+  NSWarnMLog(@"This test is an expected failure if the session message bus has no peer with the unique name ':1.1'!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
+  aProxy = [conn rootProxy];
+  UKDoesNotRaiseException(returnValue = [aProxy GetConnectionUnixUser: @":1.1"]);
+
+  UKTrue(returnValue > 0);
+}
+
 
 - (void)testBuildMethodCache
 {
