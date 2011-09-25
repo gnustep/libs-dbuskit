@@ -364,7 +364,7 @@ DKObjCTypeIsFPType(const char* code)
 }
 
 static inline BOOL
-DKObjCTypeFitsIntoObjCType(const char *sourceType, const char *targetType)
+_DKObjCTypeFitsIntoObjCType(const char *sourceType, const char *targetType)
 {
   // NOTE This function is only ever called from functions that already did
   // sanity checks on the arguments.
@@ -469,7 +469,7 @@ DKDBusTypeFitsIntoObjCType(int origType, const char* objCType)
   {
     return NO;
   }
-  return DKObjCTypeFitsIntoObjCType(convertedDBusType, objCType);
+  return _DKObjCTypeFitsIntoObjCType(convertedDBusType, objCType);
 }
 
 BOOL
@@ -502,6 +502,23 @@ DKObjCTypeFitsIntoDBusType(const char *origType, int DBusType)
   {
     return NO;
   }
-  return DKObjCTypeFitsIntoObjCType(origType, convertedDBusType);
+  return _DKObjCTypeFitsIntoObjCType(origType, convertedDBusType);
 }
 
+BOOL
+DKObjCTypeFitsIntoObjCType(const char *sourceType, const char *targetType)
+{
+  // Guard against NULL pointers
+  if ((NULL == sourceType) || (NULL == targetType))
+  {
+    return NO;
+  }
+
+  // Guard against empty strings
+  if (('\0' == *sourceType) || ('\0' == *targetType))
+  {
+    return NO;
+  }
+
+  return _DKObjCTypeFitsIntoObjCType(sourceType, targetType);
+}

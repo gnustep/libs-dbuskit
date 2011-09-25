@@ -106,3 +106,9 @@ DKDBusTypeFitsIntoObjCType(int type, const char* code);
  */
 BOOL
 DKObjCTypeFitsIntoDBusType(const char* code, int type);
+
+/**
+ * Returns whether a value of the given Objective-C type can fit into the space of another ObjC type.
+ */
+BOOL
+DKObjCTypeFitsIntoObjCType(const char* code, const char* otherCode);

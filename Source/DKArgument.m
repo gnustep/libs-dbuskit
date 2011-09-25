@@ -541,6 +541,186 @@ DKDBusTypeForUnboxingObject(id object)
 }
 
 
+- (void)fixupBuffer: (uint64_t*)buffer
+           fromType: (const char*)sourceType
+             toType: (const char*)targetType
+{
+
+  /*
+   * For convenience, we set up a union of all primitive types.
+   */
+  union allTypeReps
+  {
+    uint64_t buffer;
+#   define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+    typeName name ## Representation;
+#   define NON_INTEGER_TYPES 1
+#   include "type_encoding_cases.h"
+   } rep;
+
+  NSAssert((((NULL != sourceType) && ('\0' != *sourceType))
+    && ((NULL != targetType) && ('\0' != *targetType))
+    && (NULL != buffer)),
+    @"Insufficient type information for conversion.");
+
+  if (0 == strcmp(sourceType,targetType))
+  {
+    // with equivalent types, no fixup is needed.
+    return;
+  }
+
+  // Assign the value of the buffer to the union:
+  rep.buffer = *buffer;
+
+  /*
+   * The APPLY_TYPE macro is useful, but the preprocessor is stupid, we need to
+   * define the first half of this stuff by hand. The general procedure is to
+   * find the field for the source type in the union and cast it to the target
+   * type, assigning the result back to the buffer.
+   */
+  switch (*sourceType)
+  {
+    //Float can be cast only to double:
+    case 'f':
+    {
+      if ('d' == *targetType)
+      {
+	// We need additional indirections to avoid miscasting this.
+	union fpAndLLRep
+	{
+	  uint64_t buf;
+	  double val;
+	} anotherRep;
+	anotherRep.val = (double)rep.floatRepresentation;
+        *buffer = anotherRep.buf;
+      }
+      return;
+    }
+    case 'c':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.charRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 'i':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.intRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 's':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.shortRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 'l':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.longRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 'C':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.unsignedCharRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 'I':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.unsignedIntRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 'L':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.unsignedLongRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+    case 'B':
+    {
+      switch (*targetType)
+      {
+#       define APPLY_TYPE(typeName, name, capitalizedName, encodingChar) \
+        case encodingChar: \
+        { \
+	  *buffer = (typeName)rep.boolRepresentation;\
+	  return; \
+        }
+#       include "type_encoding_cases.h"
+      }
+      break;
+    }
+
+    // Types that can not be cast anywhere
+    case 'd':
+    case 'q':
+    case 'Q':
+    default:
+    return;
+  }
+  return;
+}
+
+
+
 - (BOOL) unboxValue: (id)value
          intoBuffer: (long long*)buffer
 {
@@ -781,6 +961,9 @@ DKDBusTypeForUnboxingObject(id object)
 }
 
 
+
+
+
 - (void) unmarshallFromIterator: (DBusMessageIter*)iter
                  intoInvocation: (NSInvocation*)inv
 		        atIndex: (NSInteger)index
@@ -818,7 +1001,7 @@ DKDBusTypeForUnboxingObject(id object)
   }
 
   // Check whether the invocation has a matching call frame:
-  NSAssert((0 == strcmp(invType, expectedType)),
+  NSAssert(DKObjCTypeFitsIntoObjCType(expectedType, invType),
     @"Type mismatch between introspection data and invocation.");
 
   dbus_message_iter_get_basic(iter, (void*)&buffer);
@@ -838,6 +1021,9 @@ DKDBusTypeForUnboxingObject(id object)
   }
   else
   {
+    [self fixupBuffer: &buffer
+             fromType: expectedType
+               toType: invType];
     if (index == -1)
     {
       [inv setReturnValue: (void*)&buffer];
@@ -849,6 +1035,8 @@ DKDBusTypeForUnboxingObject(id object)
     }
   }
 }
+
+
 
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
@@ -918,7 +1106,7 @@ DKDBusTypeForUnboxingObject(id object)
     invType = [[inv methodSignature] getArgumentTypeAtIndex: index];
   }
 
-  NSAssert((0 == strcmp(expectedType, invType)),
+  NSAssert(DKObjCTypeFitsIntoObjCType(invType, expectedType),
     @"Type mismatch between introspection data and invocation.");
 
   if (doBox)
@@ -954,6 +1142,9 @@ DKDBusTypeForUnboxingObject(id object)
                atIndex: index];
     }
   }
+  [self fixupBuffer: &buffer
+           fromType: invType
+             toType: expectedType];
 
   DK_ITER_APPEND(iter, DBusType, &buffer);
 }

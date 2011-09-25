@@ -32,6 +32,7 @@
 
 #import "DKArgument.h"
 #import "DKMethod.h"
+#import "DKBoxingUtils.h"
 
 #import "DKProxy+Private.h"
 
@@ -108,7 +109,9 @@
   {
     const char* typeFromSig = [aSignature getArgumentTypeAtIndex: sigIndex];
     const char* boxedType = @encode(id);
-    const char *unboxedTypeFromDBus = [[inArgs objectAtIndex: argIndex] unboxedObjCTypeChar];
+    DKArgument *theArg = [inArgs objectAtIndex: argIndex];
+    int origTypeFromDBus = [theArg DBusType];
+    const char *unboxedTypeFromDBus = [theArg unboxedObjCTypeChar];
     BOOL boxedMatch = NO;
     BOOL unboxedMatch = NO;
     if ((typeFromSig == NULL) || (unboxedTypeFromDBus == NULL))
@@ -118,7 +121,7 @@
     boxedMatch = (0 == strcmp(typeFromSig, boxedType));
     if (NO == boxedMatch)
     {
-      unboxedMatch = (0 == strcmp(typeFromSig, unboxedTypeFromDBus));
+      unboxedMatch = DKObjCTypeFitsIntoDBusType(typeFromSig, origTypeFromDBus);
       if (unboxedMatch)
       {
 	return DK_ARGUMENT_UNBOXED;
@@ -152,7 +155,7 @@
     return DK_ARGUMENT_BOXED;
   }
 
-  unboxedReturnMatch = (0 == strcmp(sigReturn, [self returnTypeBoxed: NO]));
+  unboxedReturnMatch = DKObjCTypeFitsIntoObjCType([self returnTypeBoxed: NO], sigReturn);
   if (unboxedReturnMatch)
   {
     return DK_ARGUMENT_UNBOXED;
