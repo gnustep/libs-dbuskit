@@ -70,4 +70,11 @@
  * newline.
  */
 - (NSString*)propertyDeclarationForObjC2: (BOOL)useObjC2;
+
+
+/**
+ * Specifies whether the owner of the property will emit a signal upon changes
+ * to the property.
+ */
+- (BOOL)willPostChangeNotification;
 @end

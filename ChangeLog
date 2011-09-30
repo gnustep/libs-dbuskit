@@ -1,5 +1,12 @@
 2011-10-01 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKProperty.h: Expose change notification check method.
+	* Source/DKProxy.m: Implement -automaticallyNotifiesObserversForKey:
+
+	Start working on KVO support.
+
+2011-10-01 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKProperty.m: Implement check whether the property emits change
 	notifications.
 	* Source/DKPropertyMethod.m: Ensure that mutators are KVC-compliant.

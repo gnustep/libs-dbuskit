@@ -28,6 +28,7 @@
 #import "DKIntrospectionParserDelegate.h"
 #import "DKMethod.h"
 #import "DKMethodCall.h"
+#import "DKProperty.h"
 #import "DKProxy+Private.h"
 
 #import "DBusKit/DKNotificationCenter.h"
@@ -943,6 +944,34 @@ DKInterface *_DKInterfaceIntrospectable;
   [parser release];
   [delegate release];
   return YES;
+}
+
+/*
+ * KVO compliance methods:
+ */
+
+- (BOOL)automaticallyNotifiesObserversForKey: (NSString*)key
+{
+  DKProperty *property = nil;
+  if ([activeInterface isKindOfClass: [DKInterface class]])
+  {
+    property = [[activeInterface properties] objectForKey: key];
+  }
+  if (nil == property)
+  {
+    NSEnumerator *ifEnum = [interfaces objectEnumerator];
+    DKInterface *thisIf = nil;
+    SEL propertiesSel = @selector(properties);
+    IMP getProps = class_getMethodImplementation([DKInterface class],
+     propertiesSel);
+    while ((nil != (thisIf = [ifEnum nextObject]))
+      && (nil == property))
+    {
+      NSDictionary *propDict = getProps(thisIf, propertiesSel);
+      property = [propDict objectForKey: key];
+    }
+  }
+  return [property willPostChangeNotification];
 }
 
 - (void) dealloc
