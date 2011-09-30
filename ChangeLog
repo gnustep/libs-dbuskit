@@ -1,4 +1,19 @@
 2011-10-01 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProperty.m: Implement check whether the property emits change
+	notifications.
+	* Source/DKPropertyMethod.m: Ensure that mutators are KVC-compliant.
+	* Source/DKMethod
+	* Source/DKPropertyMethod.m:
+	Fix generation of mutator declarations.
+	* Documentation/UsingDBus.texi:
+	Update docs on property mutators.
+
+	Make properties somewhat KVC-compliant. NOTE: This constitutes an API
+	break. If you have code that sets a D-Bus property foo by calling
+	-setfoo: please change that to -setFoo:.
+
+2011-10-01 Niels Grewe <niels.grewe@halbordnung.de>
 	
 	* Source/DKProperty.h
 	* Source/DKProperty.m:

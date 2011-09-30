@@ -170,14 +170,14 @@ introspection data:
 <property name="address" type="s" access="readwrite"/>
 @end example
 This property can then be accessed by calling @code{-address} and changed by
-calling @code{-setaddress:} on the proxy object. Just like with other methods,
+calling @code{-setAddress:} on the proxy object. Just like with other methods,
 both the plain C types and the corresponding Foundation classes are valid as
 parameters to the getter and setter methods:
 @example
 - (NSString*)address;
 - (char*)address;
-- (void)setaddress: (NSString*)address;
-- (void)setaddress: (char*)address;
+- (void)setAddress: (NSString*)address;
+- (void)setAddress: (char*)address;
 @end example
 If other methods with the same names exist within the same interface of the
 remote object, those will take precedence over the generated getter and setter

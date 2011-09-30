@@ -113,26 +113,36 @@
   return newNode;
 }
 
+- (BOOL)willPostChangeNotification
+{
+  NSString *state = [self annotationValueForKey: @"org.freedesktop.DBus.Property.EmitsChangedSignal"];
+  if ([@"invalidate" isEqualToString: state] || [@"true" isEqualToString: state])
+  {
+    return YES;
+  }
+  return NO;
+}
+
 - (NSString*)propertyDeclarationForObjC2: (BOOL)useObjC2
 {
   NSMutableString *declaration = [NSMutableString new];
   NSString *returnValue = nil;
+  BOOL readable = (nil != accessor);
+  BOOL writable = (nil != mutator);
   if (NO == useObjC2)
   {
 
-    if (nil != accessor)
+    if (readable)
     {
       [declaration appendFormat: @"%@\n\n", [accessor methodDeclaration]];
     }
-    if (nil != mutator)
+    if (writable)
     {
       [declaration appendFormat: @"%@\n\n", [mutator methodDeclaration]];
     }
   }
   else
   {
-    BOOL readable = [self isReadable];
-    BOOL writable = [self isWritable];
     if (NO == readable)
     {
       // Non-readable property do not make sense in an Obj-C context, we just

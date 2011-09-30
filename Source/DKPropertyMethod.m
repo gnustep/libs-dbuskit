@@ -257,8 +257,12 @@
   }
 }
 
+- (NSArray*)userVisibleArguments
+{
+  return nil;
+}
 
-- (NSUInteger)userVisibleArguments
+- (NSUInteger)userVisibleArgumentCount
 {
   return 0;
 }
@@ -333,8 +337,11 @@
 
 - (NSString*)selectorString
 {
-  // We could camelCase this, but perhaps we shouldn't to avoid ambiguities.
-  return [NSString stringWithFormat: @"set%@:", [parent name]];
+  // Use camelCase:
+  NSString *parentName = [parent name];
+  NSString *propertyName = [parentName stringByReplacingCharactersInRange: NSMakeRange(0,1)
+                                                               withString: [[parentName substringToIndex: 1] capitalizedString]];
+  return [NSString stringWithFormat: @"set%@:", propertyName];
 }
 
 - (const char*)objCTypesBoxed: (BOOL)doBox
@@ -530,7 +537,12 @@
   }
 }
 
-- (NSUInteger)userVisibleArguments
+- (NSArray*)userVisibleArguments
+{
+  return [NSArray arrayWithObject: [inArgs objectAtIndex: 2]];
+}
+
+- (NSUInteger)userVisibleArgumentCount
 {
   return 1;
 }

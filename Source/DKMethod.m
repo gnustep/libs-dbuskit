@@ -565,7 +565,12 @@
   }
 }
 
-- (NSUInteger)userVisibleArguments
+- (NSArray*)userVisibleArguments
+{
+  return inArgs;
+}
+
+- (NSUInteger)userVisibleArgumentCount
 {
   return [inArgs count];
 }
@@ -576,7 +581,7 @@
   NSArray *components = nil;
   NSString *returnType = nil;
   NSUInteger outCount = [outArgs count];
-  NSUInteger inCount = [self userVisibleArguments];
+  NSUInteger inCount = [self userVisibleArgumentCount];
   NSUInteger inIndex = 0;
   NSEnumerator *argEnum = nil;
   DKArgument *arg = nil;
@@ -633,7 +638,7 @@
   }
   else
   {
-    argEnum = [inArgs objectEnumerator];
+    argEnum = [[self userVisibleArguments] objectEnumerator];
     while (nil != (arg = [argEnum nextObject]))
     {
       NSString *argType = @"id";
