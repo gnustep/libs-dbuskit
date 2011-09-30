@@ -89,7 +89,7 @@ int main (int argc, char **argv, char **env)
   NSUInteger argCount = [args count];
   NSUInteger argIndex = 1;
   NSUInteger argState = EXPECT_SWITCH;
-  BOOL useObjC2 = NO;
+  BOOL useObjC2 = YES;
   NSString *inPath = nil;
   NSString *outPath = nil;
   NSString **pathAddr = NULL;
@@ -102,11 +102,6 @@ int main (int argc, char **argv, char **env)
   DKInterface *thisIf = nil;
   NSEnumerator *ifEnum = nil;
 
-  if (argCount == 1)
-  {
-    GSPrintf(stderr, @"Usage: Use '-i' to specify the input file and '-o' to specify the output file.\nIf no output file is given, stdout is used.\n");
-    return 1;
-  }
   for (argIndex = 1; argIndex < argCount; argIndex++)
   {
     NSString *thisArg = [args objectAtIndex: argIndex];
@@ -115,6 +110,11 @@ int main (int argc, char **argv, char **env)
       if ([thisArg isEqualToString: @"-2"])
       {
 	useObjC2 = YES;
+	argState = EXPECT_SWITCH;
+      }
+      else if ([thisArg isEqualToString: @"-1"])
+      {
+	useObjC2 = NO;
 	argState = EXPECT_SWITCH;
       }
       else if ([thisArg isEqualToString: @"-i"])
@@ -142,8 +142,9 @@ int main (int argc, char **argv, char **env)
     }
   }
 
-  if (nil == inPath)
+  if ((argCount == 1) || (nil == inPath))
   {
+    GSPrintf(stderr, @"Usage:\nUse '-i' to specify the input file and '-o' to specify the output file.\n'-1' specifies not to use features that require Objective-C 2.\nIf no output file is given, stdout is used.\n");
     return 1;
   }
 
@@ -198,7 +199,7 @@ int main (int argc, char **argv, char **env)
       [thisIf name]];
     [outHandle writeData: [preamble dataUsingEncoding: NSUTF8StringEncoding
                                  allowLossyConversion: YES]];
-    [outHandle writeData: [[thisIf protocolDeclaration] dataUsingEncoding: NSUTF8StringEncoding
+    [outHandle writeData: [[thisIf protocolDeclarationForObjC2: useObjC2] dataUsingEncoding: NSUTF8StringEncoding
                                                      allowLossyConversion: YES]];
   }
   [outHandle closeFile];

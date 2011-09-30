@@ -62,4 +62,12 @@
 - (BOOL)isWritable;
 
 - (NSString*)interface;
+
+/**
+ * Emits a property declaration for the property. If useObjC2 is set to YES, a
+ * "@property" declaration will be produced. Otherwise, method declarations for
+ * accessors and mutators are generated. The generated string ends with a
+ * newline.
+ */
+- (NSString*)propertyDeclarationForObjC2: (BOOL)useObjC2;
 @end

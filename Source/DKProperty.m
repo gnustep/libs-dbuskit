@@ -109,8 +109,69 @@
                                                    accessAttributes: accessString
 		                                               name: name
 		                                             parent: parent];
+  [accessString release];
   return newNode;
 }
+
+- (NSString*)propertyDeclarationForObjC2: (BOOL)useObjC2
+{
+  NSMutableString *declaration = [NSMutableString new];
+  NSString *returnValue = nil;
+  if (NO == useObjC2)
+  {
+
+    if (nil != accessor)
+    {
+      [declaration appendFormat: @"%@\n\n", [accessor methodDeclaration]];
+    }
+    if (nil != mutator)
+    {
+      [declaration appendFormat: @"%@\n\n", [mutator methodDeclaration]];
+    }
+  }
+  else
+  {
+    BOOL readable = [self isReadable];
+    BOOL writable = [self isWritable];
+    if (NO == readable)
+    {
+      // Non-readable property do not make sense in an Obj-C context, we just
+      // emit the method declaration for the mutator.
+      if (writable)
+      {
+	[declaration appendFormat: @"%@\n\n", [[self mutatorMethod] methodDeclaration]];
+      }
+    }
+    else
+    {
+      NSString *access = nil;
+      Class retClass = [type objCEquivalent];
+      NSString *typeString = nil;
+
+      if (Nil == retClass)
+      {
+	typeString = @"id";
+      }
+      else
+      {
+	typeString = [NSString stringWithFormat: @"%@*", NSStringFromClass(retClass)];
+      }
+      if (readable && writable)
+      {
+	access = @"readwrite";
+      }
+      else
+      {
+	access = @"readonly";
+      }
+      [declaration appendFormat: @"@property (%@) %@ %@;\n\n", access, typeString, name];
+    }
+  }
+  returnValue = [declaration copy];
+  [declaration release];
+  return [returnValue autorelease];
+}
+
 
 - (void)dealloc
 {

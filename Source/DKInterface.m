@@ -292,7 +292,7 @@
   return protocolName;
 }
 
-- (NSString*)protocolDeclaration
+- (NSString*)protocolDeclarationForObjC2: (BOOL)useObjC2
 {
   NSMutableString *declaration = [NSMutableString stringWithFormat: @"@protocol %@\n\n", [self protocolName]];
   NSEnumerator *methodEnum = [methods objectEnumerator];
@@ -304,23 +304,17 @@
     [declaration appendFormat: @"%@\n\n", [method methodDeclaration]];
   }
 
-  // TODO: Also generate Objective-C 2 syle @property declarations.
   while (nil != (property = [propertyEnum nextObject]))
   {
-    DKPropertyAccessor *accessor = [property accessorMethod];
-    DKPropertyMutator *mutator = [property mutatorMethod];
-
-    if (nil != accessor)
-    {
-      [declaration appendFormat: @"%@\n\n", [accessor methodDeclaration]];
-    }
-    if (nil != mutator)
-    {
-      [declaration appendFormat: @"%@\n\n", [mutator methodDeclaration]];
-    }
+    [declaration appendString: [property propertyDeclarationForObjC2: useObjC2]];
   }
   [declaration appendFormat: @"@end\n"];
   return declaration;
+}
+
+- (NSString*)protocolDeclaration
+{
+  return [self protocolDeclarationForObjC2: YES];
 }
 
 - (Protocol*)protocol

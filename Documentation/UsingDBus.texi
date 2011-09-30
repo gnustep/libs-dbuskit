@@ -76,6 +76,12 @@ all specify valid ways to invoke @code{NameHasOwner()} method from
 - (BOOL)NameHasOwner: (char*)name;
 @end example
 
+By default, @b{dk_make_protocol} generates protocol declarations that
+are compliant with Objective-C 2. It will thus produce
+@code{@@property}-style declarations for properties of D-Bus objects.
+This behaviour can be disabled by passing the ``@b{-1}'' switch to the
+programme.
+
 @section Obtaining a Proxy to a D-Bus Object
 With these provisions in place, it is quite easy to obtain a proxy to a
 D-Bus object. The process is quite similar to creating a proxy to a

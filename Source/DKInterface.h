@@ -113,9 +113,18 @@
 
 /**
  * Returns the description of all methods in the interface as a protocol
- * declaration suitable for an Objective-C header file.
+ * declaration suitable for an Objective-C header file. Defaults to creating
+ * Objective-C 2 compliant protocol declarations.
  */
 - (NSString*)protocolDeclaration;
+
+
+/**
+ * Returns the description of all methods in the interface as a protocol
+ * declaration. Set useObjC2 to NO if separate method declarations for property
+ * mutators and accessors are required.
+ */
+- (NSString*)protocolDeclarationForObjC2: (BOOL)useObjC2;
 
 /**
  * Returns the Objective-C protocol that corresponds to the interface (if any).
