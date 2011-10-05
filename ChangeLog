@@ -1,5 +1,13 @@
 2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKProxy.m: Fix memory leak.
+	* Source/DKNotificationCenter.m: Rearrange to silence invalid warning
+	about use-after-free.
+
+	Bugfixes for problems detected by clang's static analyser.
+
+2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKProperty.m: Absence of the change notification annotation in
 	the introspection data implies that the property sends change
 	notifications (per D-Bus spec).

@@ -1313,8 +1313,8 @@ static DKEndpointManager *manager;
                                                      parent: nil];
     [signalInfo setObject: stubIf
                    forKey: interfaceName];
-    theInterface = stubIf;
     [stubIf release];
+    theInterface = [signalInfo objectForKey: interfaceName];
   }
 
   if (nil != (signal = [[theInterface signals] objectForKey: name]))
@@ -1493,8 +1493,8 @@ static DKEndpointManager *manager;
                                                      parent: nil];
     [signalInfo setObject: stubIf
                    forKey: interfaceName];
-    theInterface = stubIf;
     [stubIf release];
+    theInterface = [signalInfo objectForKey: interfaceName];
   }
 
   // Get the signal:

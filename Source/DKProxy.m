@@ -1118,8 +1118,8 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
    * initializing). Using an DKNonAutoInvalidatingPort avoids this circular
    * dependency.
    */
-  aPort = [[DKNonAutoInvalidatingPort alloc] initWithRemote: aService
-                                                 atEndpoint: anEndpoint];
+  aPort = [[[DKNonAutoInvalidatingPort alloc] initWithRemote: aService
+                                                  atEndpoint: anEndpoint] autorelease];
 
   if (nil == (self = [super initWithPort: aPort
                                     path: aPath]))
