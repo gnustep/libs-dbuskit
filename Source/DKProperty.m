@@ -116,6 +116,12 @@
 - (BOOL)willPostChangeNotification
 {
   NSString *state = [self annotationValueForKey: @"org.freedesktop.DBus.Property.EmitsChangedSignal"];
+
+  if (nil == state)
+  {
+    return YES;
+  }
+
   if ([@"invalidate" isEqualToString: state] || [@"true" isEqualToString: state])
   {
     return YES;

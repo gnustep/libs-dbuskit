@@ -1,5 +1,11 @@
 2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKProperty.m: Absence of the change notification annotation in
+	the introspection data implies that the property sends change
+	notifications (per D-Bus spec).
+
+2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m: Add a special case for conversions to bool for
 	compliance with the D-Bus specification.
 
