@@ -563,13 +563,34 @@ DKDBusTypeForUnboxingObject(id object)
     && (NULL != buffer)),
     @"Insufficient type information for conversion.");
 
+  /*
+   * Special case: Equivalent types, no fixup needed.
+   */
   if (0 == strcmp(sourceType,targetType))
   {
-    // with equivalent types, no fixup is needed.
     return;
   }
 
-  // Assign the value of the buffer to the union:
+  /*
+   * Special case: Booleans are treated specially by D-Bus. They are supposed to
+   * be either 0 or 1, but nothing else. So we just set the buffer to 1 if it
+   * contains anything but 0.
+   */
+  if ('B' == *targetType)
+  {
+    if (0 != *buffer)
+    {
+      *buffer = 1;
+      return;
+    }
+  }
+
+
+  /*
+   * Other cases: We assign the value of the buffer to the union of all
+   * primitive types and perform conversions with it according to the type
+   * combination.
+   */
   rep.buffer = *buffer;
 
   /*

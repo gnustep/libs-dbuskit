@@ -1,5 +1,10 @@
 2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKArgument.m: Add a special case for conversions to bool for
+	compliance with the D-Bus specification.
+
+2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m
 	* Source/DKBoxingUtils.m:
 	Small bugfixes for problems detected by clang.
