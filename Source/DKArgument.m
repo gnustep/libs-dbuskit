@@ -1292,7 +1292,7 @@ DKDBusTypeForUnboxingObject(id object)
   return self;
 }
 
-- (char*) unboxedObjCTypeChar
+- (const char*) unboxedObjCTypeChar
 {
   /*
    * All container types are boxed.

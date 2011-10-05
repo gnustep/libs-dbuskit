@@ -1,3 +1,9 @@
+2011-10-05 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKBoxingUtils.m:
+	Small bugfixes for problems detected by clang.
+
 2011-10-01 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKProperty.h: Expose change notification check method.

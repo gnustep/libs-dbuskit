@@ -23,6 +23,7 @@
 
 #import "DKBoxingUtils.h"
 #import "DKArgument.h"
+#import "DKProxy+Private.h"
 
 #import "config.h"
 
