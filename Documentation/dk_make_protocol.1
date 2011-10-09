@@ -1,0 +1,56 @@
+.\"Copyright (C) 2011 Free Software Foundation, Inc.
+.\"Copying and distribution of this file, with or without modification,
+.\"are permitted in any medium without royalty provided the copyright
+.\"notice and this notice are preserved.
+
+.TH DK_MAKE_PROTOCOL "1" "October 2011" "GNUstep"  "DBusKit Manual"
+.SH NAME
+dk_make_protocol \- produce Objective-C protocol declarations from D-Bus introspection data
+
+.SH SYNOPSIS
+.B dk_make_protocol
+.RB [ -1|-2 ]
+.RB [ -o
+.IR protocol.h ]
+.B -i
+.IR interface.xml
+.P
+.SH DESCRIPTION
+The
+.B dk_make_protocol
+command produces Objective-C protocol declarations from XML-formatted D-Bus
+interface declarations. These protocol declarations can be used in Objective-C
+programmes that use DBusKit to communicate with D-Bus.
+.PP
+The interface declaration is specified with the \fB-i\fR switch and the
+generated protocol declaration will be printed to stdout unless an output file
+is specified using the \fB-o\fR switch.
+.PP
+By default, the tool generates Objective-C 2 compliant protocol
+declarations using the "@property"-keyword.
+.SH OPTIONS
+.IP "\fB-i \fIinterface.xml"
+read the interface declaration from
+.I interface.xml
+.IP "\fB-o \fIprotocol.h"
+write the generated protocol declaration to
+.I protocol.h
+.IP "\fB-1"
+do not use Objective-C 2 features.
+.IP "\fB-2"
+use Objective-C 2 features (default)
+.PP
+.SH BUGS
+When multiple switches of the same kind are used, the last value specified takes
+precedence.
+.P
+.SH HISTORY
+.B dk_make_protocol
+was written in August 2010 and appeared in version 0.1 of DBusKit.
+.P
+This manual page was first written in October 2011 and appeared in version 0.2
+of DBusKit.
+.P
+.SH AUTHORS
+.B dk_make_protocol
+and this manual page were written by Niels Grewe <niels.grewe@halbordnung.de>.

@@ -7,10 +7,31 @@ after-install::
 ifneq ($(CHOWN_TO),)
 	$(CHOWN) -R $(CHOWN_TO) $(REF_DOC_INSTALL_DIR)/DBusKit/Reference
 endif
+after-install::
+	if [ ! -f $(GNUSTEP_DOC_MAN) ]; then \
+	  $(MKDIRS) $(GNUSTEP_DOC_MAN); \
+	fi; \
+	if [ ! -f $(GNUSTEP_DOC_MAN)/man1 ]; then \
+	  $(MKDIRS) $(GNUSTEP_DOC_MAN)/man1; \
+	fi; \
+	for file in $(MAN1_PAGES) __done; do \
+	  if [ $$file != __done ]; then \
+	    $(INSTALL_DATA) $$file $(GNUSTEP_DOC_MAN)/man1/$$file; \
+	    which gzip && rm -f $(GNUSTEP_DOC_MAN)/man1/$$file.gz \
+	    && gzip -9 $(GNUSTEP_DOC_MAN)/man1/$$file; \
+	  fi; \
+	done;
+
 
 after-uninstall::
 	rm -rf $(REF_DOC_INSTALL_DIR)/DBusKit
 	-rmdir --ignore-fail-on-non-empty $(REF_DOC_INSTALL_DIR)
+	for file in $(MAN1_PAGES) __done; do \
+	  if [ $$file != __done ]; then \
+	    rm -f $(GNUSTEP_DOC_MAN)/man1/$$file.gz; \
+	  fi; \
+	done;
+
 
 after-clean::
 	rm -rf Reference

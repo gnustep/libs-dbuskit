@@ -23,6 +23,8 @@ README_TEXT_MAIN = readme.texi
 README_TEXI_FILES = readme.texi
 README_DOC_INSTALL_DIR = Developer/DBusKit/ReleaseNotes/$(VERSION)
 
+MAN1_PAGES= dk_make_protocol.1
+
 REF_DOC_INSTALL_DIR = $(GNUSTEP_DOC)/Developer
 
 DBusKit_AGSDOC_FLAGS = \
