@@ -4,8 +4,17 @@ AC_INIT
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
+
+#Override the OBJC variable if it is empty and CC is also set.
+if test x"$CC" != x""; then
+  if x"$OBJC" = x""; then
+    OBJC="$CC"
+  fi
+fi 
+
 AC_PROG_CC(clang gcc cc c1 egcs)
 AC_PROG_CPP
+AC_PROG_OBJC(clang gcc objcc objc cc CC)
 AC_LANG(Objective C)
 PKG_PROG_PKG_CONFIG([])
 AC_LANG_PUSH(C)
@@ -129,7 +138,7 @@ else
 fi
 
 AC_SUBST(OBJC_RUNTIME_H)
-
+AC_SUBST(OBJC)
 CFLAGS="$saved_CFLAGS"
 CPPFLAGS="$saved_CPPFLAGS"
 LDFLAGS="$saved_LDFLAGS"

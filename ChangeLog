@@ -1,3 +1,11 @@
+2011-12-20 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* configure.ac: When selecting an Objective-C compiler, prefer the
+	value of $CC if $OBJC is not set. Also, if the user does not specify
+	a specific compiler and clang is installed, default to using clang.
+	* config.make.in: Update for new compiler selection.
+	* configure: Regenerate.
+
 2011-10-09 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Documentation/GNUmakefile
