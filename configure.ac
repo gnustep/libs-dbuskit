@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
 
 #Override the OBJC variable if it is empty and CC is also set.
-if test x"$CC" != x""; then
-  if x"$OBJC" = x""; then
+if test -n ""; then
+  if test -z "$OBJC"; then
     OBJC="$CC"
   fi
 fi 

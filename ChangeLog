@@ -1,5 +1,10 @@
 2011-12-20 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* configure.ac: Improve last commit.
+	* configure: Regenerate.
+
+2011-12-20 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* configure.ac: When selecting an Objective-C compiler, prefer the
 	value of $CC if $OBJC is not set. Also, if the user does not specify
 	a specific compiler and clang is installed, default to using clang.
