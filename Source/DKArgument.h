@@ -159,6 +159,12 @@ extern NSString *DKArgumentDirectionOut;
  */
 - (NSXMLNode*)XMLNode;
 
+
+/**
+ * Returns an XML node representing the argument for the specified direction.
+ */
+- (NSXMLNode*)XMLNodeForDirection: (NSString*)direction;
+
 @end
 
 /**

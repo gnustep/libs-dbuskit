@@ -486,7 +486,7 @@ DKDBusTypeForUnboxingObject(id object)
   return [parent isKindOfClass: [DKArgument class]];
 }
 
-- (NSXMLNode*)xmlNodeWithDirectionAttribute: (NSXMLNode*)directionAttr
+- (NSXMLNode*)XMLNodeWithDirectionAttribute: (NSXMLNode*)directionAttr
 {
   NSArray *annotationNodes = nil;
 
@@ -521,14 +521,14 @@ DKDBusTypeForUnboxingObject(id object)
 {
   if ((nil == direction) || (0 == [direction length]))
   {
-    return [self xmlNodeWithDirectionAttribute: nil];
+    return [self XMLNodeWithDirectionAttribute: nil];
   }
-  return [self xmlNodeWithDirectionAttribute: [NSXMLNode attributeWithName: @"direction" stringValue: direction]];
+  return [self XMLNodeWithDirectionAttribute: [NSXMLNode attributeWithName: @"direction" stringValue: direction]];
 
 }
 - (NSXMLNode*)XMLNode
 {
-  return [self xmlNodeWithDirectionAttribute: nil];
+  return [self XMLNodeWithDirectionAttribute: nil];
 
 }
 

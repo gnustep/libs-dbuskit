@@ -25,6 +25,7 @@
 #import <Foundation/NSEnumerator.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSValue.h>
+#import <Foundation/NSXMLNode.h>
 
 #import <UnitKit/UnitKit.h>
 
@@ -287,6 +288,15 @@ static NSDictionary *basicSigsAndClasses;
   [superArg release];
 }
 
+- (void)testXMLNode
+{
+  DKContainerTypeArgument *arg = (DKContainerTypeArgument*)[[DKArgument alloc] initWithDBusSignature: "a{su}"
+                                                                                                name: @"foo"
+                                                                                              parent: nil];
+  NSXMLNode *node = [arg XMLNodeForDirection: @"in"];
+  UKNotNil(node);
+  UKObjectsEqual([node XMLString], @"<arg name=\"foo\" type=\"a{su}\" direction=\"in\"/>");
+}
 - (void) testDictionaryDetection
 {
   DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "a{su}"
