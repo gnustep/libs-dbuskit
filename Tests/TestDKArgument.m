@@ -297,6 +297,20 @@ static NSDictionary *basicSigsAndClasses;
   UKNotNil(node);
   UKObjectsEqual([node XMLString], @"<arg name=\"foo\" type=\"a{su}\" direction=\"in\"/>");
 }
+
+- (void)testAnnotatedXMLNode
+{
+  DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "i"
+                                                         name: @"foo"
+                                                       parent: nil];
+  NSXMLNode *node = nil;
+  [arg setAnnotationValue: @"bar"
+                   forKey: @"org.gnustep.dbuskit.test"];
+
+  node = [arg XMLNodeForDirection: @"in"];
+  UKObjectsEqual([node XMLString], @"<arg name=\"foo\" type=\"i\" direction=\"in\">\n    <annotation name=\"org.gnustep.dbuskit.test\" value=\"bar\"/>\n  </arg>");
+}
+
 - (void) testDictionaryDetection
 {
   DKArgument *arg = [[DKArgument alloc] initWithDBusSignature: "a{su}"

@@ -1,3 +1,7 @@
+2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Tests/TestDKArgument.m: Add test for annotated XML introspection data.
+	
 2012-01-26 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Tests/TestDKArgument.m: Add test for XML generation of arguments.
