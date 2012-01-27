@@ -1,5 +1,16 @@
 2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKArgument.h
+	* Source/DKMethod.m
+	* Source/DKArgument.m
+	* Source/DKSignal.h
+	* Source/DKSignal.m
+	* Source/DKProxy.m
+	* Source/DKPropertyMethod.m:
+	Use constants for argument directions consistently.
+
+2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKProperty.m: Implement generation of MXL introspection data.
 	* Tests/GNUMakefile: Add new test file.
 	* Tests/TestDKProperty.m: Add test for XML introspection data generation.

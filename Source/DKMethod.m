@@ -290,11 +290,11 @@
     return;
   }
 
-  if ((direction == nil) || [direction isEqualToString: DKArgumentDirectionIn])
+  if ((direction == nil) || [direction isEqualToString: kDKArgumentDirectionIn])
   {
     [inArgs addObject: argument];
   }
-  else if ([direction isEqualToString: DKArgumentDirectionOut])
+  else if ([direction isEqualToString: kDKArgumentDirectionOut])
   {
     [outArgs addObject: argument];
   }
@@ -752,11 +752,11 @@
 {
   NSEnumerator *theEnum = nil;
   DKArgument *arg = nil;
-  if ([@"in" isEqualToString: direction])
+  if ([kDKArgumentDirectionIn isEqualToString: direction])
   {
     theEnum = [inArgs objectEnumerator];
   }
-  else if ([@"out" isEqualToString: direction])
+  else if ([kDKArgumentDirectionOut isEqualToString: direction])
   {
     theEnum = [outArgs objectEnumerator];
   }

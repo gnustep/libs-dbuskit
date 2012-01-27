@@ -38,7 +38,7 @@
 
 /**
  * Add an argument to the signal specification. It is invalid to specify
- * <code>DKArgumentDirectionIn</code> as a value for <var>direction</var>.
+ * <code>kDKArgumentDirectionIn</code> as a value for <var>direction</var>.
  */
 - (void)addArgument: (DKArgument*)arg
           direction: (NSString*)direction;

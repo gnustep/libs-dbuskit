@@ -54,8 +54,8 @@
 #include <string.h>
 #include <dbus/dbus.h>
 
-NSString *DKArgumentDirectionIn = @"in";
-NSString *DKArgumentDirectionOut = @"out";
+NSString *kDKArgumentDirectionIn = @"in";
+NSString *kDKArgumentDirectionOut = @"out";
 
 
 /*

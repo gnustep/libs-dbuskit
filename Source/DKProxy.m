@@ -126,7 +126,7 @@ DKInterface *_DKInterfaceIntrospectable;
                                                      name: @"data"
                                                    parent: introspect];
     [introspect addArgument: xmlOutArg
-                  direction: DKArgumentDirectionOut];
+                  direction: kDKArgumentDirectionOut];
     [_DKInterfaceIntrospectable addMethod: introspect];
     [_DKInterfaceIntrospectable installMethod: introspect
                                   forSelector: @selector(Introspect)];

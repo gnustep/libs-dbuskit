@@ -28,8 +28,8 @@
 
 @class NSString, NSInvocation, NSMutableArray, NSXMLNode, DKProxy;
 
-extern NSString *DKArgumentDirectionIn;
-extern NSString *DKArgumentDirectionOut;
+extern NSString *kDKArgumentDirectionIn;
+extern NSString *kDKArgumentDirectionOut;
 
 
 /**
