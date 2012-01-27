@@ -26,7 +26,9 @@
 #import "DKArgument.h"
 #import "DKPropertyMethod.h"
 
+#import <Foundation/NSArray.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLNode.h>
 
 @implementation DKProperty
 
@@ -63,6 +65,14 @@
   {
     mutator = [[DKPropertyMutator alloc] initWithProperty: self];
   }
+
+  // If we got neither accessor nor mutator, we bail out here:
+  if ((nil == accessor) && (nil == mutator))
+  {
+    [self release];
+    return nil;
+  }
+
   return self;
 }
 - (DKPropertyMutator*)mutatorMethod
@@ -188,6 +198,44 @@
   return [returnValue autorelease];
 }
 
+- (NSXMLNode*)XMLNode
+{
+  NSXMLNode *nameAttr = nil;
+  NSXMLNode *typeAttr = nil;
+  NSXMLNode *accessAttr = nil;
+  NSString *accessString = nil;
+
+  if ([self isReadable] && [self isWritable])
+  {
+    accessString = @"readwrite";
+  }
+  else if ([self isReadable])
+  {
+    accessString = @"read";
+  }
+  else if ([self isWritable])
+  {
+    accessString = @"write";
+  }
+  else
+  {
+    //This is clearly bogus since access is a #REQUIRED attribute
+    return nil;
+  }
+  accessAttr = [NSXMLNode attributeWithName: @"access"
+                                stringValue: accessString];
+  nameAttr = [NSXMLNode attributeWithName: @"name"
+                              stringValue: name];
+  typeAttr = [NSXMLNode attributeWithName: @"type"
+                              stringValue: [[self type] DBusTypeSignature]];
+
+  return [NSXMLNode elementWithName: @"property"
+                           children: [self annotationXMLNodes]
+                         attributes: [NSArray arrayWithObjects: nameAttr,
+                                                                typeAttr,
+                                                                accessAttr,
+                                                                nil]];
+}
 
 - (void)dealloc
 {

@@ -24,6 +24,7 @@ DBusKitTests_OBJC_FILES += \
         TestDKMethod.m \
 	TestDKMethodCall.m \
         TestDKPort.m \
+	TestDKProperty.m \
 	TestDKProxy.m
 
 include $(GNUSTEP_MAKEFILES)/bundle.make

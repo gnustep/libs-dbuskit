@@ -1,10 +1,16 @@
 2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKProperty.m: Implement generation of MXL introspection data.
+	* Tests/GNUMakefile: Add new test file.
+	* Tests/TestDKProperty.m: Add test for XML introspection data generation.
+
+2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
 	
 	* Source/DKIntrospectionNode.h
 	* Source/DKIntrospectionNode.m:
 	Declare -XMLNode on all introspection nodes.
 	* Source/DKMethod.m: Implement generation of MXL introspection data.
-	* Tests(TestDKMethod.m: Add test for XML introspection data generation.
+	* Tests/TestDKMethod.m: Add test for XML introspection data generation.
 
 2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
 
