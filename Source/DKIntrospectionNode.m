@@ -153,6 +153,13 @@
   return [NSArray arrayWithArray: [annotationNodes autorelease]];
 }
 
+
+- (NSXMLNode*)XMLNode
+{
+  [self subclassResponsibility: _cmd];
+  return nil;
+}
+
 - (void) dealloc
 {
   parent = nil;

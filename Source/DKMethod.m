@@ -29,6 +29,7 @@
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLNode.h>
 
 #import "DKArgument.h"
 #import "DKMethod.h"
@@ -744,6 +745,52 @@
   [newOut release];
   [newIn release];
   return newNode;
+}
+
+- (void)_addArgXMLNodesForDirection: (NSString*)direction
+                            toArray: (NSMutableArray*)nodes
+{
+  NSEnumerator *theEnum = nil;
+  DKArgument *arg = nil;
+  if ([@"in" isEqualToString: direction])
+  {
+    theEnum = [inArgs objectEnumerator];
+  }
+  else if ([@"out" isEqualToString: direction])
+  {
+    theEnum = [outArgs objectEnumerator];
+  }
+  else
+  {
+    return;
+  }
+
+  while (nil != (arg = [theEnum nextObject]))
+  {
+    NSXMLNode *node = [arg XMLNodeForDirection: @"in"];
+    if (nil != node)
+    {
+      [nodes addObject: node];
+    }
+  }
+
+
+}
+
+- (NSXMLNode*)XMLNode
+{
+  NSXMLNode *nameAttribute = [NSXMLNode attributeWithName: @"name"
+                                              stringValue: name];
+  NSMutableArray *childNodes = [NSMutableArray array];
+  [self _addArgXMLNodesForDirection: @"in"
+                            toArray: childNodes];
+  [self _addArgXMLNodesForDirection: @"out"
+                            toArray: childNodes];
+  [childNodes addObjectsFromArray: [self annotationXMLNodes]];
+
+  return [NSXMLNode elementWithName: @"method"
+                           children: childNodes
+                         attributes: [NSArray arrayWithObject: nameAttribute]];
 }
 
 - (void)dealloc

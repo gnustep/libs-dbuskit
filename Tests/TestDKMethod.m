@@ -101,4 +101,14 @@
   UKNotNil(method);
   UKObjectsEqual(new, [method parent]);
 }
+
+
+- (void)testXMLNode
+{
+  //We use our builtin introspection method for this.
+  DKMethod *m = [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)];
+  NSXMLNode *n = [m XMLNode];
+  UKNotNil(n);
+  UKObjectsEqual(@"<method name=\"Introspect\">\n    <arg name=\"data\" type=\"s\" direction=\"in\"/>\n  </method>", [n XMLString]);
+}
 @end
