@@ -31,6 +31,7 @@
 #import <Foundation/NSException.h>
 #import <Foundation/NSNull.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLNode.h>
 
 #import "DBusKit/DKNotificationCenter.h"
 #import "DKProxy+Private.h"
@@ -166,6 +167,31 @@
   }
   return userInfo;
 }
+
+- (NSXMLNode*)XMLNode
+{
+  NSXMLNode *nameAttribute = [NSXMLNode attributeWithName: @"name"
+                                              stringValue: name];
+  NSMutableArray *childNodes = [NSMutableArray array];
+  NSEnumerator *argEnum = [args objectEnumerator];
+  DKArgument *arg = nil;
+  while (nil != (arg = [argEnum nextObject]))
+  {
+    // Signal arguments should not carry a "direction" attribute
+    NSXMLNode *n = [arg XMLNode];
+    if (nil != n)
+    {
+      [childNodes addObject: n];
+    }
+  }
+
+  [childNodes addObjectsFromArray: [self annotationXMLNodes]];
+
+  return [NSXMLNode elementWithName: @"signal"
+                           children: childNodes
+                         attributes: [NSArray arrayWithObject: nameAttribute]];
+}
+
 
 - (void)dealloc
 {

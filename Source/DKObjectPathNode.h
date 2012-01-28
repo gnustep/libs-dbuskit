@@ -23,7 +23,8 @@
 
 #import "DKIntrospectionNode.h"
 
-@class DKEndpoint, DKInterface, DKObjectPathNode, NSMutableArray, NSMutableDictionary, NSString;
+@class DKEndpoint, DKInterface, DKObjectPathNode, NSMutableArray,
+  NSMutableDictionary, NSString, NSXMLNode;
 
 /**
  * The DKObjectPathNode protocol is implemented by classes representing objects
@@ -67,6 +68,8 @@
  * Returns a proxy representing the object specified by this node.
  */
 - (DKProxy*)proxy;
+
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection;
 @end
 
 

@@ -21,6 +21,7 @@ DBusKitTests_LDFLAGS=-L../Source/DBusKit.framework/$(GNUSTEP_TARGET_LDIR) -lDBus
 DBusKitTests_OBJC_FILES += \
 	TestDKArgument.m \
 	TestDKEndpointManager.m \
+	TestDKInterface.m \
         TestDKMethod.m \
 	TestDKMethodCall.m \
         TestDKPort.m \

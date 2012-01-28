@@ -24,6 +24,7 @@
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSObjCRuntime.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLNode.h>
 #import <Foundation/NSXMLParser.h>
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -418,6 +419,50 @@
   return newNode;
 }
 
+- (NSArray*)arrayOfXMLNodesFromIntrospectionNodesInDictionary: (NSDictionary*)dict
+{
+  NSEnumerator *theEnum = [dict objectEnumerator];
+  NSMutableArray *array = [NSMutableArray arrayWithCapacity: [dict count]];
+  DKIntrospectionNode *iNode = nil;
+  while (nil != (iNode = [theEnum nextObject]))
+  {
+    NSXMLNode *n = [iNode XMLNode];
+    if (nil != n)
+    {
+      [array addObject: n];
+    }
+  }
+  return array;
+}
+
+
+- (NSXMLNode*)XMLNode
+{
+  NSXMLNode *nameAttribute = [NSXMLNode attributeWithName: @"name"
+                                              stringValue: name];
+  NSMutableArray *childNodes = [NSMutableArray array];
+  if (0 < [properties count])
+  {
+    [childNodes addObjectsFromArray:
+      [self arrayOfXMLNodesFromIntrospectionNodesInDictionary: properties]];
+
+  }
+  if (0 < [methods count])
+  {
+    [childNodes addObjectsFromArray:
+      [self arrayOfXMLNodesFromIntrospectionNodesInDictionary: methods]];
+  }
+  if (0 < [signals count])
+  {
+    [childNodes addObjectsFromArray:
+      [self arrayOfXMLNodesFromIntrospectionNodesInDictionary: signals]];
+  }
+  [childNodes addObjectsFromArray: [self annotationXMLNodes]];
+
+  return [NSXMLNode elementWithName: @"interface"
+                           children: childNodes
+                         attributes: [NSArray arrayWithObject: nameAttribute]];
+}
 - (void)dealloc
 {
   [methods release];

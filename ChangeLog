@@ -1,3 +1,13 @@
+2012-01-28 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKObjectPathNode.h
+	* Source/DKObjectPathNode.m
+	* Source/DKInterface.m
+	* Source/DKSignal.m:
+	Implement XML introspection data generation.
+	* Tests/GNUMakefile: Add new test file.
+	* Tests/TestDKInterface.m: Add some tests for interfaces.
+
 2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.h

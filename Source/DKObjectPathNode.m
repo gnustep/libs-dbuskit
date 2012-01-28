@@ -2,7 +2,7 @@
    Copyright (C) 2010 Free Software Foundation, Inc.
 
    Written by:  Niels Grewe <niels.grewe@halbordnung.de>
-   Created: Jly 2010
+   Created: July 2010
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,8 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSXMLNode.h>
+
 
 @implementation DKObjectPathNode
 
@@ -117,6 +119,67 @@
   return newNode;
 }
 
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                        forChildren: (BOOL)includeChildIntrospection
+{
+  NSArray *attributes = nil;
+  NSMutableArray *childNodes = [NSMutableArray array];
+  if (0 < [name length])
+  {
+     attributes = [NSArray arrayWithObject: [NSXMLNode attributeWithName: @"name"
+                                                             stringValue: name]];
+  }
+  if (includeIntrospection)
+  {
+    if (0 != [interfaces count])
+    {
+    	NSEnumerator *ifEnum = [interfaces objectEnumerator];
+	DKInterface *theIf = nil;
+	while (nil != (theIf = [ifEnum nextObject]))
+	{
+	  NSXMLNode *ifNode = [theIf XMLNode];
+	  if (nil != ifNode)
+	  {
+	    [childNodes addObject: ifNode];
+	  }
+	}
+    }
+    // Don't add annotations because the DTD doesn't allow that.
+  }
+
+  if (0 != [children count])
+  {
+    NSEnumerator *nodeEnum = [children objectEnumerator];
+    DKObjectPathNode *child = nil;
+    while (nil != (child = [nodeEnum nextObject]))
+    {
+      // For children, we no longer differentiate whether they should introspect
+      // themselves or their own children.
+      NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeChildIntrospection
+                                                         forChildren: includeChildIntrospection];
+      if (nil != node)
+      {
+	[childNodes addObject: node];
+      }
+    }
+  }
+  return [NSXMLNode elementWithName: @"node"
+                           children: childNodes
+                         attributes: attributes];
+}
+
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+{
+  return [self XMLNodeIncludingCompleteIntrospection: YES
+                                         forChildren: includeIntrospection];
+
+}
+
+- (NSXMLNode*)XMLNode
+{
+	return [self XMLNodeIncludingCompleteIntrospection: NO];
+}
+
 - (void)dealloc
 {
   [children release];
@@ -181,6 +244,8 @@
                                  andService: service
                                     andPath: path] autorelease];
 }
+
+
 
 - (void)dealloc
 {
