@@ -1,5 +1,12 @@
 2012-01-29 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/NSConnection+DBus.m: Replace -rootProxy in NSConnection with
+	the implementation from our category.
+	* Tests/TestDKProxy.m: Test to verify that we are not breaking
+	-rootProxy for standard DO.
+
+2012-01-29 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m: Fix emission of argument names
 	* Source/DKMethod.m: Fix bug in specifying argument directions.
 	* Source/DKObjectPathNode.m: Actually comply to the D-Bus spec when 

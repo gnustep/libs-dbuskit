@@ -30,11 +30,47 @@
 
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
+#define INCLUDE_RUNTIME_H
+#import "config.h"
+#undef INCLUDE_RUNTIME_H
+
 @interface DKPort (DKPortPrivate)
 - (BOOL)hasValidRemote;
 @end
 
+static SEL rootProxySel = @selector(rootProxy);
+static IMP _DKNSConnectionRootProxy;
+
+
 @implementation NSConnection (DBusKit)
++ (void)load
+{
+  /*
+   * We do some devious patching and replace -rootProxy in NSConnection with the
+   * implementation of _DKRootProxy from our category.
+   */
+  Method oldRootProxyMethod =
+    class_getInstanceMethod(objc_getClass("NSConnection"), rootProxySel);
+  Method newRootProxyMethod =
+    class_getInstanceMethod(objc_getClass("NSConnection"),
+      @selector(_DKRootProxy));
+  _DKNSConnectionRootProxy = method_getImplementation(oldRootProxyMethod);
+  method_exchangeImplementations(oldRootProxyMethod, newRootProxyMethod);
+}
+
+- (NSDistantObject*)_DKRootProxy
+{
+  id sp = [self sendPort];
+  if (NO == [sp isKindOfClass: [DKPort class]])
+  {
+    return _DKNSConnectionRootProxy(self, rootProxySel);
+  }
+  else
+  {
+    return (NSDistantObject*)[self proxyAtPath: @"/"];
+  }
+}
+
 - (DKProxy*)proxyAtPath: (NSString*)path
 {
   id sp = [self sendPort];

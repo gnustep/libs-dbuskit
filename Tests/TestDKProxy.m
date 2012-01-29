@@ -273,6 +273,13 @@
   }
 }
 
+- (void)testNSPortStillWorks
+{
+  NSConnection *conn = [NSConnection defaultConnection];
+  NSString *obj = @"Test";
+  [conn setRootObject: obj];
+  UKNotNil([conn rootProxy]);
+}
 
 @end
 
