@@ -25,7 +25,7 @@
 #import "DKObjectPathNode.h"
 #import "DKNonAutoInvalidatingPort.h"
 
-@class DKInterface, DKNotificationCenter;
+@class DKInterface, DKNotificationCenter, NSXMLNode;
 
 @interface DKProxy (DKProxyPrivate) <DKObjectPathNode>
 - (DKPort*)_port;
@@ -34,6 +34,8 @@
 - (BOOL)_isLocal;
 - (NSString*)_uniqueName;
 - (void)_registerSignalsWithNotificationCenter: (DKNotificationCenter*)center;
+- (NSXMLNode*)XMLNode;
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection;
 @end
 
 @interface DKDBus (DKDBusPrivate)

@@ -51,11 +51,13 @@
 {
   //We use our builtin introspection method for this.
   NSXMLNode *n = [_DKInterfaceIntrospectable XMLNode];
+  NSXMLNode *methodNode = [n childAtIndex: 0];
   UKNotNil(n);
-  UKObjectsEqual(@"<interface name=\"org.freedesktop.DBus.Introspectable\">\n\
-    <method name=\"Introspect\">\n\
-      <arg name=\"data\" type=\"s\" direction=\"in\"/>\n\
-    </method>\n\
-  </interface>", [n XMLString]);
+  UKNotNil(methodNode);
+
+  UKObjectsEqual(@"interface", [(NSXMLElement*)n name]);
+  UKObjectsEqual(@"org.freedesktop.DBus.Introspectable", [[(NSXMLElement*)n attributeForName: @"name"] stringValue]);
+  UKObjectsEqual(@"method", [methodNode name]);
+  // The internals of method nodes are tested in TestDKMethod.m
 }
 @end

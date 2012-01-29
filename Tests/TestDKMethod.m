@@ -109,6 +109,9 @@
   DKMethod *m = [_DKInterfaceIntrospectable DBusMethodForSelector: @selector(Introspect)];
   NSXMLNode *n = [m XMLNode];
   UKNotNil(n);
-  UKObjectsEqual(@"<method name=\"Introspect\">\n    <arg name=\"data\" type=\"s\" direction=\"in\"/>\n  </method>", [n XMLString]);
+  UKObjectsEqual(@"Introspect", [[(NSXMLElement*)n attributeForName: @"name"] stringValue]);
+  UKObjectsEqual(@"data", [[(NSXMLElement*)[n childAtIndex: 0] attributeForName: @"name"] stringValue]);
+  UKObjectsEqual(@"s", [[(NSXMLElement*)[n childAtIndex: 0] attributeForName: @"type"] stringValue]);
+  UKObjectsEqual(@"out", [[(NSXMLElement*)[n childAtIndex: 0] attributeForName: @"direction"] stringValue]);
 }
 @end

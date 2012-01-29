@@ -491,7 +491,8 @@ DKDBusTypeForUnboxingObject(id object)
   NSArray *annotationNodes = nil;
 
   NSArray *attributes = nil;
-  NSArray *mandatoryAttributes = [NSArray arrayWithObjects: [NSXMLNode attributeWithName: @"name" stringValue: [self name]],
+
+  NSArray *mandatoryAttributes = [NSArray arrayWithObjects:
     [NSXMLNode attributeWithName: @"type" stringValue: [self DBusTypeSignature]],
     nil];
 
@@ -499,13 +500,23 @@ DKDBusTypeForUnboxingObject(id object)
   {
     return nil;
   }
-  if (nil != directionAttr)
+
+  if (0 != [[self name] length])
   {
-    attributes = [mandatoryAttributes arrayByAddingObject: directionAttr];
+    attributes = [mandatoryAttributes arrayByAddingObject: [NSXMLNode attributeWithName: @"name" stringValue: [self name]]];
   }
   else
   {
     attributes = mandatoryAttributes;
+  }
+
+  if (nil != directionAttr)
+  {
+    attributes = [attributes arrayByAddingObject: directionAttr];
+  }
+  else
+  {
+    attributes = attributes;
   }
 
   if (0 != ([annotations count]))

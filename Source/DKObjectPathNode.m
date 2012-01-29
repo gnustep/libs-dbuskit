@@ -129,37 +129,37 @@
      attributes = [NSArray arrayWithObject: [NSXMLNode attributeWithName: @"name"
                                                              stringValue: name]];
   }
-  if (includeIntrospection)
+
+  if (YES == includeIntrospection)
   {
     if (0 != [interfaces count])
     {
-    	NSEnumerator *ifEnum = [interfaces objectEnumerator];
-	DKInterface *theIf = nil;
-	while (nil != (theIf = [ifEnum nextObject]))
-	{
-	  NSXMLNode *ifNode = [theIf XMLNode];
-	  if (nil != ifNode)
-	  {
-	    [childNodes addObject: ifNode];
-	  }
-	}
-    }
-    // Don't add annotations because the DTD doesn't allow that.
-  }
-
-  if (0 != [children count])
-  {
-    NSEnumerator *nodeEnum = [children objectEnumerator];
-    DKObjectPathNode *child = nil;
-    while (nil != (child = [nodeEnum nextObject]))
-    {
-      // For children, we no longer differentiate whether they should introspect
-      // themselves or their own children.
-      NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeChildIntrospection
-                                                         forChildren: includeChildIntrospection];
-      if (nil != node)
+      NSEnumerator *ifEnum = [interfaces objectEnumerator];
+      DKInterface *theIf = nil;
+      while (nil != (theIf = [ifEnum nextObject]))
       {
-	[childNodes addObject: node];
+	NSXMLNode *ifNode = [theIf XMLNode];
+	if (nil != ifNode)
+	{
+	  [childNodes addObject: ifNode];
+	}
+      }
+    }
+
+    if (0 != [children count])
+    {
+      NSEnumerator *nodeEnum = [children objectEnumerator];
+      DKObjectPathNode *child = nil;
+      while (nil != (child = [nodeEnum nextObject]))
+      {
+	// For children, we no longer differentiate whether they should introspect
+	// themselves or their own children.
+	NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeChildIntrospection
+	                                                   forChildren: includeChildIntrospection];
+	if (nil != node)
+	{
+	  [childNodes addObject: node];
+	}
       }
     }
   }

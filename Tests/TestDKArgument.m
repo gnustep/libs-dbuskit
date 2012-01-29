@@ -295,7 +295,9 @@ static NSDictionary *basicSigsAndClasses;
                                                                                               parent: nil];
   NSXMLNode *node = [arg XMLNodeForDirection: @"in"];
   UKNotNil(node);
-  UKObjectsEqual([node XMLString], @"<arg name=\"foo\" type=\"a{su}\" direction=\"in\"/>");
+  UKObjectsEqual(@"foo", [[(NSXMLElement*)node attributeForName: @"name"] stringValue]);
+  UKObjectsEqual(@"a{su}", [[(NSXMLElement*)node attributeForName: @"type"] stringValue]);
+  UKObjectsEqual(@"in", [[(NSXMLElement*)node attributeForName: @"direction"] stringValue]);
 }
 
 - (void)testAnnotatedXMLNode
@@ -308,7 +310,12 @@ static NSDictionary *basicSigsAndClasses;
                    forKey: @"org.gnustep.dbuskit.test"];
 
   node = [arg XMLNodeForDirection: @"in"];
-  UKObjectsEqual([node XMLString], @"<arg name=\"foo\" type=\"i\" direction=\"in\">\n    <annotation name=\"org.gnustep.dbuskit.test\" value=\"bar\"/>\n  </arg>");
+  UKObjectsEqual(@"foo", [[(NSXMLElement*)node attributeForName: @"name"] stringValue]);
+  UKObjectsEqual(@"i", [[(NSXMLElement*)node attributeForName: @"type"] stringValue]);
+  UKObjectsEqual(@"in", [[(NSXMLElement*)node attributeForName: @"direction"] stringValue]);
+  UKObjectsEqual(@"annotation", [(NSXMLElement*)[node childAtIndex: 0] name]);
+  UKObjectsEqual(@"org.gnustep.dbuskit.test", [[(NSXMLElement*)[node childAtIndex: 0] attributeForName: @"name"] stringValue]);
+  UKObjectsEqual(@"bar", [[(NSXMLElement*)[node childAtIndex: 0] attributeForName: @"value"] stringValue]);
 }
 
 - (void) testDictionaryDetection

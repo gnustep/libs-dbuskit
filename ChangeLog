@@ -1,3 +1,17 @@
+2012-01-29 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Fix emission of argument names
+	* Source/DKMethod.m: Fix bug in specifying argument directions.
+	* Source/DKObjectPathNode.m: Actually comply to the D-Bus spec when 
+	writing introspection data.
+	* Source/DKProxy.m: Implement XML introspection data generation
+	* Source/DKProxy+Private.h: Declare -XMLNode on DKProxy
+	* Tests/TestDKArgument.m
+	* Tests/TestDKInterface.m
+	* Tests/TestDKMethod.m
+	* Tests/TestDKProxy.m:
+	Make tests more robust.
+
 2012-01-28 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKObjectPathNode.h
@@ -21,7 +35,7 @@
 
 2012-01-27 Niels Grewe <niels.grewe@halbordnung.de>
 
-	* Source/DKProperty.m: Implement generation of MXL introspection data.
+	* Source/DKProperty.m: Implement generation of XML introspection data.
 	* Tests/GNUMakefile: Add new test file.
 	* Tests/TestDKProperty.m: Add test for XML introspection data generation.
 

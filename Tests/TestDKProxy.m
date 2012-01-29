@@ -34,6 +34,7 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSThread.h>
+#import <Foundation/NSXMLNode.h>
 
 #include <unistd.h>
 
@@ -42,6 +43,7 @@
                 interface: (NSString**)interface;
 - (void)DBusBuildMethodCache;
 - (NSDictionary*)_interfaces;
+- (NSXMLNode*)XMLNode;
 @end
 
 @interface TestDKProxy: NSObject <UKTest>
@@ -151,6 +153,20 @@
   UKNotNil(interfaces);
   UKTrue([interfaces count] > 0);
 }
+
+- (void)testXMLNode
+{
+  NSConnection *conn = nil;
+  id aProxy = nil;
+  NSXMLNode *node = nil;
+  NSWarnMLog(@"This test is an expected failure if the session message bus is not available!");
+  conn = [NSConnection connectionWithReceivePort: [DKPort port]
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"] autorelease]];
+  aProxy = [conn rootProxy];
+  node = [aProxy XMLNode];
+  UKNotNil(node);
+}
+
 
 - (void)testSendGetId
 {

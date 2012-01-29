@@ -767,7 +767,7 @@
 
   while (nil != (arg = [theEnum nextObject]))
   {
-    NSXMLNode *node = [arg XMLNodeForDirection: @"in"];
+    NSXMLNode *node = [arg XMLNodeForDirection: direction];
     if (nil != node)
     {
       [nodes addObject: node];

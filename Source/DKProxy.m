@@ -50,6 +50,7 @@
 #import <Foundation/NSString.h>
 #import <Foundation/NSThread.h>
 #import <Foundation/NSValue.h>
+#import <Foundation/NSXMLNode.h>
 #import <Foundation/NSXMLParser.h>
 #import <GNUstepBase/GSObjCRuntime.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
@@ -147,7 +148,7 @@ DKInterface *_DKInterfaceIntrospectable;
 {
   return [[[self alloc] initWithService: aService
                                    path: aPath
-				    bus: type] autorelease];
+                                    bus: type] autorelease];
 }
 
 + (id)proxyWithPort: (DKPort*)aPort
@@ -972,6 +973,63 @@ DKInterface *_DKInterfaceIntrospectable;
     }
   }
   return [property willPostChangeNotification];
+}
+
+- (NSXMLNode*)XMLNode
+{
+  return [self XMLNodeIncludingCompleteIntrospection: NO];
+}
+
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+{
+  NSMutableArray *childNodes = [NSMutableArray array];
+
+  /* If we don't have a cache yet, we trigger its generation */
+  [condition lock];
+  if ((HAVE_INTROSPECT >= state) && (CACHE_READY != state))
+  {
+    state = WILL_BUILD_CACHE;
+    [condition unlock];
+    [self DBusBuildMethodCache];
+  }
+  else
+  {
+    [condition unlock];
+  }
+
+
+  if (0 != [interfaces count])
+  {
+    NSEnumerator *ifEnum = [interfaces objectEnumerator];
+    DKInterface *theIf = nil;
+    while (nil != (theIf = [ifEnum nextObject]))
+    {
+      NSXMLNode *ifNode = [theIf XMLNode];
+      if (nil != ifNode)
+      {
+	[childNodes addObject: ifNode];
+      }
+    }
+  }
+
+  if (0 != [children count])
+  {
+    NSEnumerator *nodeEnum = [children objectEnumerator];
+    DKObjectPathNode *child = nil;
+    while (nil != (child = [nodeEnum nextObject]))
+    {
+      // For children, we no longer differentiate whether they should introspect
+      // themselves or their own children.
+      NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeIntrospection];
+      if (nil != node)
+      {
+	[childNodes addObject: node];
+      }
+    }
+  }
+  return [NSXMLNode elementWithName: @"node"
+                           children: childNodes
+                         attributes: nil];
 }
 
 - (void) dealloc
