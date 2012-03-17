@@ -82,7 +82,7 @@
    * Keeps track of the number of observations the notification center is
    * waiting to be successfully scheduled.
    */
-  NSUInteger *queueCount;
+  NSUInteger queueCount;
 
   /**
    * The signalInfo dictionary holds DKSignal objects indexed by their interface

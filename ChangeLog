@@ -1,3 +1,7 @@
+2012-03-25 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNotificationCenter.h: Fix declaration of queueCount ivar.
+
 2012-01-29 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/NSConnection+DBus.m: Replace -rootProxy in NSConnection with
