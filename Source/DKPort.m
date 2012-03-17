@@ -30,8 +30,10 @@
 #import <Foundation/NSConnection.h>
 #import <Foundation/NSDate.h>
 #import <Foundation/NSDebug.h>
+#import <Foundation/NSException.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSLock.h>
+#import <Foundation/NSMapTable.h>
 #import <Foundation/NSNotification.h>
 #import <Foundation/NSPort.h>
 #import <Foundation/NSPortCoder.h>
@@ -93,6 +95,11 @@ enum {
  * bus.
  */
 - (void)_disconnected: (NSNotification*)notification;
+
+/**
+ * Creates the map table from object paths to proxies.
+ */
+- (void)_createObjectPathMap;
 
 - (id)initForBusType: (DKDBusBusType)type;
 @end
@@ -178,6 +185,15 @@ enum {
 
   ASSIGN(endpoint, anEndpoint);
   ASSIGNCOPY(remote, aRemote);
+
+  /*
+   * With an empty remote, we might possibly be a local port. So we create the
+   * lock that is used to lazily create the object path map-table.
+   */
+  if (0 == [remote length])
+  {
+    objectPathLock = [NSLock new];
+  }
 
   [self _registerNotifications];
 
@@ -422,6 +438,11 @@ enum {
   [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
   [endpoint release];
   [remote release];
+  [objectPathLock lock];
+  [objectPathMap release];
+  [proxyMap release];
+  [objectPathLock unlock];
+  [objectPathLock release];
   [super dealloc];
 }
 
@@ -512,5 +533,47 @@ enum {
   [pm release];
   [proxyCoder release];
   return YES;
+}
+
+
+/*
+ * Methods for local serice ports.
+ */
+
+
+- (void)_createObjectPathMap
+{
+  if (nil != objectPathMap)
+  {
+    return;
+  }
+
+  [objectPathLock lock];
+
+  if (nil != objectPathMap)
+  {
+    [objectPathLock unlock];
+    return;
+  }
+
+  NS_DURING
+  {
+    objectPathMap = [[NSMapTable mapTableWithStrongToStrongObjects] retain];
+    proxyMap = [[NSMapTable mapTableWithWeakToStrongObjects] retain];
+  }
+  NS_HANDLER
+  {
+    [objectPathLock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [objectPathLock unlock];
+}
+
+- (void)_setObject: (id)object
+            atPath: (NSString*)path
+{
+  //TODO: Implement
+
 }
 @end

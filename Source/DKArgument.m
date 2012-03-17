@@ -514,10 +514,6 @@ DKDBusTypeForUnboxingObject(id object)
   {
     attributes = [attributes arrayByAddingObject: directionAttr];
   }
-  else
-  {
-    attributes = attributes;
-  }
 
   if (0 != ([annotations count]))
   {

@@ -1,5 +1,17 @@
 2012-03-25 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Headers/NSConnection+DBus.h
+	* Source/DKOutgoingProxy.h
+	* Headers/DKPort.h
+	* Source/DKPort.m
+	* Source/NSConnection+DBus.m:
+	Preliminary changes for vending objects.
+	* Source/DKArgument.m: Remove redundant conditional branch.
+	
+	Start work on scaffolding for vending objects to D-Bus.
+
+2012-03-25 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Headers/DKNotificationCenter.h: Fix declaration of queueCount ivar.
 
 2012-01-29 Niels Grewe <niels.grewe@halbordnung.de>

@@ -36,26 +36,41 @@
 
 @interface DKPort (DKPortPrivate)
 - (BOOL)hasValidRemote;
+- (void)_setObject: (id)obj
+            atPath: (NSString*)path;
 @end
 
-static SEL rootProxySel = @selector(rootProxy);
+static SEL rootProxySel;
 static IMP _DKNSConnectionRootProxy;
+static SEL setRootObjectSel;
+static IMP _DKNSConnectionSetRootObject;
 
 
 @implementation NSConnection (DBusKit)
 + (void)load
 {
   /*
-   * We do some devious patching and replace -rootProxy in NSConnection with the
-   * implementation of _DKRootProxy from our category.
+   * We do some devious patching and replace some method implementations in
+   * NSConnection with the ones from this category.
    */
+  rootProxySel = @selector(rootProxy);
+  setRootObjectSel = @selector(setRootObject:);
   Method oldRootProxyMethod =
     class_getInstanceMethod(objc_getClass("NSConnection"), rootProxySel);
   Method newRootProxyMethod =
     class_getInstanceMethod(objc_getClass("NSConnection"),
       @selector(_DKRootProxy));
+  Method oldSetRootObjectMethod =
+    class_getInstanceMethod(objc_getClass("NSConnection"), setRootObjectSel);
+  Method newSetRootObjectMethod =
+    class_getInstanceMethod(objc_getClass("NSConnection"),
+      @selector(_DKSetRootObject:));
   _DKNSConnectionRootProxy = method_getImplementation(oldRootProxyMethod);
   method_exchangeImplementations(oldRootProxyMethod, newRootProxyMethod);
+
+ _DKNSConnectionSetRootObject =
+    method_getImplementation(oldSetRootObjectMethod);
+  method_exchangeImplementations(oldSetRootObjectMethod, newSetRootObjectMethod);
 }
 
 - (NSDistantObject*)_DKRootProxy
@@ -69,6 +84,33 @@ static IMP _DKNSConnectionRootProxy;
   {
     return (NSDistantObject*)[self proxyAtPath: @"/"];
   }
+}
+
+- (void)_DKSetRootObject: (id)obj
+{
+  id rp = [self receivePort];
+  if (YES == [rp isKindOfClass: [DKPort class]])
+  {
+    [self setObject: obj
+             atPath: @"/"];
+  }
+  _DKNSConnectionSetRootObject(self, setRootObjectSel, obj);
+}
+
+- (void)setObject: (id)obj
+           atPath: (NSString*)path
+{
+  id rp = [self receivePort];
+  if (NO == [rp isKindOfClass: [DKPort class]])
+  {
+    if ([@"/" isEqualToString: path])
+    {
+      _DKNSConnectionSetRootObject(self, setRootObjectSel, obj);
+    }
+    return;
+  }
+  [(DKPort*)rp _setObject: obj
+                   atPath: path];
 }
 
 - (DKProxy*)proxyAtPath: (NSString*)path

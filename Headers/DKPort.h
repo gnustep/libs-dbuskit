@@ -22,7 +22,7 @@
 
 #import <Foundation/NSPort.h>
 
-@class DKEndpoint;
+@class NSLock, NSMapTable, DKEndpoint;
 
 
 enum
@@ -42,7 +42,8 @@ typedef NSUInteger DKDBusBusType;
  * DKPort is used by the Distributed Objects system to communicate with
  * D-Bus. Unless you have special needs, don't create DKPort instances
  * yourself, but use the interfaces provided by NSConnection instead.
- * The default +port message will return a port connected to the session bus.
+ * The default <ref id="+port" type="method" class="NSPort">+port</ref> message will
+ * return a port connected to the session bus.
  */
 @interface DKPort: NSPort
 {
@@ -55,6 +56,24 @@ typedef NSUInteger DKDBusBusType;
    * connections bypassing the bus and for ports used in service connections.
    */
   NSString *remote;
+
+
+  /**
+   * If the port is used as a receive port of a service connection, the object
+   * paths for which proxies were created will be tracked in the objectPathMap.
+   */
+   NSMapTable *objectPathMap;
+
+  /**
+   * If the port is used as a receive port of a service connection, the proxies
+   * generated for local object will be tracked in the proxyMap.
+   */
+  NSMapTable *proxyMap;
+
+  /**
+   * The lock protecting access to the <ivar>objectPathMap</ivar>.
+   */
+   NSLock *objectPathLock;
 }
 
 /**
@@ -72,10 +91,12 @@ typedef NSUInteger DKDBusBusType;
 /**
  * This method should be called by an application that wants to make use of
  * the multithreaded features of DBusKit. After this method has been called, it
- * is no longer safe to call into DBusKit from +initialize methods, which might
+ * is no longer safe to call into DBusKit from <ref id="+initialize"
+ * type="method" class="NSObject">+initialize</ref> methods, which might
  * result in deadlock from the Objective-C runtime.
  */
 + (void)enableWorkerThread;
+
 /**
  * Return a DKPort instance connected to the specified D-Bus peer on the session
  * message bus.

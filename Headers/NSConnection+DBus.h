@@ -29,8 +29,21 @@
 
 /**
  * Returns a proxy to D-Bus object located at the specified D-Bus object path.
- * Will return <code>nil</code> if used for native DO connecections.
+ * Will return <code>nil</code> if used for native DO connections.
  */
 - (DKProxy*)proxyAtPath: (NSString*)path;
 
+
+/**
+ * Vends the named <var>object</var> at the specified D-Bus object
+ * <var>path</var>. Users should note that the registered names of a D-Bus port
+ * do not act as namespaces for object paths. It is thus advisable not to use
+ * the root path "/" to export objects.
+ *
+ * For native DO connections this method is only effective if the
+ * <var>path</var> is "/", in which case it is equivalent to calling
+ * -rootObject:.
+ */
+- (void)setObject: (id)object
+           atPath: (NSString*)path;
 @end
