@@ -49,20 +49,23 @@ static IMP _DKNSConnectionSetRootObject;
 @implementation NSConnection (DBusKit)
 + (void)load
 {
+  Method oldRootProxyMethod, newRootProxyMethod;
+  Method oldSetRootObjectMethod, newSetRootObjectMethod;
+
   /*
    * We do some devious patching and replace some method implementations in
    * NSConnection with the ones from this category.
    */
   rootProxySel = @selector(rootProxy);
   setRootObjectSel = @selector(setRootObject:);
-  Method oldRootProxyMethod =
+  oldRootProxyMethod =
     class_getInstanceMethod(objc_getClass("NSConnection"), rootProxySel);
-  Method newRootProxyMethod =
+  newRootProxyMethod =
     class_getInstanceMethod(objc_getClass("NSConnection"),
       @selector(_DKRootProxy));
-  Method oldSetRootObjectMethod =
+  oldSetRootObjectMethod =
     class_getInstanceMethod(objc_getClass("NSConnection"), setRootObjectSel);
-  Method newSetRootObjectMethod =
+  newSetRootObjectMethod =
     class_getInstanceMethod(objc_getClass("NSConnection"),
       @selector(_DKSetRootObject:));
   _DKNSConnectionRootProxy = method_getImplementation(oldRootProxyMethod);
