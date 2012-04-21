@@ -36,6 +36,7 @@
 - (void)_registerSignalsWithNotificationCenter: (DKNotificationCenter*)center;
 - (NSXMLNode*)XMLNode;
 - (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection;
+- (BOOL)isKindOfClass: (Class)cls;
 @end
 
 @interface DKDBus (DKDBusPrivate)

@@ -22,7 +22,7 @@
 
 #import <Foundation/NSPort.h>
 
-@class NSLock, NSMapTable, DKEndpoint;
+@class NSLock, NSMapTable, NSMutableDictionary, DKEndpoint;
 
 
 enum
@@ -59,14 +59,19 @@ typedef NSUInteger DKDBusBusType;
 
 
   /**
+   * A reference to the object path node that forms the root of a local port.
+   */
+  id rootNode;
+
+  /**
    * If the port is used as a receive port of a service connection, the object
    * paths for which proxies were created will be tracked in the objectPathMap.
    */
-   NSMapTable *objectPathMap;
+   NSMutableDictionary *objectPathMap;
 
   /**
    * If the port is used as a receive port of a service connection, the proxies
-   * generated for local object will be tracked in the proxyMap.
+   * generated for local objects will be tracked in the proxyMap.
    */
   NSMapTable *proxyMap;
 

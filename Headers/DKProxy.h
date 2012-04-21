@@ -50,9 +50,9 @@
   NSMutableDictionary *interfaces;
 
   /**
-   * The array of all direct children of the node.
+   * The name->child dictionary of all direct children of the node.
    */
-  NSMutableArray *children;
+  NSMutableDictionary *children;
 
   /**
    * A reference to the interface that is marked active and will be preferred

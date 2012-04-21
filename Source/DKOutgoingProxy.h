@@ -22,7 +22,7 @@
 
 #import "DKProxy+Private.h"
 
-
+@class NSRecursiveLock;
 /**
  * Instance of the DKOutgoingProxy class are used to broker the exchange between
  * local objects and other clients on D-Bus.
@@ -34,7 +34,53 @@
    * The represented object.
    */
   id object;
+
+  /**
+   * Determines whether the object is autoexported.
+   */
+  BOOL _DBusIsAutoExported;
+  /**
+   * Auto-exported objects need to be reference counted by D-Bus clients.
+   */
+   NSUInteger _DBusRefCount;
+
+  NSRecursiveLock *busLock;
 }
-+ (id) proxyWithParent: (DKProxy*)rootProxy
-                object: (id)anObject;
++ (id) proxyWithName: (NSString*)name
+              parent: (id<DKObjectPathNode>)parentNode
+              object: (id)anObject;
+
+- (id)initWithName: (NSString*)name
+            parent: (id<DKObjectPathNode>)parentNode
+            object: (id)anObject;
+
+/**
+ * Queries the autoexporting state of the object.
+ */
+- (BOOL)_DBusIsAutoExported;
+
+/**
+ * Set the flag that determines whether the object counts as autoexported.
+ */
+- (void)_setDBusIsAutoExported: (BOOL)yesno;
+/**
+ * Returns the number of D-Bus clients claiming a reference to the proxied
+ * object.
+ */
+- (NSUInteger)_DBusRefCount;
+
+/**
+ * Called to inform the proxy that a D-Bus client wants to keep an object
+ * around.
+ */
+- (void)_DBusRetain;
+
+/**
+ * Called to inform the proxy that a D-Bus client no longer references this
+ * object.
+ */
+- (void)_DBusRelease;
+
+
+
 @end

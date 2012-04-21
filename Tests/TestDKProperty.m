@@ -40,7 +40,9 @@
                                                        name: @"foo"
                                                      parent: nil];
   NSXMLNode *n = [p XMLNode];
+  NSString *nodeString = [n XMLString];
   UKNotNil(n);
-  UKObjectsEqual(@"<property name=\"foo\" type=\"s\" access=\"readwrite\"/>", [n XMLString]);
+  UKTrue([@"<property name=\"foo\" type=\"s\" access=\"readwrite\"/>" isEqualToString: nodeString]
+    || [@"<property name=\"foo\" type=\"s\" access=\"readwrite\"></property>" isEqualToString: nodeString]);
 }
 @end

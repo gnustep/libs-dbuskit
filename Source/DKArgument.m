@@ -41,6 +41,7 @@
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #import "DKProxy+Private.h"
+#import "DKPort+Private.h"
 #import "DKEndpoint.h"
 #import "DKObjectPathNode.h"
 #import "DKOutgoingProxy.h"
@@ -846,7 +847,7 @@ DKDBusTypeForUnboxingObject(id object)
       }
       break;
     case DBUS_TYPE_OBJECT_PATH:
-      if ([value isKindOfClass: [DKProxy class]])
+      if ([value isKindOfClass: objc_getClass("DKProxy")])
       {
         DKProxy *rootProxy = [self proxyParent];
         /*
@@ -876,8 +877,10 @@ DKDBusTypeForUnboxingObject(id object)
          */
          if ([rootProxy _isLocal])
          {
- 	   DKOutgoingProxy *newProxy = [DKOutgoingProxy proxyWithParent: rootProxy
-	                                                         object: value];
+	   // FIXME: Ask the port to register a proxy for the value.
+
+	   DKOutgoingProxy *newProxy = [[rootProxy _port] _autoregisterObject: value
+	                                                           withParent: rootProxy];
 	   *buffer = (uintptr_t)[[newProxy _path] UTF8String];
 	   return YES;
          }

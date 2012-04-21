@@ -1,3 +1,28 @@
+2012-04-21 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m: Fix marshalling of vendable local objects.
+	* Headers/DKProxy.h
+	* Source/DKProxy+Private.h
+	* Source/DKProxy.m:
+	Implement revised object path protocol and proper -isKindOfClass:
+	method.
+	* Source/DKObjectPathNode.h
+	* Source/DKObjectPathNode.m:
+	Revise DKObjectPath protocol and implement special root object path
+	subclass. Fix name generation for OPNs.
+	* Source/DKOutgoingProxy.h
+	* Source/DKOutgoingProxy.m:
+	Stub out some methods.
+	* Headers/DKPort.h
+	* Source/DKPort+Private.h
+	* Source/DKPort.m: Implement more of the object path handling and 
+	add a private header to expose some of it.
+	* Tools/dk_make_protocol.m: Adapt to new introspectable interface.
+	* Tests/TestDKPort.m: Tests for object path handling.
+	* Tests/TestDKProperty.m: More flexible test for XML serialization.
+
+	More work on vending objects to D-Bus.
+
 2012-04-21 Phillipe Roussel <p.o.roussel@free.fr>
 
 	* Source/NSConnection+DBus.m: Move declarations before statements.

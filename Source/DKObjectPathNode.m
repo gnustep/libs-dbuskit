@@ -46,7 +46,7 @@
     [self release];
     return nil;
   }
-  children = [NSMutableArray new];
+  children = [NSMutableDictionary new];
   interfaces = [NSMutableDictionary new];
   return self;
 }
@@ -61,23 +61,46 @@
   }
 }
 
-- (void)_addChildNode: (DKObjectPathNode*)node
+- (void)_addChildNode: (id<DKObjectPathNode>)node
 {
-  [children addObject: node];
+  if (0 == [[node _name] length])
+  {
+    return;
+  }
+  [children setObject: node
+               forKey: [node _name]];
 }
 
 - (NSString*)_path
 {
   if ([parent conformsToProtocol: @protocol(DKObjectPathNode)])
   {
-    return [NSString stringWithFormat: @"%@/%@", [parent _path], [self name]];
+    NSString *parentPath = [parent _path];
+    if ([@"/" isEqualToString: parentPath])
+    {
+      return [parentPath stringByAppendingString: [self name]];
+    }
+    else
+    {
+      return [NSString stringWithFormat: @"%@/%@", [parent _path], [self name]];
+    }
   }
   return nil;
+}
+
+- (NSString*)_name
+{
+  return [self name];
 }
 
 - (NSDictionary*)_interfaces
 {
   return [[interfaces copy] autorelease];
+}
+
+- (NSDictionary*)_children
+{
+  return [[children copy] autorelease];
 }
 
 - (DKProxy*)proxy
@@ -90,10 +113,10 @@
                                     andPath: [self _path]] autorelease];
 }
 
-- (void)setChildren: (NSMutableArray*)newChildren
+- (void)setChildren: (NSMutableDictionary*)newChildren
 {
   ASSIGN(children,newChildren);
-  [children makeObjectsPerformSelector: @selector(setParent:) withObject: self];
+  [[children allValues] makeObjectsPerformSelector: @selector(setParent:) withObject: self];
 }
 
 - (void)setInterfaces: (NSMutableDictionary*)newInterfaces
@@ -106,12 +129,12 @@
 {
   DKObjectPathNode *newNode = [super copyWithZone: zone];
   NSMutableDictionary *newIfs = nil;
-  NSMutableArray *newChildren = nil;
+  NSMutableDictionary *newChildren = nil;
 
   newIfs = [[NSMutableDictionary allocWithZone: zone] initWithDictionary: interfaces
                                                                copyItems: YES];
-  newChildren = [[NSMutableArray allocWithZone: zone] initWithArray: children
-                                                          copyItems: YES];
+  newChildren = [[NSMutableDictionary allocWithZone: zone] initWithDictionary: children
+                                                                    copyItems: YES];
   [newNode setChildren: newChildren];
   [newNode setInterfaces: newIfs];
   [newIfs release];
@@ -253,5 +276,44 @@
   DESTROY(service);
   DESTROY(path);
   [super dealloc];
+}
+@end
+
+
+@implementation DKRootObjectPathNode
+
+- (id)initWithPort: (DKPort*)thePort
+{
+  // We reuse the parent ivar to store the port
+  if (nil == (self = [super initWithName: @"/"
+                                 parent: (id)thePort]))
+  {
+    return nil;
+  }
+  // We always need the introspectable interface:
+  [self setInterfaces: [NSDictionary dictionaryWithObject: [_DKInterfaceIntrospectable copy]
+                                                   forKey: [_DKInterfaceIntrospectable name]]];
+  return self;
+}
+- (NSString*)_path
+{
+  return @"/";
+}
+
+- (DKPort*)_port
+{
+  // We reuse the parent ivar to store the port
+  return (DKPort*)parent;
+}
+
+- (id)parent
+{
+  // This can only be used as a root
+  return nil;
+}
+
+- (void)setParent: (id)theParent
+{
+  //NoOp, we are a root.
 }
 @end

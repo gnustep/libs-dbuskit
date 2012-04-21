@@ -45,12 +45,17 @@
   return @"/";
 }
 
-- (void)_addChildNode: (DKObjectPathNode*)node
+- (void)_addChildNode: (id<DKObjectPathNode>)node
 {
   if (nil != node)
   {
     [nodes addObject: node];
   }
+}
+
+- (NSString*)_name
+{
+  return @"";
 }
 
 - (void)_addInterface: (DKInterface*)interface
@@ -68,6 +73,11 @@
   return interfaces;
 }
 
+- (NSDictionary*)_children
+{
+  // We don't return children when generating interface descriptions.
+  return nil;
+}
 - (void)dealloc
 {
   [interfaces release];

@@ -23,7 +23,7 @@
 
 #import "DKIntrospectionNode.h"
 
-@class DKEndpoint, DKInterface, DKObjectPathNode, NSMutableArray,
+@class DKEndpoint, DKInterface, DKObjectPathNode, DKPort, NSMutableArray,
   NSMutableDictionary, NSString, NSXMLNode;
 
 /**
@@ -39,7 +39,7 @@
 /**
  * Adds the child node to the node.
  */
-- (void)_addChildNode: (DKObjectPathNode*)node;
+- (void)_addChildNode: (id<DKObjectPathNode>)node;
 
 /**
  * Constructs the path that the node is located in the graph.
@@ -47,9 +47,19 @@
 - (NSString*)_path;
 
 /**
+ * The name of the node
+ */
+- (NSString*)_name;
+
+/**
  * Returns the dictionary of all interfaces supported by the node.
  */
 - (NSDictionary*)_interfaces;
+
+/**
+ * Returns a dictionary of all children of the node.
+ */
+- (NSDictionary*)_children;
 @end;
 
 /**
@@ -59,7 +69,7 @@
 @interface DKObjectPathNode: DKIntrospectionNode <DKObjectPathNode>
 {
   /** Contains all nodes descending from the present one. */
-  NSMutableArray *children;
+  NSMutableDictionary *children;
   /** Contains all interfaces supported by the present node. */
   NSMutableDictionary *interfaces;
 }
@@ -88,4 +98,15 @@
                   path: (NSString*)aPath;
 
 - (DKProxy*)proxy;
+@end
+
+/**
+ * Object path node that can be used as the root of an object graph exported
+ * through an DKPort.
+ */
+@interface DKRootObjectPathNode : DKObjectPathNode
+
+- (id)initWithPort: (DKPort*)port;
+
+- (DKPort *)_port;
 @end

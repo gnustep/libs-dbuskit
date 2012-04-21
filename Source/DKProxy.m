@@ -205,6 +205,11 @@ DKInterface *_DKInterfaceIntrospectable;
   return self;
 }
 
+- (NSString*)_name
+{
+  return [path lastPathComponent];
+}
+
 - (id)initWithCoder: (NSCoder*)coder
 {
   DKEndpoint *endpoint = nil;
@@ -661,11 +666,7 @@ DKInterface *_DKInterfaceIntrospectable;
 
 - (BOOL)isKindOfClass: (Class)aClass
 {
-  if (aClass == [DKProxy class])
-  {
-    return YES;
-  }
-  return NO;
+  return GSObjCIsKindOf([self class], aClass);
 }
 
 - (DKPort*)_port
@@ -835,7 +836,7 @@ DKInterface *_DKInterfaceIntrospectable;
       }
       if (nil == children)
       {
-	children = [NSMutableArray new];
+	children = [NSMutableDictionary new];
       }
       [tableLock unlock];
       state = HAVE_TABLES;
@@ -866,12 +867,13 @@ DKInterface *_DKInterfaceIntrospectable;
   }
 }
 
-- (void)_addChildNode: (DKObjectPathNode*)node
+- (void)_addChildNode: (id<DKObjectPathNode>)node
 {
   if (nil != node)
   {
     [tableLock lock];
-    [children addObject: node];
+    [children setObject: node
+                 forKey: [node _path]];
     [tableLock unlock];
   }
 }

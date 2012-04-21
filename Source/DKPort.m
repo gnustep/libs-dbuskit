@@ -23,6 +23,7 @@
 #import "DBusKit/DKPort.h"
 #import "DBusKit/DKNotificationCenter.h"
 #import "DKProxy+Private.h"
+#import "DKOutgoingProxy.h"
 #import "DKEndpoint.h"
 #import "DKEndpointManager.h"
 
@@ -414,8 +415,14 @@ enum {
  */
 - (void) getFds: (int*)fds count: (int*)count
 {
-  *fds=0;
-  *count=0;
+  if (NULL != fds)
+  {
+    *fds=0;
+  }
+  if (NULL != count)
+  {
+    *count=0;
+  }
 }
 
 /**
@@ -537,7 +544,7 @@ enum {
 
 
 /*
- * Methods for local serice ports.
+ * Methods for local service ports.
  */
 
 
@@ -558,7 +565,7 @@ enum {
 
   NS_DURING
   {
-    objectPathMap = [[NSMapTable mapTableWithStrongToStrongObjects] retain];
+    objectPathMap = [NSMutableDictionary new];
     proxyMap = [[NSMapTable mapTableWithWeakToStrongObjects] retain];
   }
   NS_HANDLER
@@ -570,10 +577,261 @@ enum {
   [objectPathLock unlock];
 }
 
+
+- (void)_DBusRegisterProxy: (id<DKObjectPathNode>)proxy
+{
+  // TODO: Implement
+}
+
+- (void)_DBusUnregisterProxy: (id<DKObjectPathNode>)proxy
+{
+  // TODO: Implement
+}
+
+- (void)_fillInMissingNodes: (NSArray*)nodes
+            forObjectAtLeaf: (id)object
+{
+  NSUInteger count = [nodes count];
+
+  id<DKObjectPathNode> lastNode = nil;
+  id<DKObjectPathNode> thisNode = nil;
+  for (NSUInteger i = 0; i < count; i++)
+  {
+    id<DKObjectPathNode> proxy = nil;
+    NSString *component = [nodes objectAtIndex: i];
+    lastNode = thisNode;
+    thisNode = [[lastNode _children] objectForKey: component];
+
+    if (nil == thisNode)
+    {
+      if (0 == i)
+      {
+	// At index 0 we have the root object path node
+	component = @"/";
+	lastNode = [[[DKRootObjectPathNode alloc] initWithPort: self] autorelease];
+	rootNode = lastNode;
+	proxy = lastNode;
+      }
+
+      if ((i + 1) == count)
+      {
+	proxy = [DKOutgoingProxy proxyWithName: component
+	                                parent: lastNode
+	                                object: object];
+	NSMapInsert(proxyMap, object, proxy);
+	[self _DBusRegisterProxy: proxy];
+      }
+      else if (nil == proxy)
+      {
+	proxy = [[DKObjectPathNode alloc] initWithName: component
+                                                parent: lastNode];
+      }
+      thisNode = proxy;
+      [lastNode _addChildNode: proxy];
+      [objectPathMap setObject: proxy
+                        forKey: [proxy _path]];
+    }
+  }
+}
+
+- (void)_replaceProxy: (id<DKObjectPathNode>)oldProxy
+               atPath: (NSString*)path
+            forObject: (id)object
+{
+
+  NSDictionary *oldChildren = [oldProxy _children];
+  id<DKObjectPathNode> oldParent = nil;
+  id<DKObjectPathNode> newProxy = nil;
+  if ([(id<NSObject>)oldProxy isKindOfClass: [DKObjectPathNode class]])
+  {
+     oldParent = [(DKObjectPathNode*)oldProxy parent];
+  }
+  else if ([@"/" isEqual: path])
+  {
+    // If we are installing a root path object, we use the cached root
+    oldParent = rootNode;
+  }
+  else
+  {
+    // DKProxy doesn't record parents, only paths. So we need to look it up.
+    oldParent = [objectPathMap objectForKey:
+    [[oldProxy _path] stringByDeletingLastPathComponent]];
+  }
+  NSAssert((nil != oldParent), @"Unclean state in object path map.");
+
+  /*
+   * If we are removing the object, check whether we need a new placeholder
+   * (i.e. when there are children further up the tree).
+   */
+  if (nil == object)
+  {
+    NSMapRemove(proxyMap, object);
+    if (0 != [oldChildren count])
+    {
+       newProxy = [[[DKObjectPathNode alloc] initWithName: [path lastPathComponent]
+                                                   parent: oldParent] autorelease];
+    }
+  }
+  else
+  {
+     newProxy = [DKOutgoingProxy proxyWithName: [path lastPathComponent]
+                                        parent: oldParent
+                                        object: object];
+  }
+
+  if (nil == newProxy)
+  {
+     [objectPathMap removeObjectForKey: path];
+     [self _DBusUnregisterProxy: oldProxy];
+  }
+  else
+  {
+    NSEnumerator *nodeEnum = [oldChildren objectEnumerator];
+    id<NSObject,DKObjectPathNode> node = nil;
+    while (nil != (node = [nodeEnum nextObject]))
+    {
+      [newProxy _addChildNode: node];
+      // Only OPNs need reparenting, proxies are referred to by path
+      // (which is maintained through replacements).
+      if (YES == [node isKindOfClass: [DKObjectPathNode class]])
+      {
+	[(DKObjectPathNode*)node setParent: newProxy];
+      }
+    }
+    [objectPathMap setObject: newProxy
+                      forKey: path];
+    NSMapInsert(proxyMap, object, newProxy);
+    [self _DBusRegisterProxy: newProxy];
+  }
+}
+
+
 - (void)_setObject: (id)object
             atPath: (NSString*)path
 {
-  //TODO: Implement
+  // Don't bother registering anything at an empty or invalid path.
+  if ((0 == [path length]) || ('/' != [path characterAtIndex: 0]))
+  {
+    [NSException raise: @"DKInvalidArgumentException"
+                format: @"Object path '%@' is malformed.", path];
+  }
+
+  // Set up the tables as needed.
+  if (nil == objectPathMap)
+  {
+    [self _createObjectPathMap];
+  }
+  [objectPathLock lock];
+  NS_DURING
+  {
+    id<DKObjectPathNode> oldProxy = [objectPathMap objectForKey: path];
+    // Save state from the old proxy if necessary
+    if (nil != oldProxy)
+    {
+      [self _replaceProxy: oldProxy
+                   atPath: path
+                forObject: object];
+    }
+    else
+    {
+      [self _fillInMissingNodes: [path pathComponents]
+                forObjectAtLeaf: object];
+    }
+
+  }
+  NS_HANDLER
+  {
+    [objectPathLock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [objectPathLock unlock];
 
 }
+
+- (DKOutgoingProxy*)_autoregisterObject: (id)object
+                             withParent: (DKProxy*)theParent
+{
+  DKOutgoingProxy *proxy = nil;
+  NSString *parentPath = [theParent _path];
+  NSString *rootPath = [@"/" isEqual: parentPath] ? @"" : parentPath;
+  NSString *newPath = nil;
+  if (nil == object)
+  {
+    return nil;
+  }
+
+  [objectPathLock lock];
+  NS_DURING
+  {
+    // If the object was already installed, don't bother installing it again.
+    proxy = NSMapGet(proxyMap, object);
+    if (nil != proxy)
+    {
+      [proxy _DBusRetain];
+      [objectPathLock unlock];
+      return proxy;
+    }
+
+    // Else we generate an object path as follows: rootPath + "/" +
+    // class_name + "-" + hex_pointer
+    newPath = [NSString stringWithFormat: @"%@/%s-%p",
+      rootPath,
+      class_getName([object class]),
+      (void*)object];
+    [self _setObject: object
+              atPath: newPath];
+    proxy = NSMapGet(proxyMap, object);
+  }
+  NS_HANDLER
+  {
+    [objectPathLock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [objectPathLock unlock];
+  [proxy _setDBusIsAutoExported: YES];
+  [proxy _DBusRetain];
+  return proxy;
+}
+
+
+
+
+- (id<DKObjectPathNode>)_objectPathNodeAtPath: (NSString*)path
+{
+  id<DKObjectPathNode> res = nil;
+  [objectPathLock lock];
+  NS_DURING
+  {
+    res = [objectPathMap objectForKey: path];
+  }
+  NS_HANDLER
+  {
+    [objectPathLock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [objectPathLock unlock];
+  return res;
+}
+
+- (id<DKObjectPathNode>)_proxyForObject: (id)obj
+{
+  id<DKObjectPathNode> res = nil;
+  [objectPathLock lock];
+  NS_DURING
+  {
+    res = NSMapGet(proxyMap, obj);
+  }
+  NS_HANDLER
+  {
+    [objectPathLock unlock];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [objectPathLock unlock];
+  return res;
+}
+
 @end

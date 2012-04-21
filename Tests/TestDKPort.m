@@ -25,7 +25,8 @@
 
 #import "DBusKit/DKPort.h"
 #import "DBusKit/DKProxy.h"
-
+#import "../Source/DKPort+Private.h"
+#import "../Source/DKObjectPathNode.h"
 @interface TestDKPort: NSObject <UKTest>
 @end
 
@@ -40,4 +41,39 @@
   aProxy = [conn rootProxy];
   UKNotNil(aProxy);
 }
+
+- (void)testObjectPathManagementRootObject
+{
+  DKPort *p = (DKPort*)[DKPort port];
+  id obj = @"p";
+  id<DKObjectPathNode> n = nil;
+  [p _setObject: obj
+         atPath: @"/"];
+  n = [p _objectPathNodeAtPath: @"/"];
+  UKNotNil(n);
+  UKTrue(GSObjCIsKindOf(object_getClass(n),objc_getClass("DKOutgoingProxy")));
+  UKObjectsEqual(n, [p _proxyForObject: obj]);
+  UKObjectsEqual(p, [(DKOutgoingProxy*)n _port]);
+}
+
+- (void)testObjectPathManagementLeafObject
+{
+  DKPort *p = (DKPort*)[DKPort port];
+  id obj = @"p";
+  id<DKObjectPathNode> n = nil;
+  id<DKObjectPathNode> innerNode = nil;
+  [p _setObject: obj
+         atPath: @"/org/gnustep/test/p"];
+  n = [p _objectPathNodeAtPath: @"/org/gnustep/test/p"];
+  innerNode = [p _objectPathNodeAtPath: @"/org/gnustep"];
+  UKNotNil(n);
+  UKNotNil(innerNode);
+  UKTrue(GSObjCIsKindOf(object_getClass(n), objc_getClass("DKOutgoingProxy")));
+  UKTrue(GSObjCIsKindOf(object_getClass(innerNode), objc_getClass("DKObjectPathNode")));
+  UKObjectsEqual(n, [p _proxyForObject: obj]);
+  UKObjectsEqual(p, [(DKOutgoingProxy*)n _port]);
+}
+
+
+
 @end
