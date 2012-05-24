@@ -32,8 +32,26 @@
 - (void)_setObject: (id)obj
             atPath: (NSString*)path;
 
-- (id<DKObjectPathNode>)_objectPathNodeAtPath: (NSString*)path;
-- (id<DKObjectPathNode>)_proxyForObject: (id)obj;
+- (id<DKExportableObjectPathNode>)_objectPathNodeAtPath: (NSString*)path;
+- (id<DKExportableObjectPathNode>)_proxyForObject: (id)obj;
+/**
+ * Removes all objects from the bus.
+ */
+- (void)_unregisterAllObjects;
+
+- (DKEndpoint*)endpoint;
+/**
+ * Returns a default vTable for libdbus to use for managing our exported
+ * objects.
+ */
++ (DBusObjectPathVTable)_DBusDefaultObjectPathVTable;
 @end
 
-
+/**
+ * Callback required by libdbus to handle messages send to a specific object
+ * path. The (Objective-C) receiver of the message is passed in
+ * <var>userData</var>.
+ */
+extern DBusHandlerResult
+_DKObjectPathHandleMessage(DBusConnection* connection, DBusMessage* message,
+  void* userData);

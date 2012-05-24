@@ -23,13 +23,16 @@
 
 #import "DKObjectPathNode.h"
 #import "DKInterface.h"
+#import "DKMethodReturn.h"
 #import "DKProxy+Private.h"
+#import "DKPort+Private.h"
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
+#import <Foundation/NSInvocation.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSXMLNode.h>
-
+#import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 @implementation DKObjectPathNode
 
@@ -71,6 +74,15 @@
                forKey: [node _name]];
 }
 
+- (void)_removeChildNode: (id<DKObjectPathNode>)node
+{
+  if (0 == [[node _name] length])
+  {
+    return;
+  }
+  [children removeObjectForKey: [node _name]];
+}
+
 - (NSString*)_path
 {
   if ([parent conformsToProtocol: @protocol(DKObjectPathNode)])
@@ -101,6 +113,12 @@
 - (NSDictionary*)_children
 {
   return [[children copy] autorelease];
+}
+
+
+- (DBusObjectPathVTable)vTable
+{
+  return [DKPort _DBusDefaultObjectPathVTable];
 }
 
 - (DKProxy*)proxy
@@ -144,13 +162,19 @@
 
 - (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
                                         forChildren: (BOOL)includeChildIntrospection
+					   absolute: (BOOL)absolutePath
 {
   NSArray *attributes = nil;
   NSMutableArray *childNodes = [NSMutableArray array];
-  if (0 < [name length])
+  if ((0 < [name length]) || absolutePath)
   {
+    NSString *theName = name;
+    if (absolutePath)
+    {
+      theName = [self _path];
+    }
      attributes = [NSArray arrayWithObject: [NSXMLNode attributeWithName: @"name"
-                                                             stringValue: name]];
+                                                             stringValue: theName]];
   }
 
   if (YES == includeIntrospection)
@@ -176,9 +200,11 @@
       while (nil != (child = [nodeEnum nextObject]))
       {
 	// For children, we no longer differentiate whether they should introspect
-	// themselves or their own children.
+	// themselves or their own children, also we don't want absolute paths
+	// in child names
 	NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeChildIntrospection
-	                                                   forChildren: includeChildIntrospection];
+	                                                   forChildren: includeChildIntrospection
+	                                                      absolute: NO];
 	if (nil != node)
 	{
 	  [childNodes addObject: node];
@@ -192,15 +218,82 @@
 }
 
 - (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                           absolute: (BOOL)absolutePath
 {
   return [self XMLNodeIncludingCompleteIntrospection: YES
-                                         forChildren: includeIntrospection];
+                                         forChildren: includeIntrospection
+                                            absolute: absolutePath];
 
 }
 
 - (NSXMLNode*)XMLNode
 {
-	return [self XMLNodeIncludingCompleteIntrospection: NO];
+	return [self XMLNodeIncludingCompleteIntrospection: NO
+	                                          absolute: YES];
+}
+
+
+- (NSString*)Introspect
+{
+  NSString *introspectionData = [NSString stringWithFormat: @"%@\n%@", kDKDBusDocType, [[self XMLNode] XMLString]];
+  NSDebugMLog(@"Generated introspection data:\n%@", introspectionData);
+  return introspectionData;
+}
+
+- (DBusHandlerResult)handleDBusMessage: (DBusMessage*)message
+{
+  NSInvocation *inv = nil;
+  DKInterface *introspectableIf = nil;
+  /*
+   * A bunch of sanity checks:
+   */
+  NSDebugMLog(@"Received message for %s, member %s",
+    dbus_message_get_interface(message),
+    dbus_message_get_member(message));
+  // The message shall not be NULL
+  if (NULL == message)
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  // The message shall be a method call
+  if (DBUS_MESSAGE_TYPE_METHOD_CALL != dbus_message_get_type(message))
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  // The message shall go to the introspectable interface
+  if (FALSE == dbus_message_has_interface(message,
+    DBUS_INTERFACE_INTROSPECTABLE))
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  // It shall invoke the Introspect() method
+  if (FALSE == dbus_message_has_member(message,"Introspect"))
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+  NSDebugMLog(@"Yes, will handle this message");
+  introspectableIf = [interfaces objectForKey: [_DKInterfaceIntrospectable name]];
+  if (nil == introspectableIf)
+  {
+    introspectableIf = [_DKInterfaceIntrospectable copy];
+    [self _addInterface: introspectableIf];
+    // remove extra retain count from -copy:
+    [introspectableIf release];
+  }
+
+  inv = [NSInvocation invocationWithMethodSignature: [self methodSignatureForSelector: @selector(Introspect)]];
+  [inv setTarget: self];
+  [inv setSelector: @selector(Introspect)];
+
+  [DKMethodReturn replyToDBusMessage: message
+                            forProxy: self
+                              method: [introspectableIf DBusMethodForSelector: @selector(Introspect)]
+                          invocation: inv];
+  // TODO: Send the message
+  return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 - (void)dealloc
@@ -304,6 +397,15 @@
 {
   // We reuse the parent ivar to store the port
   return (DKPort*)parent;
+}
+
+- (DKEndpoint*)_endpoint
+{
+  return [(DKPort*)parent endpoint];
+}
+- (DKProxy*)proxyParent
+{
+  return (DKProxy*)self;
 }
 
 - (id)parent

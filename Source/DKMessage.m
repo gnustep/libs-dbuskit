@@ -27,7 +27,7 @@
 #import "DKEndpoint.h"
 
 #include <dbus/dbus.h>
-
+#import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 @implementation DKMessage
 
@@ -94,6 +94,10 @@
 {
   if (res != NULL)
   {
+    NSDebugMLog(@"Sending preallocated message (type: %ld, signature, '%s') via endpoint %@",
+      dbus_message_get_type(msg),
+      dbus_message_get_signature(msg),
+      endpoint);
     // We have preallocated resources and use those to send the message
     dbus_connection_send_preallocated([endpoint DBusConnection],
       res,

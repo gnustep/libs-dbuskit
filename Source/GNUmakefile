@@ -34,6 +34,7 @@ DBusKit_OBJC_FILES = \
         DKMessage.m \
         DKMethod.m \
 	DKMethodCall.m \
+	DKMethodReturn.m \
 	DKNonAutoInvalidatingPort.m \
 	DKNotificationCenter.m \
 	DKObjectPathNode.m \

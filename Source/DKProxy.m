@@ -110,6 +110,8 @@ enum
 
 DKInterface *_DKInterfaceIntrospectable;
 
+NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n\"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd\">";
+
 @implementation DKProxy
 
 + (void)initialize
@@ -867,6 +869,11 @@ DKInterface *_DKInterfaceIntrospectable;
   }
 }
 
+- (NSDictionary*)_children
+{
+  return children;
+}
+
 - (void)_addChildNode: (id<DKObjectPathNode>)node
 {
   if (nil != node)
@@ -876,6 +883,17 @@ DKInterface *_DKInterfaceIntrospectable;
                  forKey: [node _path]];
     [tableLock unlock];
   }
+}
+
+- (void)_removeChildNode: (id<DKObjectPathNode>)node
+{
+  if (nil == node)
+  {
+    return;
+  }
+  [tableLock lock];
+  [children removeObjectForKey: [node _path]];
+  [tableLock unlock];
 }
 
 - (BOOL)_buildMethodCache: (id)ignored
@@ -979,13 +997,15 @@ DKInterface *_DKInterfaceIntrospectable;
 
 - (NSXMLNode*)XMLNode
 {
-  return [self XMLNodeIncludingCompleteIntrospection: NO];
+  return [self XMLNodeIncludingCompleteIntrospection: NO
+                                            absolute: YES];
 }
 
 - (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                           absolute: (BOOL)absolutePath
 {
   NSMutableArray *childNodes = [NSMutableArray array];
-
+  NSArray *attributes = nil;
   /* If we don't have a cache yet, we trigger its generation */
   [condition lock];
   if ((HAVE_INTROSPECT >= state) && (CACHE_READY != state))
@@ -999,6 +1019,16 @@ DKInterface *_DKInterfaceIntrospectable;
     [condition unlock];
   }
 
+  if (absolutePath)
+  {
+    attributes = [NSArray arrayWithObject: [NSXMLNode attributeWithName: @"name"
+                                                            stringValue: [path lastPathComponent]]];
+  }
+  else
+  {
+    attributes = [NSArray arrayWithObject: [NSXMLNode attributeWithName: @"name"
+                                                            stringValue: path]];
+  }
 
   if (0 != [interfaces count])
   {
@@ -1022,7 +1052,8 @@ DKInterface *_DKInterfaceIntrospectable;
     {
       // For children, we no longer differentiate whether they should introspect
       // themselves or their own children.
-      NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeIntrospection];
+      NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeIntrospection
+                                                            absolute: NO];
       if (nil != node)
       {
 	[childNodes addObject: node];
@@ -1031,7 +1062,7 @@ DKInterface *_DKInterfaceIntrospectable;
   }
   return [NSXMLNode elementWithName: @"node"
                            children: childNodes
-                         attributes: nil];
+                         attributes: attributes];
 }
 
 - (void) dealloc

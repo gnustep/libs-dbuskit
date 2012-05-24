@@ -23,6 +23,7 @@
 
 #import "DKIntrospectionNode.h"
 
+#include <dbus/dbus.h>
 @class DKEndpoint, DKInterface, DKObjectPathNode, DKPort, NSMutableArray,
   NSMutableDictionary, NSString, NSXMLNode;
 
@@ -40,6 +41,11 @@
  * Adds the child node to the node.
  */
 - (void)_addChildNode: (id<DKObjectPathNode>)node;
+
+/**
+ * Removes a child node from the node.
+ */
+- (void)_removeChildNode: (id<DKObjectPathNode>)node;
 
 /**
  * Constructs the path that the node is located in the graph.
@@ -62,11 +68,21 @@
 - (NSDictionary*)_children;
 @end;
 
+
+@protocol DKExportableObjectPathNode <DKObjectPathNode>
+
+- (DBusObjectPathVTable)vTable;
+
+- (DBusHandlerResult)handleDBusMessage: (DBusMessage*)message;
+
+- (DKProxy*)proxyParent;
+@end
+
 /**
  * DKObjectPathNode is a lightweight class to represent child nodes in a D-Bus
  * object graph. Full DKProxy instances can be obtained with the -proxy method.
  */
-@interface DKObjectPathNode: DKIntrospectionNode <DKObjectPathNode>
+@interface DKObjectPathNode: DKIntrospectionNode <DKExportableObjectPathNode>
 {
   /** Contains all nodes descending from the present one. */
   NSMutableDictionary *children;
@@ -79,7 +95,8 @@
  */
 - (DKProxy*)proxy;
 
-- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection;
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                           absolute: (BOOL)absolutePath;
 @end
 
 

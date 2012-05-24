@@ -369,7 +369,6 @@ if (NO == DKRingEmpty)\
     dbus_error_free(&err);
     return nil;
   }
-  dbus_error_free(&err);
 
   NS_DURING
   {
@@ -410,7 +409,6 @@ if (NO == DKRingEmpty)\
     dbus_error_free(&err);
     return nil;
   }
-  dbus_error_free(&err);
 
   /*
    * dbus_bus_get() will cause _exit() to be called when the bus goes away.

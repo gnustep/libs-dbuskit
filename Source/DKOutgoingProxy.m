@@ -224,4 +224,14 @@
   }
 }
 
+- (DBusObjectPathVTable)vTable
+{
+  return [DKPort _DBusDefaultObjectPathVTable];
+}
+
+- (DBusHandlerResult)handleDBusMessage: (DBusMessage*)message
+{
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
 @end

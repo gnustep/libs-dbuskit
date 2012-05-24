@@ -53,6 +53,15 @@
   }
 }
 
+- (void)_removeChildNode: (id<DKObjectPathNode>)node
+{
+  if (nil == node)
+  {
+    return;
+  }
+  [nodes removeObject: node];
+}
+
 - (NSString*)_name
 {
   return @"";

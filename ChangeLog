@@ -1,3 +1,40 @@
+2012-05-24 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/GNUmakefile: Add DKMethodReturn.m
+	* Source/DKProxy+Private.h
+	* Source/DKProxy.m: 
+	Tweak generation of introspection data.
+	* Source/DKMethodReturn.h
+	* Source/DKMethodReturn.m:
+	Implement replies to method calls.
+	* Source/DKMessage.m: Add some debugging.
+	* Source/DKOutgoingProxy.h
+	* Source/DKOutgoingProxy.m:
+	Adopt DKExportableObjectPathNode protocol.
+	* Source/DKEndpointManager.m: Fix incorrect use of libdbus
+	APIs.
+	* Source/DKPort+Private.h
+	* Source/DKPort.m:
+	Register exported objects with the D-Bus daemon.
+	* Source/DKObjectPathNode.h: Another revision of the object
+	path protocol; add subprotocol for exportable nodes.
+	* Source/DKObjectPathNode.m: Implement revised object path
+	protocol; tweak generation of introspection data; Implement
+	handling of method calls from D-Bus (object path nodes do not
+	represent any local object and only respond to introspection
+	requests.
+	* Tools/dk_make_protocol.m: Follow up changes for revised 
+	object path protocol.
+	* Tests/TestDKPort.m: Revoke D-Bus object registrations after
+	the tests.
+	* Examples/HelloWorldService: Initial scaffolding for an example
+	service that vends objects to D-Bus.
+
+	First batch of object vending changes. We can now succesfully 
+	export arbitrary object graphs to D-Bus and they can (partially)
+	be introspected by other clients on the bus. Exported objects 
+	don't respond to message sends yet, though.
+
 2012-04-21 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.m: Fix marshalling of vendable local objects.

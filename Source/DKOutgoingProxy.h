@@ -27,7 +27,7 @@
  * Instance of the DKOutgoingProxy class are used to broker the exchange between
  * local objects and other clients on D-Bus.
  */
-@interface DKOutgoingProxy : DKProxy
+@interface DKOutgoingProxy : DKProxy <DKExportableObjectPathNode>
 {
   @private
   /**
@@ -46,6 +46,7 @@
 
   NSRecursiveLock *busLock;
 }
+
 + (id) proxyWithName: (NSString*)name
               parent: (id<DKObjectPathNode>)parentNode
               object: (id)anObject;

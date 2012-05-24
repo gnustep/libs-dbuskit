@@ -35,8 +35,10 @@
 - (NSString*)_uniqueName;
 - (void)_registerSignalsWithNotificationCenter: (DKNotificationCenter*)center;
 - (NSXMLNode*)XMLNode;
-- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection;
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                           absolute: (BOOL)absolutePath;
 - (BOOL)isKindOfClass: (Class)cls;
+- (DKProxy*)proxyParent;
 @end
 
 @interface DKDBus (DKDBusPrivate)
@@ -64,3 +66,8 @@
  * of a proxy because we need it to dispatch the initial introspection data.
  */
 extern DKInterface *_DKInterfaceIntrospectable;
+
+/**
+ * The document type string for D-Bus introspection data
+ */
+extern NSString* kDKDBusDocType;

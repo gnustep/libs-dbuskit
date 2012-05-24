@@ -54,6 +54,8 @@
   UKTrue(GSObjCIsKindOf(object_getClass(n),objc_getClass("DKOutgoingProxy")));
   UKObjectsEqual(n, [p _proxyForObject: obj]);
   UKObjectsEqual(p, [(DKOutgoingProxy*)n _port]);
+  [p _setObject: nil
+         atPath: @"/"];
 }
 
 - (void)testObjectPathManagementLeafObject
@@ -72,6 +74,7 @@
   UKTrue(GSObjCIsKindOf(object_getClass(innerNode), objc_getClass("DKObjectPathNode")));
   UKObjectsEqual(n, [p _proxyForObject: obj]);
   UKObjectsEqual(p, [(DKOutgoingProxy*)n _port]);
+  [p _unregisterAllObjects];
 }
 
 

@@ -23,6 +23,7 @@
 #import "DBusKit/DKPort.h"
 #import "DBusKit/DKNotificationCenter.h"
 #import "DKProxy+Private.h"
+#import "DKPort+Private.h"
 #import "DKOutgoingProxy.h"
 #import "DKEndpoint.h"
 #import "DKEndpointManager.h"
@@ -76,7 +77,7 @@ enum {
 - (NSArray*)_components;
 @end
 
-@interface DKPort (DKPortPrivate)
+@interface DKPort (DKPortInternal)
 /**
  * Performs checks to ensure that the corresponding D-Bus service and object
  * path exist and sends a message to the delegate NSConnection object containing
@@ -105,7 +106,24 @@ enum {
 - (id)initForBusType: (DKDBusBusType)type;
 @end
 
+static DBusObjectPathVTable _DKDefaultObjectPathVTable;
+
 @implementation DKPort
+
++ (void)initialize
+{
+  if ([self isEqual: [DKPort class]])
+  {
+    // We do not need the unregistration callback
+    _DKDefaultObjectPathVTable.unregister_function = NULL;
+    _DKDefaultObjectPathVTable.message_function = _DKObjectPathHandleMessage;
+  }
+}
+
++ (DBusObjectPathVTable)_DBusDefaultObjectPathVTable
+{
+  return _DKDefaultObjectPathVTable;
+}
 
 + (NSPort*)port
 {
@@ -433,15 +451,28 @@ enum {
   return 0;
 }
 
+- (void)_cleanupExportedObjects
+{
+  [objectPathLock lock];
+  [objectPathMap removeAllObjects];
+  if (nil != proxyMap)
+  {
+    NSResetMapTable(proxyMap);
+  }
+  [objectPathLock unlock];
+}
+
 - (void)invalidate
 {
   [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
+  [self _cleanupExportedObjects];
   // The implementation in NSPort sends out the appropriate notification.
   [super invalidate];
 }
 
 - (void)dealloc
 {
+  [self _unregisterAllObjects];
   [[DKNotificationCenter centerForBusType: [endpoint DBusBusType]] removeObserver: self];
   [endpoint release];
   [remote release];
@@ -577,15 +608,62 @@ enum {
   [objectPathLock unlock];
 }
 
-
-- (void)_DBusRegisterProxy: (id<DKObjectPathNode>)proxy
+- (void)_DBusUnregisterProxyAtPath: (const char*)thePath
 {
-  // TODO: Implement
+  dbus_connection_unregister_object_path([endpoint DBusConnection],
+    thePath);
 }
 
-- (void)_DBusUnregisterProxy: (id<DKObjectPathNode>)proxy
+- (void)_unregisterAllObjects
 {
-  // TODO: Implement
+  NSEnumerator *keyEnum = [[objectPathMap allKeys] objectEnumerator];
+  NSString *path = nil;
+  while (nil != (path = [keyEnum nextObject]))
+  {
+    [self _DBusUnregisterProxyAtPath: [path UTF8String]];
+  }
+  [self _cleanupExportedObjects];
+
+}
+- (void)_DBusRegisterProxy: (id<DKExportableObjectPathNode>)proxy
+             asReplacement: (BOOL)isReplacement
+{
+  const char *path = [[proxy _path] UTF8String];
+  DBusError err;
+  DBusObjectPathVTable vTable;
+  dbus_error_init(&err);
+  if (isReplacement)
+  {
+    // Unregistration only using the path
+    [self _DBusUnregisterProxyAtPath: path];
+  }
+  vTable = [proxy vTable];
+  dbus_connection_try_register_object_path([endpoint DBusConnection],
+    path,
+    &vTable,
+    (void*)proxy,
+    &err);
+  if (dbus_error_is_set(&err))
+  {
+    NSString *exceptionName = @"DKDBusUnknownException";
+    NSString *message = [NSString stringWithUTF8String: err.message] ;
+    if (dbus_error_has_name(&err, DBUS_ERROR_NO_MEMORY))
+    {
+      exceptionName = @"DKDBusOutOfMemoryException";
+    }
+    else if (dbus_error_has_name(&err, DBUS_ERROR_OBJECT_PATH_IN_USE))
+    {
+      exceptionName = @"DKDBusObjectPathAlreadyInUseException";
+    }
+    dbus_error_free(&err);
+    [NSException raise: exceptionName
+                format: message];
+  }
+}
+
+- (void)_DBusUnregisterProxy: (id<DKExportableObjectPathNode>)proxy
+{
+  [self _DBusUnregisterProxyAtPath: [[proxy _path] UTF8String]];
 }
 
 - (void)_fillInMissingNodes: (NSArray*)nodes
@@ -593,11 +671,11 @@ enum {
 {
   NSUInteger count = [nodes count];
 
-  id<DKObjectPathNode> lastNode = nil;
-  id<DKObjectPathNode> thisNode = nil;
+  id<DKExportableObjectPathNode> lastNode = nil;
+  id<DKExportableObjectPathNode> thisNode = nil;
   for (NSUInteger i = 0; i < count; i++)
   {
-    id<DKObjectPathNode> proxy = nil;
+    id<DKExportableObjectPathNode> proxy = nil;
     NSString *component = [nodes objectAtIndex: i];
     lastNode = thisNode;
     thisNode = [[lastNode _children] objectForKey: component];
@@ -619,7 +697,6 @@ enum {
 	                                parent: lastNode
 	                                object: object];
 	NSMapInsert(proxyMap, object, proxy);
-	[self _DBusRegisterProxy: proxy];
       }
       else if (nil == proxy)
       {
@@ -630,18 +707,35 @@ enum {
       [lastNode _addChildNode: proxy];
       [objectPathMap setObject: proxy
                         forKey: [proxy _path]];
+
+      NS_DURING
+      {
+        [self _DBusRegisterProxy: proxy asReplacement: NO];
+      }
+      NS_HANDLER
+      {
+	//Undo the local part of the unsuccessful registration
+	[lastNode _removeChildNode: proxy];
+	[objectPathMap removeObjectForKey: [proxy _path]];
+	if (0 == [[objectPathMap allKeysForObject: proxy] count])
+	{
+	  NSMapRemove(proxyMap, object);
+	}
+	[localException raise];
+      }
+      NS_ENDHANDLER
     }
   }
 }
 
-- (void)_replaceProxy: (id<DKObjectPathNode>)oldProxy
+- (void)_replaceProxy: (id<DKExportableObjectPathNode>)oldProxy
                atPath: (NSString*)path
             forObject: (id)object
 {
 
   NSDictionary *oldChildren = [oldProxy _children];
-  id<DKObjectPathNode> oldParent = nil;
-  id<DKObjectPathNode> newProxy = nil;
+  id<DKExportableObjectPathNode> oldParent = nil;
+  id<DKExportableObjectPathNode> newProxy = nil;
   if ([(id<NSObject>)oldProxy isKindOfClass: [DKObjectPathNode class]])
   {
      oldParent = [(DKObjectPathNode*)oldProxy parent];
@@ -665,7 +759,12 @@ enum {
    */
   if (nil == object)
   {
-    NSMapRemove(proxyMap, object);
+    // If this is the last reference to the proxy, we remove it from the proxy
+    // map.
+    if (1 == [[objectPathMap allKeysForObject: oldProxy] count])
+    {
+      NSMapRemove(proxyMap, object);
+    }
     if (0 != [oldChildren count])
     {
        newProxy = [[[DKObjectPathNode alloc] initWithName: [path lastPathComponent]
@@ -687,7 +786,7 @@ enum {
   else
   {
     NSEnumerator *nodeEnum = [oldChildren objectEnumerator];
-    id<NSObject,DKObjectPathNode> node = nil;
+    id<NSObject,DKExportableObjectPathNode> node = nil;
     while (nil != (node = [nodeEnum nextObject]))
     {
       [newProxy _addChildNode: node];
@@ -701,7 +800,7 @@ enum {
     [objectPathMap setObject: newProxy
                       forKey: path];
     NSMapInsert(proxyMap, object, newProxy);
-    [self _DBusRegisterProxy: newProxy];
+    [self _DBusRegisterProxy: newProxy asReplacement: YES];
   }
 }
 
@@ -724,7 +823,7 @@ enum {
   [objectPathLock lock];
   NS_DURING
   {
-    id<DKObjectPathNode> oldProxy = [objectPathMap objectForKey: path];
+    id<DKExportableObjectPathNode> oldProxy = [objectPathMap objectForKey: path];
     // Save state from the old proxy if necessary
     if (nil != oldProxy)
     {
@@ -798,9 +897,9 @@ enum {
 
 
 
-- (id<DKObjectPathNode>)_objectPathNodeAtPath: (NSString*)path
+- (id<DKExportableObjectPathNode>)_objectPathNodeAtPath: (NSString*)path
 {
-  id<DKObjectPathNode> res = nil;
+  id<DKExportableObjectPathNode> res = nil;
   [objectPathLock lock];
   NS_DURING
   {
@@ -816,9 +915,9 @@ enum {
   return res;
 }
 
-- (id<DKObjectPathNode>)_proxyForObject: (id)obj
+- (id<DKExportableObjectPathNode>)_proxyForObject: (id)obj
 {
-  id<DKObjectPathNode> res = nil;
+  id<DKExportableObjectPathNode> res = nil;
   [objectPathLock lock];
   NS_DURING
   {
@@ -835,3 +934,12 @@ enum {
 }
 
 @end
+
+
+DBusHandlerResult
+_DKObjectPathHandleMessage(DBusConnection* connection,
+  DBusMessage* message, void* receiver)
+{
+  return [(id<DKExportableObjectPathNode>)receiver handleDBusMessage: message];
+}
+
