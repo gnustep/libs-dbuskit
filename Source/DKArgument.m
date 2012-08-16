@@ -446,11 +446,11 @@ DKDBusTypeForUnboxingObject(id object)
                   name: (NSString*)_name
                 parent: (id)_parent
 {
+  char theType[2];
   if (NULL == objCType)
   {
     return nil;
   }
-  char theType[2];
   theType[0] =(char)DKDBusTypeForObjCType(objCType);
   theType[1] = '\0';
   return [self initWithDBusSignature: theType

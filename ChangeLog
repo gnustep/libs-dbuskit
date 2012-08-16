@@ -1,4 +1,9 @@
 2012-08-16 Niels Grewe <niels.grewe@halbordnung.de>
+	* configure.ac: Disable -Wdeclaration-after-statement
+	* configure: Regenerate
+	* Source/DKArgument.m: Move declaration before statement
+	(spotted by Philippe Roussel)
+2012-08-16 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* configure.ac: Temporarily enable -Wno-deprecated-declarations
 	for clang; check whether we need to include objc/encoding.h.

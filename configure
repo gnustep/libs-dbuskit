@@ -12390,91 +12390,13 @@ fi
 
 
 
-#--------------------------------------------------------------------
-# Check for -Wdeclaration-after-statement (adopted from gnustep-base)
-# TODO: Doing it this way looks really ugly because there is a bunch
-#       of other tests executed before the result of the test is
-#       printed.
-#--------------------------------------------------------------------
-{ echo "$as_me:$LINENO: checking whether the compiler supports -Wdeclaration-after-statement" >&5
-echo $ECHO_N "checking whether the compiler supports -Wdeclaration-after-statement... $ECHO_C" >&6; }
-
-saved_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -Wdeclaration-after-statement"
-
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext
-if { (ac_try="$ac_compile"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_compile") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_objc_werror_flag" || test ! -s conftest.err'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest.$ac_objext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  HAS_W_DECL_AFTER_STATEMENT=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	HAS_W_DECL_AFTER_STATEMENT=no
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-CFLAGS="$saved_CFLAGS"
-
-{ echo "$as_me:$LINENO: result: $HAS_W_DECL_AFTER_STATEMENT" >&5
-echo "${ECHO_T}$HAS_W_DECL_AFTER_STATEMENT" >&6; }
-
-if test x"$HAS_W_DECL_AFTER_STATEMENT" = x"yes"; then
-  WARN_FLAGS="-Wall -Wdeclaration-after-statement"
-else
-  WARN_FLAGS="-Wall"
-fi
+WARN_FLAGS="-Wall"
 
 { echo "$as_me:$LINENO: checking whether the compiler supports -Wno-deprecated-declarations" >&5
 echo $ECHO_N "checking whether the compiler supports -Wno-deprecated-declarations... $ECHO_C" >&6; }
 saved_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -Wno-deprecated-declarations"
+
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
