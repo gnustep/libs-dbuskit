@@ -37,3 +37,7 @@
 #ifdef INCLUDE_RUNTIME_H
 #  include <@OBJC_RUNTIME_H@>
 #endif
+
+#ifndef HAVE_OBJC_ENCODING_H
+#  define  HAVE_OBJC_ENCODING_H @HAVE_OBJC_ENCODING_H@
+#endif

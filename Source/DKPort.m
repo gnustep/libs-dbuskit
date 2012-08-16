@@ -670,7 +670,6 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
             forObjectAtLeaf: (id)object
 {
   NSUInteger count = [nodes count];
-
   id<DKExportableObjectPathNode> lastNode = nil;
   id<DKExportableObjectPathNode> thisNode = nil;
   for (NSUInteger i = 0; i < count; i++)
@@ -704,7 +703,11 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
                                                 parent: lastNode];
       }
       thisNode = proxy;
-      [lastNode _addChildNode: proxy];
+      // Special case for the root, so it doesn't end up being its own child.
+      if (proxy != lastNode)
+      {
+	[lastNode _addChildNode: proxy];
+      }
       [objectPathMap setObject: proxy
                         forKey: [proxy _path]];
 

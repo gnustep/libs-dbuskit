@@ -234,4 +234,34 @@
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
+- (void)_installClassPermittedMessages
+{
+	// Introspects the Obj-C class of the object
+}
+
+
+- (void)DBusBuildMethodCache
+{
+ /* [condition lock];
+  if (WILL_BUILD_CACHE == state)
+  {
+
+
+    [condition unlock];
+  }
+  else
+  {
+    [condition unlock];
+  }
+  */
+}
+
+
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                        forChildren: (BOOL)includeChildIntrospection
+					   absolute: (BOOL)absolutePath
+{
+  //TODO: Implement
+  return nil;
+}
 @end

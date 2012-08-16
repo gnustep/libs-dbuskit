@@ -23,7 +23,14 @@
    */
 
 #import "DKIntrospectionNode.h"
+
+#define INCLUDE_RUNTIME_H
+#include "config.h"
+#undef INCLUDE_RUNTIME_H
+
 #include <dbus/dbus.h>
+
+
 @class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
 
 enum
@@ -43,6 +50,29 @@ enum
   NSMutableArray *inArgs;
   NSMutableArray *outArgs;
 }
+
+/**
+ * Returns a method corresponding to the given Objective-C method description.
+ * Method descriptions are provided by protocol introspection data.
+ */
++ (id)methodWithObjCMethodDescription: (const struct objc_method_description*)desc;
+
+
+/**
+ * Returns a D-Bus method for the selector specified. The type information needs
+ * to be supplied using some other mechanism (e.g. NSObject's
+ * -methodSignatureForSelector:).
+ */
++ (id)methodWithObjCSelector: (SEL)selector
+                       types: (const char*)types;
+#ifdef GNUSTEP
+/**
+ * Returns a D-Bus method for the selector specified. The selector must include
+ * type information so that the method can be constructed. Typed selectors are
+ * only available for the GCC and GNUstep runtimes.
+ */
++ (id)methodWithTypedObjCSelector: (SEL)selector;
+#endif
 
 /**
  * Returns the Objective-C type string the method corresponds to. Use doBox to

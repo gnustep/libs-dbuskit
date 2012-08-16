@@ -103,6 +103,18 @@ else
   WARN_FLAGS="-Wall"
 fi
 
+AC_MSG_CHECKING(whether the compiler supports -Wno-deprecated-declarations)
+saved_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wno-deprecated-declarations"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],HAS_W_NO_DEPRECATED_DECL=yes,HAS_W_NO_DEPRECATED_DECL=no)
+CFLAGS="$saved_CFLAGS"
+
+AC_MSG_RESULT($HAS_W_NO_DEPRECATED_DECL)
+
+if test x"$HAS_W_NO_DEPRECATED_DECL" = x"yes"; then
+  WARN_FLAGS="$WARN_FLAGS -Wno-deprecated-declarations"
+fi
+
 AC_SUBST(WARN_FLAGS)
 AC_SUBST(ATOMIC_CFLAGS)
 
@@ -137,6 +149,23 @@ else
   fi
 fi
 
+AC_CHECK_HEADERS([objc/encoding.h], [have_objc_encoding_h=yes], [have_objc_encoding_h=no], 
+  [#ifdef HAVE_OBJC_RUNTIME_H 
+   #include <objc/runtime.h>
+   #else
+   #  ifdef HAVE_OBJECTIVEC2_RUNTIME_H
+   #  include <ObjectiveC2/runtime.h>
+   #  endif
+   #endif
+])
+
+if test "$have_objc_encoding_h" = "yes"; then
+	HAVE_OBJC_ENCODING_H=1
+else
+	HAVE_OBJC_ENCODING_H=0
+fi
+
+AC_SUBST(HAVE_OBJC_ENCODING_H)
 AC_SUBST(OBJC_RUNTIME_H)
 AC_SUBST(OBJC)
 CFLAGS="$saved_CFLAGS"

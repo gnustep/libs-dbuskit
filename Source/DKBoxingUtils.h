@@ -112,3 +112,13 @@ DKObjCTypeFitsIntoDBusType(const char* code, int type);
  */
 BOOL
 DKObjCTypeFitsIntoObjCType(const char* code, const char* otherCode);
+
+/**
+ * Eliminates all occurrences of a colon (':') in a selector name and
+ * uppercases the following character in order to obtain a D-Bus method name
+ * from an Objective-C selector.
+ *
+ * Example: ``setObject:forKey:'' becomes ``setObjectForKey''.
+ */
+NSString*
+DKMethodNameFromSelector(SEL aSelector);

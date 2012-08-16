@@ -35,6 +35,25 @@
 #include <dbus/dbus.h>
 @implementation DKMethodReturn
 
+- (void)deserializeArguments
+{
+
+  DBusMessageIter iter;
+  dbus_message_iter_init_append(original, &iter);
+  NSDebugMLog(@"Deserializing arguments from method call");
+  NS_DURING
+  {
+    [method unmarshallFromIterator: &iter
+                    intoInvocation: invocation
+                       messageType: DBUS_MESSAGE_TYPE_METHOD_CALL];
+  }
+  NS_HANDLER
+  {
+    NSWarnMLog(@"Could not unmarshall arguments from D-Bus message. Exception raised: %@", localException);
+    [localException raise];
+  }
+  NS_ENDHANDLER
+}
 
 - (id) initAsReplyToDBusMessage: (DBusMessage*)aMsg
                        forProxy: (id<DKExportableObjectPathNode>)aProxy
@@ -95,25 +114,6 @@
                            sendOutright: NO];
 }
 
-- (void)deserializeArguments
-{
-
-  DBusMessageIter iter;
-  dbus_message_iter_init_append(original, &iter);
-  NSDebugMLog(@"Deserializing arguments from method call");
-  NS_DURING
-  {
-    [method unmarshallFromIterator: &iter
-                    intoInvocation: invocation
-                       messageType: DBUS_MESSAGE_TYPE_METHOD_CALL];
-  }
-  NS_HANDLER
-  {
-    NSWarnMLog(@"Could not unmarshall arguments from D-Bus message. Exception raised: %@", localException);
-    [localException raise];
-  }
-  NS_ENDHANDLER
-}
 
 - (void)serialize
 {

@@ -186,6 +186,8 @@
  * terminated by <code>nil</code>. If you want to match the first argument,
  * specify that particular match as the first one and set <var>firstIndex</var>
  * to <code>0</code>.
+ *
+ * NOTE: This method will be deprecated once a replacement is available.
  */
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
@@ -257,6 +259,8 @@
  * Removes all observation activities matching the arguments specified.
  * The match is inclusive. Every observation for a more specific rule will also
  * be removed.
+ *
+ * NOTE: This method will be deprecated once a replacement is available.
  */
 -  (void)removeObserver: (id)observer
                  signal: (NSString*)signalName

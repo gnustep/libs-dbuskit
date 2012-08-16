@@ -421,7 +421,7 @@ DKDBusTypeForUnboxingObject(id object)
   return self;
 }
 
-/* Public initializer, see publich header for documentation. */
+/* Public initializer, see public header for documentation. */
 - (id)initWithDBusSignature: (const char*)DBusTypeString
                        name: (NSString*)_name
                      parent: (id)_parent
@@ -441,6 +441,22 @@ DKDBusTypeForUnboxingObject(id object)
 }
 
 
+/* Public initializer, see public header for documentation. */
+- (id)initWithObjCType: (const char*)objCType
+                  name: (NSString*)_name
+                parent: (id)_parent
+{
+  if (NULL == objCType)
+  {
+    return nil;
+  }
+  char theType[2];
+  theType[0] =(char)DKDBusTypeForObjCType(objCType);
+  theType[1] = '\0';
+  return [self initWithDBusSignature: theType
+                                name: _name
+                              parent: _parent];
+}
 
 - (void)setObjCEquivalent: (Class)class
 {

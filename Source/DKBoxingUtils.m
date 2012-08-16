@@ -27,11 +27,14 @@
 
 #import "config.h"
 
-#import <Foundation/NSValue.h>
+#import <Foundation/NSException.h>
 #import <Foundation/NSFileHandle.h>
+#import <Foundation/NSValue.h>
+
+#import <GNUstepBase/Unicode.h>
 
 #include <dbus/dbus.h>
-
+#include <wctype.h>
 Class
 DKBuiltinObjCClassForDBusType(int type)
 {
@@ -103,7 +106,7 @@ DKDBusTypeForObjCType(const char* code)
     case _C_CHARPTR:
       return DBUS_TYPE_STRING;
     case _C_ID:
-      return DBUS_TYPE_OBJECT_PATH;
+      return DBUS_TYPE_VARIANT;
     case _C_ARY_B:
       return DBUS_TYPE_ARRAY;
     case _C_STRUCT_B:
@@ -522,4 +525,65 @@ DKObjCTypeFitsIntoObjCType(const char *sourceType, const char *targetType)
   }
 
   return _DKObjCTypeFitsIntoObjCType(sourceType, targetType);
+}
+
+
+NSString*
+DKMethodNameFromSelector(SEL selector)
+{
+  NSString *selName = nil;
+  NSUInteger length;
+  BOOL charsOnStack;
+  unichar stackChars[64];
+  unichar *heapChars = NULL;
+  if (0 == selector)
+  {
+    return nil;
+  }
+  selName = NSStringFromSelector(selector);
+  length = [selName length];
+  charsOnStack = (length <= 64);
+  // 64 characters on the stack should be large enough most of the time.
+  if (NO == charsOnStack)
+  {
+    heapChars = malloc(length * sizeof(unichar));
+  }
+  else
+  {
+    heapChars = &stackChars[0];
+  }
+  NS_DURING
+  {
+    [selName getCharacters: heapChars range: NSMakeRange(0,length)];
+
+    for (int i = 0; i < (length - 1); i++)
+    {
+      if(':' == heapChars[i])
+      {
+	// Advance the buffer, uppercase the next character
+	i++;
+	if (iswlower(heapChars[i]))
+	{
+	  heapChars[i] = uni_toupper(heapChars[i]);
+	}
+      }
+    }
+    selName = [NSString stringWithCharacters: heapChars length: length];
+  }
+  NS_HANDLER
+  {
+    if (NO == charsOnStack)
+    {
+      free(heapChars);
+    }
+    [localException raise];
+  }
+  NS_ENDHANDLER
+
+  if (NO == charsOnStack)
+  {
+    free(heapChars);
+  }
+  return [selName stringByReplacingOccurrencesOfString: @":" withString: @""];
+
 }

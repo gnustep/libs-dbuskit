@@ -59,6 +59,26 @@ extern NSString *kDKArgumentDirectionOut;
                         name: (NSString*)name
                       parent: (id)parent;
 
+
+/**
+ * Initializes the argument with the first Objective-C type code appearing in
+ * <var>objCType</var>. This is a convenience method that works for some, but
+ * not all types and does not examine the contents of structs or arrays.
+ * Unsupported types are:
+ * <list>
+ *   <item><code>#</code> (class)</item>
+ *   <item><code>:</code> (selector)</item>
+ *   <item><code>^</code> (pointer)</item>
+ *   <item><code>?</code> (unknown or function pointer)</item>
+ *   <item><code>%</code> (atom)</item>
+ *   <item><code>()</code> (union)</item>
+ *   <item><code>!</code> (vector)</item>
+ *   <item><code>j</code> (complex number)</item>
+ * </list>
+ */
+- (id)initWithObjCType: (const char*)objCType
+                  name: (NSString*)_name
+                parent: (id)_parent;
 /**
  * Return whether the argument is a complex one that is made up by further
  * types.

@@ -37,11 +37,123 @@
 
 #import "DKProxy+Private.h"
 
+/* GCC libobjc has the encodings stuff in runtime.h */
+#if HAVE_OBJC_ENCODING_H
+#include <objc/encoding.h>
+#endif
+
 #include <dbus/dbus.h>
 #include <stdint.h>
 #include <string.h>
 
 @implementation DKMethod
+
+
++ (id)methodWithObjCSelector: (SEL)theSel
+                       types: (const char*)types
+{
+  NSString *methodName;
+  BOOL qualifier = YES;
+  DKMethod *theMethod = nil;
+  DKArgument *returnArg = nil;
+
+  // Sanity check: We cannot build methods without names or without types.
+  if ((0 == theSel) || ((NULL == types) || ('\0' == types)))
+  {
+    return nil;
+  }
+  methodName = DKMethodNameFromSelector(theSel);
+  theMethod = [[[DKMethod alloc] initWithName: methodName
+                                       parent: nil] autorelease];
+
+  // Record the proper selector string:
+  [theMethod setAnnotationValue: [NSString stringWithUTF8String: sel_getName(theSel)]
+                         forKey: @"org.gnustep.objc.selector"];
+
+  // Get type qualifiers for the return value:
+  while(qualifier)
+  {
+    switch (*types)
+    {
+      case 'V':
+        [theMethod setAnnotationValue: @"true"
+                               forKey: @"org.freedesktop.DBus.Method.NoReply"];
+        //No break here, we fall through to the types++
+      case 'O':
+      case 'o':
+      case 'n':
+      case 'N':
+      case 'r':
+      case 'R':
+        types++;
+        break;
+      default:
+        qualifier = NO;
+        break;
+    }
+  }
+
+  if ('v' != *types)
+  {
+    returnArg = [[[DKArgument alloc] initWithObjCType: types
+                                                 name: nil
+                                               parent: theMethod] autorelease];
+
+    if (nil == returnArg)
+    {
+      NSWarnMLog(@"Could not construct D-Bus method from `%s'", sel_getName(theSel));
+      return nil;
+    }
+    [theMethod addArgument: returnArg
+                 direction: kDKArgumentDirectionOut];
+  }
+  // Skip return, self and _cmd:
+  types = objc_skip_argspec(types);
+  types = objc_skip_argspec(types);
+  types = objc_skip_argspec(types);
+
+  while ('\0' != *types)
+  {
+    DKArgument *theArg = nil;
+    types = objc_skip_type_qualifiers(types);
+    theArg = [[DKArgument alloc] initWithObjCType: types
+                                             name: nil
+                                           parent: theMethod];
+    if (nil == theArg)
+    {
+      NSWarnMLog(@"Could not construct D-Bus method from `%s'", sel_getName(theSel));
+      return nil;
+    }
+    [theMethod addArgument: theArg
+                 direction: kDKArgumentDirectionIn];
+    [theArg release];
+    types = objc_skip_argspec(types);
+  }
+
+  return theMethod;
+}
+
+#ifdef GNUSTEP
++(id)methodWithTypedObjCSelector: (SEL)aSelector
+{
+  if (0 == aSelector)
+  {
+    return nil;
+  }
+  return [self methodWithObjCSelector: aSelector
+                                types: sel_getType_np(aSelector)];
+}
+#endif
+
++ (id)methodWithObjCMethodDescription: (const struct objc_method_description*)desc
+{
+  if (NULL == desc)
+  {
+    return nil;
+  }
+  return [self methodWithObjCSelector: desc->name
+                                types: desc->types];
+}
 
 - (id) initWithName: (NSString*)aName
              parent: (id)aParent
