@@ -13,6 +13,7 @@ if test -n ""; then
 fi 
 
 AC_PROG_CC(clang gcc cc c1 egcs)
+AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_OBJC(clang gcc objcc objc cc CC)
 AC_LANG(Objective C)
@@ -66,15 +67,6 @@ if test "$CC" = "gcc"; then
 fi
 AC_LANG_POP(C)
 
-# FIXME: We need a proper test for libobjc2 for some advanced features (e.g.
-# the declared-properties - dbus-properties bridge).
-# AC_CHECK_FUNCS(objc_setProperty)
-# if test $ac_cv_func_objc_setProperty = yes ; then
-#   HAVE_OBJC2=1
-# else
-#   HAVE_OBJC2=0
-# fi
-
 #--------------------------------------------------------------------
 # Check for libdbus
 #--------------------------------------------------------------------
@@ -102,13 +94,14 @@ AC_SUBST(ATOMIC_CFLAGS)
 # Setup variables:
 
 saved_CFLAGS="$CFLAGS"
-saved_CPPFLAGS="$CPPFLAGS$"
+saved_CPPFLAGS="$CPPFLAGS"
 saved_LDFLAGS="$LDFLAGS"
 GS_OBJCFLAGS=`gnustep-config --objc-flags`
 CFLAGS="$CFLAGS $GS_OBJCFLAGS"
 CPPFLAGS="$CPPFLAGS $GS_OBJCFLAGS"
 GS_LDFLAGS=`gnustep-config --objc-libs`
 LDFLAGS="$LDFLAGS $GS_LDFLAGS"
+
 
 
 
@@ -146,9 +139,35 @@ else
 	HAVE_OBJC_ENCODING_H=0
 fi
 
+CPPFLAGS="$saved_CPPFLAGS"
+
+# We also need to set the libs because the order does sometimes matter.
+LIBS=`gnustep-config --objc-libs`
+AC_CHECK_FUNCS(sel_getType_np, [have_sel_getType_np=yes],
+  [have_sel_getType_np=no;
+   AC_CHECK_FUNCS(sel_getTypeEncoding, [have_sel_getTypeEncoding=yes],
+   [have_sel_getTypeEncoding=no])
+  ]
+)
+
+USE_SEL_GETTYPEENCODING=0
+DISABLE_TYPED_SELECTORS=0
+if test "$have_sel_getType_np" = "no"; then
+  if test "$have_sel_getTypeEncoding" = "yes"; then
+    USE_SEL_GETTYPEENCODING=1;
+  else
+    DISABLE_TYPED_SELECTORS=1
+  fi
+fi
+
+C99_FLAGS=$ac_cv_prog_cc_c99
+AC_SUBST(C99_FLAGS)
 AC_SUBST(HAVE_OBJC_ENCODING_H)
 AC_SUBST(OBJC_RUNTIME_H)
 AC_SUBST(OBJC)
+AC_SUBST(USE_SEL_GETTYPEENCODING)
+AC_SUBST(DISABLE_TYPED_SELECTORS)
+
 CFLAGS="$saved_CFLAGS"
 CPPFLAGS="$saved_CPPFLAGS"
 LDFLAGS="$saved_LDFLAGS"

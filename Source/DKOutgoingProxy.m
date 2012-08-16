@@ -264,4 +264,50 @@
   //TODO: Implement
   return nil;
 }
+
+
+/*
+ * These methods are only here because GCC does not take into account methods
+ * implemented in superclasses when checking for protocol compliance.
+ */
+
+- (DKProxy*)proxyParent
+{
+  return [super proxyParent];
+}
+
+- (NSDictionary*)_children
+{
+  return [super _children];
+}
+
+- (NSDictionary*)_interfaces
+{
+  return [super _interfaces];
+}
+
+- (NSString*)_name
+{
+  return [super _name];
+}
+
+- (NSString*)_path
+{
+  return [super _path];
+}
+
+- (void)_removeChildNode: (id<DKObjectPathNode>)node
+{
+  [super _removeChildNode: node];
+}
+
+- (void)_addChildNode: (id<DKObjectPathNode>)node
+{
+  [super _addChildNode: node];
+}
+
+- (void)_addInterface: (DKInterface*)iface
+{
+  [super _addInterface: iface];
+}
 @end

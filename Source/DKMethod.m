@@ -133,7 +133,7 @@
   return theMethod;
 }
 
-#ifdef GNUSTEP
+#if !DISABLE_TYPED_SELECTORS
 +(id)methodWithTypedObjCSelector: (SEL)aSelector
 {
   if (0 == aSelector)

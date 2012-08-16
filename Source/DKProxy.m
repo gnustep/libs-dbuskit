@@ -736,7 +736,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   return theDict;
 }
 
-- (id) proxyParent
+- (DKProxy*) proxyParent
 {
   return self;
 }

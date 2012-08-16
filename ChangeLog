@@ -1,8 +1,27 @@
 2012-08-16 Niels Grewe <niels.grewe@halbordnung.de>
+	* configure.ac: Properly set compiler flags for C99 and detect
+	the runtime flavour.
+	* configure: Regenerate.
+	* config.make.in: Add C99 flags when needed.
+	* Source/config.h.in: Macros for choosing typed selector
+	introspection method.
+	* Source/DKProxy.m
+	* Source/DKOutgoingProxy.m
+	* Source/DKMethod.h
+	* Source/DKMethod.m
+	* Source/DKObjectPathNode.m:
+	GCC compatibility tweaks
+	* Tools/GNUmakefile: Explicitly link against libdbus.
+
+	Build compatibility tweaks.
+
+2012-08-16 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* configure.ac: Disable -Wdeclaration-after-statement
 	* configure: Regenerate
 	* Source/DKArgument.m: Move declaration before statement
 	(spotted by Philippe Roussel)
+
 2012-08-16 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* configure.ac: Temporarily enable -Wno-deprecated-declarations

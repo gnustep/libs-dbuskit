@@ -14,7 +14,7 @@ TOOL_NAME = dk_make_protocol
 dk_make_protocol_OBJC_FILES=dk_make_protocol.m
 
 ADDITIONAL_LIB_DIRS += -L../Source/DBusKit.framework/Versions/Current/$(GNUSTEP_TARGET_LDIR)
-ADDITIONAL_TOOL_LIBS = -lgnustep-base -lDBusKit
+ADDITIONAL_TOOL_LIBS = -lgnustep-base -lDBusKit `pkg-config dbus-1 --libs`
 
 #
 # Makefiles

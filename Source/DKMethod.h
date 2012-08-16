@@ -65,7 +65,7 @@ enum
  */
 + (id)methodWithObjCSelector: (SEL)selector
                        types: (const char*)types;
-#ifdef GNUSTEP
+#if !DISABLE_TYPED_SELECTORS
 /**
  * Returns a D-Bus method for the selector specified. The selector must include
  * type information so that the method can be constructed. Typed selectors are

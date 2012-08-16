@@ -121,6 +121,15 @@
   return [DKPort _DBusDefaultObjectPathVTable];
 }
 
+/*
+ * This method is only here because GCC is to braindead to check whether a
+ * superclass implementation provides a method declared by an adopted protocl.
+ */
+- (DKProxy*)proxyParent
+{
+  return [super proxyParent];
+}
+
 - (DKProxy*)proxy
 {
   DKProxy *rootProxy = [self proxyParent];
