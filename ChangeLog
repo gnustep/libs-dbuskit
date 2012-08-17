@@ -1,3 +1,11 @@
+2012-08-17 Niels Grewe <niels.grewe@halbordnung.de>
+	* configure.ac: Add a second check for dbus/dbus.h just in case
+	that pkg-config returns nonesense.
+	* configure: Regenerate
+	* Source/DKObjectPathNode.m: Import DKEndpoint header.
+
+	Minor build compatibility tweaks.
+
 2012-08-16 Niels Grewe <niels.grewe@halbordnung.de>
 	* configure.ac: Properly set compiler flags for C99 and detect
 	the runtime flavour.

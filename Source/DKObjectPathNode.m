@@ -26,6 +26,7 @@
 #import "DKMethodReturn.h"
 #import "DKProxy+Private.h"
 #import "DKPort+Private.h"
+#import "DKEndpoint.h"
 
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>

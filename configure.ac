@@ -76,6 +76,23 @@ AC_SUBST(DBUS_LIBS)
 
 WARN_FLAGS="-Wall"
 
+
+if test "$HAVE_DBUS" = "0"; then
+  AC_MSG_ERROR(DBusKit requires libdbus.)
+fi
+saved_CFLAGS="$CFLAGS"
+saved_CPPFLAGS="$CPPFLAGS"
+CFLAGS="$CFLAGS $DBUS_CFLAGS"
+CPPFLAGS="$CPPFLAGS -Werror $DBUS_CFLAGS" 
+
+AC_CHECK_HEADERS(dbus/dbus.h,have_dbus_h=yes,have_dbus_h=no)
+if test "$have_dbus_h" = "no"; then
+  AC_MSG_ERROR(pkg-config claims that libdbus is available but DBusKit is unable to use it.)
+fi
+
+CFLAGS="$saved_CFLAGS"
+CPPFLAGS="$saved_CPPFLAGS"
+
 AC_MSG_CHECKING(whether the compiler supports -Wno-deprecated-declarations)
 saved_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -Wno-deprecated-declarations"
