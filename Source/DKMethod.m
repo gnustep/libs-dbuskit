@@ -412,7 +412,7 @@
   }
   else
   {
-    NSDebugMLog(@"Ignoring argument with unkown direction '%@'.", direction);
+    NSDebugMLog(@"Ignoring argument with unknown direction '%@'.", direction);
   }
 }
 

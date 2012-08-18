@@ -1,3 +1,9 @@
+2012-08-18 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKMethod.m:
+	Fix typos.
+
 2012-08-17 Niels Grewe <niels.grewe@halbordnung.de>
 	* configure.ac: Add a second check for dbus/dbus.h just in case
 	that pkg-config returns nonesense.

@@ -1257,7 +1257,7 @@ DKDBusTypeForUnboxingObject(id object)
         concreteClass = [DKDictEntryTypeArgument class];
         break;
       default:
-        NSWarnMLog(@"Cannot handle unkown container type.");
+        NSWarnMLog(@"Cannot handle unknown container type.");
         [self release];
         return nil;
     }
