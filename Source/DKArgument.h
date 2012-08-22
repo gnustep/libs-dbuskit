@@ -25,6 +25,11 @@
 #import "DKIntrospectionNode.h"
 
 #include <dbus/dbus.h>
+#include "config.h"
+
+#if HAVE_LIBCLANG
+#include <clang-c/Index.h>
+#endif
 
 @class NSString, NSInvocation, NSMutableArray, NSXMLNode, DKProxy;
 
@@ -50,6 +55,17 @@ extern NSString *kDKArgumentDirectionOut;
 + (void)registerUnboxingSelector: (SEL)selector
                      forDBusType: (int)type;
 
+
+#if HAVE_LIBCLANG
+/**
+ * Initializes the argument to be of the specified libclang type. This is a
+ * convenience method that might not work for all types. It will return nil
+ * in that case.
+ */
+- (id)initWithCXType: (CXType)type
+                name: (NSString*)name
+              parent: (id)parent;
+#endif
 /**
  * Initializes the argument with the single complete D-Bus type signature
  * described by <var>characters</var>. Returns <code>nil</code> if the signature

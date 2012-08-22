@@ -40,6 +40,19 @@
 }
 
 /**
+ * Returns an interface set up with all methods defined in the Objective-C
+ * class given. This does not include methods defined in superclasses.
+ */
++ (id)interfaceForObjCClass: (Class)theClass;
+
+/**
+ * Returns an interface set up with all methods defined in the Objective-C
+ * protocols given. This does not include methods declared by protocols adopted.
+ * by this protocol.
+ */
++ (id)interfaceForObjCProtocol: (Protocol*)theProtocol;
+
+/**
  * Returns all methods in the interface
  */
 - (NSDictionary*)methods;

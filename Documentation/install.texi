@@ -6,8 +6,11 @@ As an Objective-C framework, DBusKit depends on recent versions of the
 GNUstep Makefile Package and the GNUstep Base Library. Versions 2.4.0
 and 1.20.0 (respectively) are known to work. D-Bus support is provided
 by libdbus. DBusKit has been verified to work with version 1.2.1 of
-libdbus, but might work with earlier versions. To build the testsuite,
-the UnitKit framework is required. It is available from the Étoilé
+libdbus, but might work with earlier versions. Some advanced features (e.g.
+generating D-Bus interfaces from Objective-C headers) require libclang. Usage
+of libclang can be disabled by passing the ``--disable-libclang switch'' to
+the configure script. To build the testsuite, the UnitKit framework is required.
+It is available from the Étoilé
 @uref{http://svn.gna.org/svn/etoile/trunk/Etoile/Frameworks/UnitKit/,
 repository}.
 
@@ -17,6 +20,8 @@ repository}.
 @item gnustep-base (>=1.22.0)
 
 @item libdbus (>=1.2.1)
+
+@item libclang (optional)
 
 @item UnitKit (optional)
 @end itemize

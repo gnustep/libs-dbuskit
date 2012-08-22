@@ -1,3 +1,30 @@
+2012-08-22 Niels Grewe <niels.grewe@halbordnung.de>
+	* configure.ac: Check for libclang.
+	* configure: Regenerate.
+	* Documentation/install.texi: Document optional libclang
+	requirement.
+	* INSTALL: Regenerate
+	* Source/config.h.in: Macro for libclang check.
+	* Source/DKBoxingUtils.h
+	* Source/DKBoxingUtils.m:
+	Add D-Bus type derivation based on libclang. Fix potential index out of
+	bounds bug in selector name mangling.
+	* Source/DKArgument.h
+	* Source/DKArgument.m:
+	Add methods for generating arguments from CXTypes.
+	* Source/DKMethod.h
+	* Source/DKMethod.m:
+	Add methods for generating methods from CXCursors.
+	* Source/DKInterface.h
+	* Source/DKInterface.m:
+	Add methods for generating interfaces by runtime-inspecting protocols 
+	or classes.
+	* Source/GNUmakefile: Explicitly link Objective-C and Foundation libs.
+	* Tests/TestDKInterface.m:
+	Tests for interface generation from introspection data.
+
+	Further work on introspection data generation.
+
 2012-08-18 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.m

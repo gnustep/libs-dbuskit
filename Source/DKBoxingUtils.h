@@ -22,7 +22,11 @@
    */
 
 #import <Foundation/NSObject.h>
+#include "config.h"
 
+#if HAVE_LIBCLANG
+#include <clang-c/Index.h>
+#endif
 /**
  * Returns the builtin default class for boxing the named D-Bus type.
  */
@@ -121,4 +125,27 @@ DKObjCTypeFitsIntoObjCType(const char* code, const char* otherCode);
  * Example: ``setObject:forKey:'' becomes ``setObjectForKey''.
  */
 NSString*
+DKMethodNameFromSelectorString(const char* selString);
+
+/**
+ * Identical to DKMethodNameFromSelectorString() except for that it takes a
+ * selector as its argument.
+ */
+NSString*
 DKMethodNameFromSelector(SEL aSelector);
+
+#if HAVE_LIBCLANG
+/**
+ * Returns the D-Bus type signature of the CXType given in <var>ty</var>.
+ * This resolves builtin classes to their respective D-Bus types if the
+ * type is of the <code>CXType_ObjCObjectPointer</code> kind (e.g. an NSString*
+ * would be converted to `s'. If the type cannot sensibly be represented,
+ * <code>DBUS_TYPE_INVALID</code> is returned.
+ *
+ * Presently, structures or arrays are returned as
+ * <code>DBUS_TYPE_VARIANT</code> because DBusKit does not yet handle plain-C
+ * arrays or structures.
+ */
+NSString*
+DKDBusTypeSignatureForCXType(CXType ty);
+#endif

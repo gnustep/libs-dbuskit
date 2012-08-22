@@ -449,6 +449,7 @@ DKDBusTypeForUnboxingObject(id object)
   char theType[2];
   if (NULL == objCType)
   {
+    [self release];
     return nil;
   }
   theType[0] =(char)DKDBusTypeForObjCType(objCType);
@@ -457,6 +458,37 @@ DKDBusTypeForUnboxingObject(id object)
                                 name: _name
                               parent: _parent];
 }
+
+
+#if HAVE_LIBCLANG
+/* Pulic initializer, see public header for documentation. */
+- (id)initWithCXType: (CXType)theType
+                name: (NSString*)_name
+              parent: (id)_parent
+{
+  NSString *sig = DKDBusTypeSignatureForCXType(theType);
+  if (nil == sig)
+  {
+    [self release];
+    return nil;
+  }
+  self = [self initWithDBusSignature: [sig UTF8String]
+                                name: _name
+                              parent: _parent];
+
+  // Yeah, object pointer! Let's put in a class annotation:
+  if (CXType_ObjCObjectPointer == theType.kind)
+  {
+    CXString n = clang_getCursorSpelling(clang_getTypeDeclaration(theType));
+    NSString *className = [[NSString alloc] initWithUTF8String: clang_getCString(n)];
+    [self setAnnotationValue: className
+                      forKey: @"org.gnustep.objc.class"];
+    clang_disposeString(n);
+    [className release];
+  }
+  return self;
+}
+#endif
 
 - (void)setObjCEquivalent: (Class)class
 {

@@ -27,6 +27,7 @@
 
 #import "config.h"
 
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSFileHandle.h>
 #import <Foundation/NSValue.h>
@@ -527,22 +528,21 @@ DKObjCTypeFitsIntoObjCType(const char *sourceType, const char *targetType)
   return _DKObjCTypeFitsIntoObjCType(sourceType, targetType);
 }
 
-
 NSString*
-DKMethodNameFromSelector(SEL selector)
+DKMethodNameFromSelectorString(const char* selString)
 {
   NSString *selName = nil;
   NSUInteger length;
   BOOL charsOnStack;
   unichar stackChars[64];
   unichar *heapChars = NULL;
-  if (0 == selector)
+  if (NULL == selString)
   {
     return nil;
   }
-  selName = NSStringFromSelector(selector);
+  selName = [NSString stringWithUTF8String: selString];
   length = [selName length];
-  charsOnStack = (length <= 64);
+  charsOnStack = (length < 64);
   // 64 characters on the stack should be large enough most of the time.
   if (NO == charsOnStack)
   {
@@ -587,3 +587,130 @@ DKMethodNameFromSelector(SEL selector)
   return [selName stringByReplacingOccurrencesOfString: @":" withString: @""];
 
 }
+
+NSString*
+DKMethodNameFromSelector(SEL selector)
+{
+  if (0 == selector)
+  {
+    return nil;
+  }
+  return DKMethodNameFromSelectorString(sel_getName(selector));
+}
+
+
+#if HAVE_LIBCLANG
+NSString*
+DKDBusTypeSignatureForCXType(CXType ty)
+{
+  int DBusType = DBUS_TYPE_INVALID;
+  CXCursor tyCursor = clang_getTypeDeclaration(clang_getCanonicalType(ty));
+  if (CXType_ObjCObjectPointer == ty.kind)
+  {
+    // Presently, we are only interested in NSString, NSArray, NSDictionary
+    // and NSFileHandle in order to treat them specially.
+    CXString cName = clang_getCursorSpelling(tyCursor);
+    const char *clsName = clang_getCString(cName);
+
+    // If we are lucky, the class exists in this compilation unit and we can
+    // check whether it is a subclass of the well known ones.
+    Class theClass = objc_getClass(clsName);
+
+    // Ad-hoc bitfield for the checks
+    // 1 < 0 : NSString
+    // 1 < 1 : NSArray
+    // 1 < 2 : NSDictionary
+    // 1 < 3 : NSFileHandle
+    char field = 0;
+
+    // Prefetch class pointers
+    Class string = [NSString class];
+    Class array = [NSArray class];
+    Class dict = [NSDictionary class];
+    Class fd = [NSFileHandle class];
+
+    // Check whether theClass inherits from one of those:
+    while ((theClass != Nil) && (0 == field))
+    {
+      if (string == theClass)
+      {
+	field = 1 < 0;
+      }
+      else if (array == theClass)
+      {
+	field = 1 < 1;
+      }
+      else if (dict == theClass)
+      {
+	field = 1 < 2;
+      }
+      else if (fd == theClass)
+      {
+	field = 1 < 3;
+      }
+      else
+      {
+	// Check the superclass next time:
+	theClass = class_getSuperclass(theClass);
+      }
+    }
+
+    /*
+     * The following code path doesn't make sense yet. But it will become
+     * useful once we allow the user to specify abitrary class->type mappings.
+     * Those classes might not be in Foundation/-base, so that we don't get a
+     * class for them. So we need brute for name checking:
+    if (0 == field)
+    {
+      NString *className = [NSString stringWithUTF8String: clsName];
+      // brute force check...
+    }
+     */
+    clang_disposeString(cName);
+
+    switch (field)
+    {
+      case 1:
+	DBusType = DBUS_TYPE_STRING;
+	break;
+      case 2:
+	// Variant type as element because it may contain arbitrary stuff,
+	// return it right away.
+	return @"av";
+      case 4:
+	// Dicts are also arrays, but with variant dict elements in them.
+	// We can also just return those.
+	return @"a{vv}";
+      case 8:
+	DBusType = DBUS_TYPE_UNIX_FD;
+	break;
+      default:
+        break;
+    }
+
+  }
+  else
+  {
+    CXString encoding = clang_getDeclObjCTypeEncoding(tyCursor);
+    DBusType = DKDBusTypeForObjCType(clang_getCString(encoding));
+    clang_disposeString(encoding);
+  }
+
+
+  // These come from C structs or arrays, we don't handle them yet because we
+  // are too lazy to do the alignment etc.
+  if ((DBUS_TYPE_STRUCT == DBusType) ||
+    (DBUS_TYPE_ARRAY == DBusType))
+  {
+    DBusType = DBUS_TYPE_VARIANT;
+  }
+
+  if (DBUS_TYPE_INVALID == DBusType)
+  {
+    return nil;
+  }
+
+  return [NSString stringWithFormat: @"%c", (char)DBusType];
+
+}
+#endif

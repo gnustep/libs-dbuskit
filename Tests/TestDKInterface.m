@@ -31,6 +31,28 @@
 @interface TestDKInterface: NSObject <UKTest>
 @end
 
+@protocol ExportableTestProtocol
+- (void)shouldNotBeExported;
+- (BOOL)application: (id)foo didSomethingWith: (NSString*)string;
+@end
+
+@interface ExportableTestObject: NSObject
+- (void)shouldNotBeExported;
+- (BOOL)application: (id)foo didSomethingWith: (NSString*)string;
+@end
+
+
+@implementation ExportableTestObject
+- (void)shouldNotBeExported
+{
+}
+
+- (BOOL)application: (id)foo didSomethingWith: (NSString*)string
+{
+  return YES;
+}
+@end
+
 @implementation TestDKInterface
 + (void)initialize
 {
@@ -60,4 +82,23 @@
   UKObjectsEqual(@"method", [methodNode name]);
   // The internals of method nodes are tested in TestDKMethod.m
 }
+
+- (void)testInterfaceFromClassIntrospection
+{
+  DKInterface *theIf = [DKInterface interfaceForObjCClass: [ExportableTestObject class]];
+  UKNotNil(theIf);
+  UKObjectsEqual(@"org.gnustep.objc.class.ExportableTestObject", [theIf name]);
+  UKNotNil([[theIf methods] objectForKey: @"applicationDidSomethingWith"]);
+  UKNil([[theIf methods] objectForKey: @"shouldNotBeExported"]);
+}
+
+- (void)testInterfaceFromProtocolIntrospection
+{
+  DKInterface *theIf = [DKInterface interfaceForObjCProtocol: objc_getProtocol("ExportableTestProtocol")];
+  UKNotNil(theIf);
+  UKObjectsEqual(@"org.gnustep.objc.protocol.ExportableTestProtocol", [theIf name]);
+  UKNotNil([[theIf methods] objectForKey: @"applicationDidSomethingWith"]);
+  UKNil([[theIf methods] objectForKey: @"shouldNotBeExported"]);
+}
+
 @end

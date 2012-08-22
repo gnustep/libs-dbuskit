@@ -28,6 +28,9 @@ DBusKitTests_OBJC_FILES += \
 	TestDKProperty.m \
 	TestDKProxy.m
 
+#DBusKitTests_RESOURCE_FILES += \
+	Resources/TestHeader.h
+
 include $(GNUSTEP_MAKEFILES)/bundle.make
 
 -include GNUmakefile.postamble

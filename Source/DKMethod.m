@@ -42,9 +42,15 @@
 #include <objc/encoding.h>
 #endif
 
+#if HAVE_LIBCLANG
+#include <clang-c/Index.h>
+#endif
+
 #include <dbus/dbus.h>
 #include <stdint.h>
 #include <string.h>
+
+
 
 @implementation DKMethod
 
@@ -145,15 +151,84 @@
 }
 #endif
 
-+ (id)methodWithObjCMethodDescription: (const struct objc_method_description*)desc
++ (id)methodWithObjCMethod: (Method)meth
 {
-  if (NULL == desc)
+  if (NULL == meth)
   {
     return nil;
   }
-  return [self methodWithObjCSelector: desc->name
-                                types: desc->types];
+  return [self methodWithObjCSelector: method_getName(meth)
+                                types: method_getTypeEncoding(meth)];
 }
+
++ (id)methodWithObjCMethodDescription: (const struct objc_method_description)desc
+{
+  return [self methodWithObjCSelector: desc.name
+                                types: desc.types];
+}
+
+
+#if HAVE_LIBCLANG
+
++ (id)methodWitCXCursor: (CXCursor)cursor
+{
+  if (CXCursor_ObjCInstanceMethodDecl != cursor.kind)
+  {
+    NSWarnMLog(@"Trying to construct DKMethod from invalid cursor kind");
+    return nil;
+  }
+
+  // Extract the method name:
+  CXString mName = clang_getCursorSpelling(cursor);
+  NSString *methodName = DKMethodNameFromSelectorString(clang_getCString(mName));
+
+  DKMethod *theMethod = [[[DKMethod alloc] initWithName: methodName
+                                                 parent: nil] autorelease];
+
+  [theMethod setAnnotationValue: [NSString stringWithUTF8String: clang_getCString(mName)]
+                         forKey: @"org.gnustep.objc.selector"];
+
+  clang_disposeString(mName);
+
+  // Extract the return and argument types:
+  CXType retTy = clang_getCursorResultType(cursor);
+
+  // Don't bother with the return argument if it's a void method:
+  if (CXType_Void != retTy.kind)
+  {
+    DKArgument *retArg = [[DKArgument alloc] initWithCXType: retTy
+                                                      name: nil
+                                                    parent: theMethod];
+    if (nil == retArg)
+    {
+      return nil;
+    }
+    [theMethod addArgument: retArg
+                 direction: kDKArgumentDirectionOut];
+    [retArg release];
+  }
+
+  int argCount  = clang_Cursor_getNumArguments(cursor);
+  for (int i = 0; i < argCount; i++)
+  {
+    CXCursor arg = clang_Cursor_getArgument(cursor, i);
+    CXString aName = clang_getCursorSpelling(cursor);
+    NSString *argName = [NSString stringWithUTF8String: clang_getCString(aName)];
+    clang_disposeString(aName);
+    DKArgument *thisArg = [[DKArgument alloc] initWithCXType: clang_getCursorType(arg)
+                                                        name: argName
+                                                      parent: theMethod];
+    if (nil == thisArg)
+    {
+      return nil;
+    }
+    [theMethod addArgument: thisArg
+                 direction: kDKArgumentDirectionIn];
+  }
+  return theMethod;
+}
+
+#endif
 
 - (id) initWithName: (NSString*)aName
              parent: (id)aParent
@@ -172,6 +247,7 @@
   outArgs = [NSMutableArray new];
   return self;
 }
+
 
 - (const char*) returnTypeBoxed: (BOOL)doBox
 {

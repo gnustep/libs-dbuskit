@@ -24,6 +24,7 @@
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSObjCRuntime.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSUserDefaults.h>
 #import <Foundation/NSXMLNode.h>
 #import <Foundation/NSXMLParser.h>
 
@@ -44,6 +45,140 @@
 #import "DKProxy+Private.h"
 
 @implementation DKInterface
+
+
++ (id)interfaceForObjCClassOrProtocol: (void*)entity
+                              isClass: (BOOL)isClass
+{
+  Protocol *theProto = NULL;
+  Class theClass = nil;
+  if (NULL == entity)
+  {
+    return nil;
+  }
+  else if (isClass)
+  {
+    theClass = (Class)entity;
+  }
+  else
+  {
+    theProto = (Protocol*)entity;
+  }
+
+  NSString *typeComponent = nil;
+  const char *identifier = NULL;
+  if (isClass)
+  {
+    typeComponent = @"class";
+    identifier = class_getName(theClass);
+  }
+  else
+  {
+    typeComponent = @"protocol";
+    identifier = protocol_getName(theProto);
+  }
+  NSString *ifName = [NSString stringWithFormat: @"org.gnustep.objc.%@.%s",
+   typeComponent, identifier];
+  DKInterface *theIf = [[[DKInterface alloc] initWithName: ifName
+                                                  parent: nil] autorelease];
+  unsigned int methodCount = 0;
+  Method *cMethodList = NULL;
+  struct objc_method_description *pMethodList = NULL;
+
+  if (isClass)
+  {
+    cMethodList = class_copyMethodList(theClass, &methodCount);
+  }
+  else
+  {
+    // Copy only required instance methods
+    pMethodList = protocol_copyMethodDescriptionList(theProto, YES, YES, &methodCount);
+  }
+
+  // Don't bother exporting empty interfaces
+  // TODO: Amend once we handle properties.
+  if (0 == methodCount)
+  {
+    // don't free anything
+    return nil;
+  }
+
+  // Get the array of additional permitted messages:
+  NSArray *messages = [[NSUserDefaults standardUserDefaults] arrayForKey:
+    @"GSPermittedMessages"];
+
+  // Iterate over the methods an generate DKMethods for them:
+  for (int i = 0; i < methodCount; i++)
+  {
+    SEL selector = 0;
+    NSString *selName = nil;
+
+    if (isClass)
+    {
+      selector = method_getName(cMethodList[i]);
+    }
+    else
+    {
+      selector = pMethodList[i].name;
+    }
+    selName = [NSString stringWithUTF8String: sel_getName(selector)];
+
+    /*
+     * Check whether we want to permit exporting this method, the checks
+     * correspond to those in gnustep-gui's GSServicesManager. (the
+     * userData:error: methods are not useful yet, though. They have an out
+     * parameter and require special-casing.
+     */
+    if (([selName hasPrefix: @"application:"] == YES)
+      || ([selName hasSuffix: @":userData:error:"] == YES)
+      || ([messages containsObject: selName]))
+    {
+      DKMethod *theMethod = nil;
+      if (isClass)
+      {
+        theMethod = [DKMethod methodWithObjCMethod: cMethodList[i]];
+      }
+      else
+      {
+	theMethod = [DKMethod methodWithObjCMethodDescription: pMethodList[i]];
+      }
+      if (nil != theMethod)
+      {
+	[theIf addMethod: theMethod];
+      }
+    }
+  }
+
+  if (NULL != cMethodList)
+  {
+    free(cMethodList);
+  }
+  if (NULL != pMethodList)
+  {
+    free(pMethodList);
+  }
+
+  //TODO: Enumerate properties
+
+  if (0 == [[theIf methods] count])
+  {
+    return nil;
+  }
+  return theIf;
+}
+
++ (id)interfaceForObjCClass: (Class)theClass
+{
+  return [self interfaceForObjCClassOrProtocol: (void*)theClass
+                                       isClass: YES];
+}
++ (id)interfaceForObjCProtocol: (Protocol*)theProto
+{
+  return [self interfaceForObjCClassOrProtocol: (void*)theProto
+                                       isClass: NO];
+}
+
+
 /**
  * Initializes the interface. Since interfaces need to be named, returns
  * <code>nil</code> when <var>aName</var> is <code>nil</code> or an empty

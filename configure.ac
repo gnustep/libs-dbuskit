@@ -108,7 +108,29 @@ fi
 AC_SUBST(WARN_FLAGS)
 AC_SUBST(ATOMIC_CFLAGS)
 
-# Setup variables:
+HAVE_LIBCLANG=0
+
+AC_ARG_ENABLE(libclang,
+      [  --disable-libclang	Disable use of libclang.],,)
+
+if test "$enable_libclang" != "no"; then
+  AC_CHECK_HEADERS("clang-c/Index.h")
+  if test "$ac_cv_header_clang_c_Index_h" = "yes"; then
+    AC_CHECK_LIB(clang, clang_visitChildren)
+    if test "$ac_cv_lib_clang_clang_visitChildren" = "yes"; then
+      HAVE_LIBCLANG=1;
+      MORE_LIBS="$MORE_LIBS -lclang"
+    fi
+  fi 
+  if test "$HAVE_LIBCLANG" = "0"; then
+    AC_MSG_WARN([Could not find a usable libclang. Please install libclang to enable advanced DBusKit features.])
+  fi
+fi
+
+AC_SUBST(HAVE_LIBCLANG)
+
+
+# Setup variables for Objective-C tests:
 
 saved_CFLAGS="$CFLAGS"
 saved_CPPFLAGS="$CPPFLAGS"

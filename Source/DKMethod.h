@@ -30,6 +30,9 @@
 
 #include <dbus/dbus.h>
 
+#if HAVE_LIBCLANG
+#include <clang-c/Index.h>
+#endif
 
 @class NSString, NSMutableArray,  NSMethodSignature, DKArgument;
 
@@ -55,8 +58,12 @@ enum
  * Returns a method corresponding to the given Objective-C method description.
  * Method descriptions are provided by protocol introspection data.
  */
-+ (id)methodWithObjCMethodDescription: (const struct objc_method_description*)desc;
++ (id)methodWithObjCMethodDescription: (const struct objc_method_description)desc;
 
+/**
+ * Returns a method corresponding to the given Objective-C method.
+ */
++ (id)methodWithObjCMethod: (Method)meth;
 
 /**
  * Returns a D-Bus method for the selector specified. The type information needs
@@ -72,6 +79,14 @@ enum
  * only available for the GCC and GNUstep runtimes.
  */
 + (id)methodWithTypedObjCSelector: (SEL)selector;
+#endif
+
+#if HAVE_LIBCLANG
+/**
+ * Returns a D-Bus method based on the information from an Objective-C instance
+ * method declaration cursor provided by libclang.
+ */
++ (id)methodWitCXCursor: (CXCursor)cursor;
 #endif
 
 /**

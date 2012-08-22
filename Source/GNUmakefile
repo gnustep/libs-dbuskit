@@ -54,6 +54,8 @@ ifneq ($(nonstrict), yes)
 DBusKit_OBJCFLAGS += -Werror
 endif
 
+LIBRARIES_DEPEND_UPON = $(FND_LIBS) $(OBJC_LIBS)
+
 -include ../GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/framework.make
 
