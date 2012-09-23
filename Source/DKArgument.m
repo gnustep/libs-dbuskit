@@ -203,7 +203,7 @@ typedef struct
     NSHashTable *selTable = NSCreateHashTable(NSIntHashCallBacks,\
      1); \
     NSMapInsert(selectorTypeMap,\
-      (void*)(uintptr_t)selector,\
+      (void*)selector,\
       (void*)(intptr_t)type);\
     NSMapInsert(typeSelectorMap,\
       (void*)(intptr_t)type,\
@@ -256,14 +256,14 @@ DKRegisterSelectorTypePair(DKSelectorTypePair *pair)
   }
 
   mapReturn = NSMapInsertIfAbsent(selectorTypeMap,
-    (void*)(uintptr_t)selector,
+    (void*)selector,
     (void*)(intptr_t)type);
 
   // InsertIfAbsent returns NULL if the key had been absent, which is the only
   // case where we also want to install the new type-selector mapping.
   if (NULL == mapReturn)
   {
-    NSHashInsertIfAbsent(selTable, (void*)(uintptr_t)selector);
+    NSHashInsertIfAbsent(selTable, (void*)selector);
   }
   [selectorTypeMapLock unlock];
 }

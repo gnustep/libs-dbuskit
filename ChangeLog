@@ -1,3 +1,9 @@
+2012-09-23 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKNotificationCenter.m:
+	Deal with clang warning about casting SEL to uintptr_t.
+
 2012-08-22 Niels Grewe <niels.grewe@halbordnung.de>
 	* configure.ac: Check for libclang.
 	* configure: Regenerate.
