@@ -1,3 +1,7 @@
+2012-11-11 Niels Grewe <niels.grewe@halbordnung.de>
+	* Source/DKEndpoint.m: Replace incorrect NSDebugMLog with NSDebugFLog.
+	Reported by Philippe Roussell.
+
 2012-09-23 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.m
