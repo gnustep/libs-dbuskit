@@ -125,7 +125,7 @@ DKInterface *_DKInterfaceIntrospectable;
                                                      name: @"data"
                                                    parent: introspect];
     [introspect addArgument: xmlOutArg
-                  direction: DKArgumentDirectionOut];
+                  direction: kDKArgumentDirectionOut];
     [_DKInterfaceIntrospectable addMethod: introspect];
     [_DKInterfaceIntrospectable installMethod: introspect
                                   forSelector: @selector(Introspect)];
@@ -919,7 +919,7 @@ DKInterface *_DKInterfaceIntrospectable;
     // Workaround for situations where gnustep-base is using its sloppy parser:
     if ([parser respondsToSelector: @selector( _setAcceptHTML:)])
     {
-      [parser  _setAcceptHTML: YES];
+      //[parser  _setAcceptHTML: YES];
     }
 
     // Generate the introspection tree:
@@ -1062,7 +1062,7 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
   {
     dbus_connection_unref(testConnection);
     [self release];
-    return sessionBus;
+    return (DKDBus*)sessionBus;
   }
   dbus_connection_unref(testConnection);
 
@@ -1075,7 +1075,7 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
     {
       dbus_connection_unref(testConnection);
       [self release];
-      return systemBus;
+      return (DKDBus*)systemBus;
     }
     dbus_connection_unref(testConnection);
   }
@@ -1089,8 +1089,8 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
    * initializing). Using an DKNonAutoInvalidatingPort avoids this circular
    * dependency.
    */
-  aPort = [[DKNonAutoInvalidatingPort alloc] initWithRemote: aService
-                                                 atEndpoint: anEndpoint];
+  aPort = [[[DKNonAutoInvalidatingPort alloc] initWithRemote: aService
+                                                  atEndpoint: anEndpoint] autorelease];
 
   if (nil == (self = [super initWithPort: aPort
                                     path: aPath]))

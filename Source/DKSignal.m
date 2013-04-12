@@ -70,7 +70,7 @@
     return;
   }
 
-  if ((direction == nil) || [direction isEqualToString: DKArgumentDirectionOut])
+  if ((direction == nil) || [direction isEqualToString: kDKArgumentDirectionOut])
   {
     [args addObject: argument];
   }

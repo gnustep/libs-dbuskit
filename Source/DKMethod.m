@@ -286,11 +286,11 @@
     return;
   }
 
-  if ((direction == nil) || [direction isEqualToString: DKArgumentDirectionIn])
+  if ((direction == nil) || [direction isEqualToString: kDKArgumentDirectionIn])
   {
     [inArgs addObject: argument];
   }
-  else if ([direction isEqualToString: DKArgumentDirectionOut])
+  else if ([direction isEqualToString: kDKArgumentDirectionOut])
   {
     [outArgs addObject: argument];
   }
@@ -561,13 +561,19 @@
                              intoIterator: iter];
   }
 }
+
+- (NSUInteger)userVisibleArguments
+{
+  return [inArgs count];
+}
+
 - (NSString*)methodDeclaration
 {
   NSMutableString *declaration = [NSMutableString stringWithString: @"- "];
   NSArray *components = nil;
   NSString *returnType = nil;
   NSUInteger outCount = [outArgs count];
-  NSUInteger inCount = [inArgs count];
+  NSUInteger inCount = [self userVisibleArguments];
   NSUInteger inIndex = 0;
   NSEnumerator *argEnum = nil;
   DKArgument *arg = nil;

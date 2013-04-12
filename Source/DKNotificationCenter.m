@@ -1258,8 +1258,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                                      parent: nil];
     [signalInfo setObject: stubIf
                    forKey: interfaceName];
-    theInterface = stubIf;
     [stubIf release];
+    theInterface = [signalInfo objectForKey: interfaceName];
   }
 
   if (nil != (signal = [[theInterface signals] objectForKey: name]))
@@ -1438,8 +1438,8 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                                                      parent: nil];
     [signalInfo setObject: stubIf
                    forKey: interfaceName];
-    theInterface = stubIf;
     [stubIf release];
+    theInterface = [signalInfo objectForKey: interfaceName];
   }
 
   // Get the signal:
@@ -1713,7 +1713,7 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
   return self;
 }
 
-- (void)release
+- (oneway void)release
 {
   // No-Op.
 }

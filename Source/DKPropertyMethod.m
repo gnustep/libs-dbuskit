@@ -85,7 +85,7 @@
                                                         name: @"interface_name"
                                                       parent: self];
     [self addArgument: interfaceArg
-            direction: DKArgumentDirectionIn];
+            direction: kDKArgumentDirectionIn];
     NS_DURING
     {
       propertyNameArg = [[DKArgument alloc] initWithDBusSignature: "s"
@@ -93,14 +93,14 @@
                                                            parent: self];
 
     [self addArgument: propertyNameArg
-            direction: DKArgumentDirectionIn];
+            direction: kDKArgumentDirectionIn];
 
       NS_DURING
       {
         retValArg = [[(DKProperty*)parent type] copy];
 	[retValArg setParent: self];
 	[self addArgument: retValArg
-	        direction: DKArgumentDirectionOut];
+	        direction: kDKArgumentDirectionOut];
       }
       NS_HANDLER
       {
@@ -256,6 +256,12 @@
                       messageType: type];
   }
 }
+
+
+- (NSUInteger)userVisibleArguments
+{
+  return 0;
+}
 @end
 
 @implementation DKPropertyMutator
@@ -281,7 +287,7 @@
                                                         name: @"interface_name"
                                                       parent: self];
     [self addArgument: interfaceArg
-            direction: DKArgumentDirectionIn];
+            direction: kDKArgumentDirectionIn];
     NS_DURING
     {
       propertyNameArg = [[DKArgument alloc] initWithDBusSignature: "s"
@@ -289,14 +295,14 @@
                                                            parent: self];
 
     [self addArgument: propertyNameArg
-            direction: DKArgumentDirectionIn];
+            direction: kDKArgumentDirectionIn];
 
       NS_DURING
       {
         newValArg = [[(DKProperty*)parent type] copy];
 	[newValArg setParent: self];
 	[self addArgument: newValArg
-	        direction: DKArgumentDirectionIn];
+	        direction: kDKArgumentDirectionIn];
       }
       NS_HANDLER
       {
@@ -522,5 +528,10 @@
                               atIndex: 2
                                boxing: doBox];
   }
+}
+
+- (NSUInteger)userVisibleArguments
+{
+  return 1;
 }
 @end

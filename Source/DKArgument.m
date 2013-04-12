@@ -50,8 +50,8 @@
 #include <string.h>
 #include <dbus/dbus.h>
 
-NSString *DKArgumentDirectionIn = @"in";
-NSString *DKArgumentDirectionOut = @"out";
+NSString *kDKArgumentDirectionIn = @"in";
+NSString *kDKArgumentDirectionOut = @"out";
 
 
 /*
@@ -154,7 +154,7 @@ DKDBusTypeForObjCType(const char* code)
     case _C_CHARPTR:
       return DBUS_TYPE_STRING;
     case _C_ID:
-      return DBUS_TYPE_OBJECT_PATH;
+      return DBUS_TYPE_VARIANT;
     case _C_ARY_B:
       return DBUS_TYPE_ARRAY;
     case _C_STRUCT_B:
@@ -627,7 +627,7 @@ DKDBusTypeForUnboxingObject(id object)
 
 }
 
-- (char*) unboxedObjCTypeChar
+- (const char*) unboxedObjCTypeChar
 {
   return DKUnboxedObjCTypeForDBusType(DBusType);
 }
@@ -1197,7 +1197,7 @@ DKDBusTypeForUnboxingObject(id object)
   return self;
 }
 
-- (char*) unboxedObjCTypeChar
+- (const char*) unboxedObjCTypeChar
 {
   /*
    * All container types are boxed.
