@@ -1,3 +1,7 @@
+2013-04-12 Niels Grewe <niels.grewe@halbordnung.de>
+	* Source/DKEndpoint.m: Backport r35789: Replace incorrect
+	NSDebugMLog with NSDebugFLog. Reported by Philippe Roussell.
+
 2011-12-20 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* configure.ac: When selecting an Objective-C compiler, prefer the

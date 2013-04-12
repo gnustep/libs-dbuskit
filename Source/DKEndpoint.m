@@ -813,7 +813,7 @@ DKTimeoutAdd(DBusTimeout *timeout, void *data)
 {
   CTX(data);
   NSCAssert(timeout, @"Missing timeout data during D-Bus event handling.");
-  NSDebugMLog(@"Timout added");
+  NSDebugFLog(@"Timout added");
   if (NO == (BOOL)dbus_timeout_get_enabled(timeout))
   {
     return TRUE;
@@ -826,7 +826,7 @@ DKTimeoutRemove(DBusTimeout *timeout, void *data)
 {
   CTX(data);
   NSCAssert(timeout, @"Missing timeout data during D-Bus event handling.");
-  NSDebugMLog(@"Timeout removed");
+  NSDebugFLog(@"Timeout removed");
   ctxPerformOnWorkerThread(@selector(removeTimeout:),timeout);
 }
 
@@ -837,7 +837,7 @@ DKTimeoutToggled(DBusTimeout *timeout, void *data)
    * Note: This is the easy solution, not sure whether we can be smarter about
    * this.
    */
-  NSDebugMLog(@"Timeout toggled");
+  NSDebugFLog(@"Timeout toggled");
   DKTimeoutRemove(timeout, data);
   // DKTimeoutRemove immediately returns, but the ringbuffer perserves the
   // ordering
@@ -849,7 +849,7 @@ DKWatchAdd(DBusWatch *watch, void *data)
 {
   CTX(data);
   NSCAssert(watch, @"Missing watch data during D-Bus event handling.");
-  NSDebugMLog(@"Watch added");
+  NSDebugFLog(@"Watch added");
   if (!dbus_watch_get_enabled(watch))
   {
     return YES;
@@ -862,7 +862,7 @@ DKWatchRemove(DBusWatch *watch, void *data)
 {
   CTX(data);
   NSCAssert(watch, @"Missing watch data during D-Bus event handling.");
-  NSDebugMLog(@"Removed watch");
+  NSDebugFLog(@"Removed watch");
   ctxPerformOnWorkerThread(@selector(removeWatch:),watch);
 }
 
@@ -873,7 +873,7 @@ DKWatchToggled(DBusWatch *watch, void *data)
    * Note: This is the easy solution, not sure whether we can be smarter about
    * this.
    */
-  NSDebugMLog(@"Watch toggled");
+  NSDebugFLog(@"Watch toggled");
   DKWatchRemove(watch, data);
   DKWatchAdd(watch, data);
 }
@@ -881,7 +881,7 @@ DKWatchToggled(DBusWatch *watch, void *data)
 static void
 DKRelease(void *data)
 {
-  NSDebugMLog(@"D-Bus calls release on something!");
+  NSDebugFLog(@"D-Bus calls release on something!");
   [(id)data release];
 }
 
@@ -889,7 +889,7 @@ static void
 DKWakeUp(void *data)
 {
   CTX(data);
-  NSDebugMLog(@"Starting runLoop on D-Bus request");
+  NSDebugFLog(@"Starting runLoop on D-Bus request");
   // If we are woken up, we surely need to dispatch new messages:
   ctxPerformOnWorkerThread(@selector(dispatchForConnection:),NULL);
 }
@@ -901,17 +901,17 @@ DKUpdateDispatchStatus(DBusConnection *conn,
 {
   CTX(data);
   NSCAssert(conn, @"Missing connection data during D-Bus event handling");
-  NSDebugMLog(@"Dispatch status changed to %d", status);
+  NSDebugFLog(@"Dispatch status changed to %d", status);
   switch (status)
   {
     case DBUS_DISPATCH_COMPLETE:
-      NSDebugMLog(@"Dispatch complete");
+      NSDebugFLog(@"Dispatch complete");
       return;
     case DBUS_DISPATCH_NEED_MEMORY:
-      NSDebugMLog(@"Insufficient memory for dispatch, will try again later");
+      NSDebugFLog(@"Insufficient memory for dispatch, will try again later");
       return;
     case DBUS_DISPATCH_DATA_REMAINS:
-      NSDebugMLog(@"Will schedule handling of messages.");
+      NSDebugFLog(@"Will schedule handling of messages.");
   }
   /* FIXME: libdbus has issues unless we synchronise on connection dispatch. */
   if (syncCtxPerformOnWorkerThread(@selector(dispatchForConnection:), conn))
