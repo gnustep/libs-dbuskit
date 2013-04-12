@@ -1,4 +1,14 @@
 2013-04-12 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKArgument.m
+	* Source/DKNotificationCenter.m:
+	Backport r35592: Deal with clang warning about casting SEL to
+	uintptr_t.
+	* Documentation/announce.0.1.1.texi: Draft release announcement.
+	* GNustep.preamble: Bump version.
+
+2013-04-12 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKEndpoint.m: Backport r35789: Replace incorrect
 	NSDebugMLog with NSDebugFLog. Reported by Philippe Roussell.
 

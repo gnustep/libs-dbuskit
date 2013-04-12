@@ -540,7 +540,7 @@
 
 - (NSUInteger)hash
 {
-  return ((NSUInteger)(uintptr_t)observer ^ (uintptr_t)selector);
+  return ((NSUInteger)(uintptr_t)observer ^ [NSStringFromSelector(selector) hash]);
 }
 
 - (BOOL)isEqual: (DKObservation*)other
