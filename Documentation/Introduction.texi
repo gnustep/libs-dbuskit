@@ -205,7 +205,7 @@ expose different disks of a computer at different paths:
 It is worth noting that it is a D-Bus convention to have the root object
 of the service not reside at the root path (``/'') but at one that
 corresponds to the service name with all dots replaced by the path
-separator. Thus you don not access the root object of
+separator. Thus you do not access the root object of
 @emph{org.freedesktop.UDisks} at ``/'' but at ``/org/freedesktop/UDisks''.
 The reason for this is to ensure proper name-spacing if different code
 modules in a single process have registered multiple names on the bus

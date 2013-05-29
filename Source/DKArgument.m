@@ -1570,7 +1570,7 @@ DKDBusTypeForUnboxingObject(id object)
 - (void) setIsDictionary: (BOOL)isDict
 {
 # ifndef NDEBUG
-  GSDebugAllocationRemove(isa, self);
+  GSDebugAllocationRemove(object_getClass(self), self);
 # endif
   if (isDict)
   {
@@ -1584,7 +1584,7 @@ DKDBusTypeForUnboxingObject(id object)
     [self setObjCEquivalent: [NSArray class]];
   }
 #ifndef NDEBUG
-  GSDebugAllocationAdd(isa, self);
+  GSDebugAllocationAdd(object_getClass(self), self);
 #endif
 }
 

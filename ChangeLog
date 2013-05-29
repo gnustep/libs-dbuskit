@@ -1,3 +1,7 @@
+2013-05-29 Niels Grewe <niels.grewe@halbordnung.de>
+	* Source/DKArgument.m: Replace deprecated self->isa access with object_getClass()
+	* Documentation/Introduction.texi: Fix typo
+
 2012-11-11 Niels Grewe <niels.grewe@halbordnung.de>
 	* Source/DKEndpoint.m: Replace incorrect NSDebugMLog with NSDebugFLog.
 	Reported by Philippe Roussell.
