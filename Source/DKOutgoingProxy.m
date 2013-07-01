@@ -23,8 +23,14 @@
 
 #import "DKOutgoingProxy.h"
 #import "DKPort+Private.h"
+#import "DKInterface.h"
+#import "DKMethod.h"
+#import "DKMethodReturn.h"
+
 #import <Foundation/NSLock.h>
 #import <Foundation/NSException.h>
+#import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSInvocation.h>
 #if __OBJC_GC__
 #import <Foundation/NSGarbageCollector.h>
 #endif
@@ -229,9 +235,54 @@
   return [DKPort _DBusDefaultObjectPathVTable];
 }
 
+- (NSInvocation*)_invocationForMethod: (DKMethod*)method
+{
+  SEL selector = NSSelectorFromString([method selectorString]);
+  if (NULL == selector)
+  {
+    return nil;
+  }
+  NSMethodSignature *sig = [object methodSignatureForSelector: selector]; 
+  if (nil == sig)
+  {
+    return nil;
+  }
+  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature: sig];
+  [invocation setTarget: object];
+  [invocation setSelector: selector];
+  return invocation;
+}
+
 - (DBusHandlerResult)handleDBusMessage: (DBusMessage*)message
 {
-  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  NSAssert(NULL != message, @"Message is NULL");
+  const char *iface = dbus_message_get_interface(message);
+  const char *mthod = dbus_message_get_member(message);
+  DKInterface *interface = [[self _interfaces] objectForKey: [NSString stringWithUTF8String: iface]];
+  if (interface == nil)
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  DKMethod *method = [[interface methods] objectForKey: [NSString stringWithUTF8String: mthod]];
+
+  if (method == nil)
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  NSInvocation *inv = [self _invocationForMethod: method];
+  if (nil == inv)
+  {
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  }
+
+  [DKMethodReturn replyToDBusMessage: message
+                            forProxy: self
+                              method: method
+                          invocation: inv]; 
+  
+  return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 - (void)_installClassPermittedMessages
