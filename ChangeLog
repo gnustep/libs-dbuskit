@@ -1,11 +1,20 @@
 2013-07-01 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* configure.ac: Check clang_Cursor_getArgument() since it's missing in earlier libclang versions
+	* configure: Regenerate
+	* ChangeLog: Reformat a few inconsistencies
+
+2013-07-01 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKOutgoingProxy.m: Implement -handleDBusMessage: on the outgoing proxy.
 
 2013-05-29 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKArgument.m: Replace deprecated self->isa access with object_getClass()
 	* Documentation/Introduction.texi: Fix typo
 
 2012-11-11 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKEndpoint.m: Replace incorrect NSDebugMLog with NSDebugFLog.
 	Reported by Philippe Roussell.
 
@@ -16,6 +25,7 @@
 	Deal with clang warning about casting SEL to uintptr_t.
 
 2012-08-22 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* configure.ac: Check for libclang.
 	* configure: Regenerate.
 	* Documentation/install.texi: Document optional libclang
