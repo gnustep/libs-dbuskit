@@ -235,6 +235,38 @@
   return [DKPort _DBusDefaultObjectPathVTable];
 }
 
+- (BOOL)_loadIntrospectionFromFile: (NSString*)path withError: (out NSError**) error
+{
+  NSError *localError = nil;
+  NSData *data = [NSData dataWithContentsOfFile: path options: 0 error: &localError];
+  if (localError)
+  {
+    if (NULL != error)
+    {
+      *error = localError;
+    }
+  return NO;
+
+  NSXMLParser *parser = [[NSXMLParser alloc] initWithData: data];
+  DKIntrospectionParserDelegte *delegate =
+    [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self]; 
+  NS_DURING
+  {
+    [parser parse];
+  }
+  NS_HANDLER
+  {
+    [parser release];
+    [delegate release];
+    [localException raise];
+  }
+  NS_ENDHANDLER
+  [parser release];
+  [delegate release];
+  [self _installAllInterfaces];
+  return YES;
+}
+
 - (NSInvocation*)_invocationForMethod: (DKMethod*)method
 {
   SEL selector = NSSelectorFromString([method selectorString]);
@@ -305,6 +337,14 @@
     [condition unlock];
   }
   */
+  [condition lock];
+  if (DK_CACHE_READY > state)
+  {
+    [self _installAllInterfaces];
+    state = DK_CACHE_READY;
+  }
+  [condition broadcast];
+  [condition unlock];
 }
 
 

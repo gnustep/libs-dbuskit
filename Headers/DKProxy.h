@@ -27,6 +27,9 @@
 @class DKEndpoint, DKInterface, NSCondition, NSLock, NSString, NSMapTable, NSMutableArray, NSMutableDictionary;
 @protocol NSCoding;
 
+
+typedef NSInteger DKProxyState;
+
 /**
  * The DKProxy class is used to send messages to D-Bus objects. Usually, you
  * don't create them yourself but by using the DKPort and NSConnection classes.
@@ -60,6 +63,7 @@
    */
   DKInterface *activeInterface;
 
+  @protected
   /**
    * The lock protecting modifications to the tables.
    */
@@ -74,7 +78,7 @@
   /**
    * Identifies the present state of the proxy.
    */
-  NSInteger state;
+  DKProxyState state;
 }
 
 + (id) proxyWithPort: (DKPort*)aPort

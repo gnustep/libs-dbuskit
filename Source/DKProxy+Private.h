@@ -25,6 +25,20 @@
 #import "DKObjectPathNode.h"
 #import "DKNonAutoInvalidatingPort.h"
 
+
+
+enum
+{
+  DK_NO_TABLES,
+  DK_HAVE_TABLES,
+  DK_HAVE_INTROSPECT,
+  DK_WILL_BUILD_CACHE,
+  DK_BUILDING_CACHE,
+  DK_CACHE_BUILT,
+  DK_CACHE_READY
+};
+
+
 @class DKInterface, DKNotificationCenter, NSXMLNode;
 
 @interface DKProxy (DKProxyPrivate) <DKObjectPathNode>
@@ -39,6 +53,7 @@
                                            absolute: (BOOL)absolutePath;
 - (BOOL)isKindOfClass: (Class)cls;
 - (DKProxy*)proxyParent;
+- (void)_installAllInterfaces;
 @end
 
 @interface DKDBus (DKDBusPrivate)

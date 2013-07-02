@@ -1,3 +1,12 @@
+2013-07-02 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKProxy.h
+	* Source/DKProxy+Private.h
+	* Source/DKProxy.m:
+	Expose some DKProxy internals for subclassing.
+	* Source/DKOutgoingProxy.m: Allow introspection data to be added from a
+	file (not a public API, though)
+
 2013-07-01 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* configure.ac: Check clang_Cursor_getArgument() since it's missing in earlier libclang versions

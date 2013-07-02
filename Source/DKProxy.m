@@ -72,16 +72,6 @@ static IMP getServiceName;
 #define DK_PORT_ENDPOINT getEndpoint(port, getEndpointSelector)
 #define DK_PORT_SERVICE getServiceName(port, getServiceNameSelector)
 
-enum
-{
-  NO_TABLES,
-  HAVE_TABLES,
-  HAVE_INTROSPECT,
-  WILL_BUILD_CACHE,
-  BUILDING_CACHE,
-  CACHE_BUILT,
-  CACHE_READY
-};
 
 @interface DKProxy (DKProxyInternal)
 
@@ -201,7 +191,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   ASSIGN(port, aPort);
   tableLock = [[NSLock alloc] init];
   condition = [[NSCondition alloc] init];
-  state = NO_TABLES;
+  state = DK_NO_TABLES;
   [self _setupTables];
   [self _installIntrospectionMethod];
   return self;
@@ -232,7 +222,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
                              atEndpoint: endpoint];
   tableLock = [[NSLock alloc] init];
   condition = [[NSCondition alloc] init];
-  state = NO_TABLES;
+  state = DK_NO_TABLES;
   [self _setupTables];
   [self _installIntrospectionMethod];
   return self;
@@ -303,7 +293,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
 {
   // Make sure we don't try to build the cache multiple times:
   [condition lock];
-  if (WILL_BUILD_CACHE == state)
+  if (DK_WILL_BUILD_CACHE == state)
   {
     [condition unlock];
 
@@ -351,9 +341,9 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   {
     /* If we don't have a cache yet, we trigger it's generation */
     [condition lock];
-    if (HAVE_INTROSPECT >= state)
+    if (DK_HAVE_INTROSPECT >= state)
     {
-      state = WILL_BUILD_CACHE;
+      state = DK_WILL_BUILD_CACHE;
       [condition unlock];
       [self DBusBuildMethodCache];
     }
@@ -573,7 +563,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   if (doWait)
   {
     // Wait until it is signaled that the cache has been built:
-    while (CACHE_READY != state)
+    while (DK_CACHE_READY != state)
     {
       if (inWorkerThread)
       {
@@ -749,13 +739,13 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
 - (void) _installIntrospectionMethod
 {
   [condition lock];
-  while (HAVE_TABLES != state)
+  while (DK_HAVE_TABLES != state)
   {
     [condition wait];
   }
   [self _addInterface: _DKInterfaceIntrospectable];
 
-  state = HAVE_INTROSPECT;
+  state = DK_HAVE_INTROSPECT;
   [condition broadcast];
   [condition unlock];
 }
@@ -796,7 +786,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   NSEnumerator *ifEnum = nil;
   DKInterface *theIf = nil;
   [condition lock];
-  while (CACHE_BUILT != state)
+  while (DK_CACHE_BUILT != state)
   {
     [condition wait];
   }
@@ -810,7 +800,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   }
   [tableLock unlock];
 
-  state = CACHE_READY;
+  state = DK_CACHE_READY;
   [condition broadcast];
   [condition unlock];
 
@@ -820,10 +810,10 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
 {
   if ((nil == interfaces) || (nil == children))
   {
-    if (NO_TABLES == state)
+    if (DK_NO_TABLES == state)
     {
       [condition lock];
-      if (NO_TABLES != state)
+      if (DK_NO_TABLES != state)
       {
 	[condition unlock];
         return;
@@ -841,7 +831,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
 	children = [NSMutableDictionary new];
       }
       [tableLock unlock];
-      state = HAVE_TABLES;
+      state = DK_HAVE_TABLES;
       [condition broadcast];
       [condition unlock];
     }
@@ -904,11 +894,11 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
 
 
   [condition lock];
-  while (WILL_BUILD_CACHE != state)
+  while (DK_WILL_BUILD_CACHE != state)
   {
     [condition wait];
   }
-  state = BUILDING_CACHE;
+  state = DK_BUILDING_CACHE;
   [condition unlock];
 
   // Get the introspection data, reset ourselves
@@ -919,9 +909,9 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   NS_HANDLER
   {
     [condition lock];
-    if (CACHE_READY != state)
+    if (DK_CACHE_READY != state)
     {
-      state = HAVE_INTROSPECT;
+      state = DK_HAVE_INTROSPECT;
     }
     [delegate release];
     [condition broadcast];
@@ -947,11 +937,11 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
     // Generate the introspection tree:
     [parser parse];
 
-    state = CACHE_BUILT;
+    state = DK_CACHE_BUILT;
     [condition broadcast];
   }
 
-  if (CACHE_BUILT == state)
+  if (DK_CACHE_BUILT == state)
   {
     [condition unlock];
     [self _installAllInterfaces];
@@ -1008,9 +998,9 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   NSArray *attributes = nil;
   /* If we don't have a cache yet, we trigger its generation */
   [condition lock];
-  if ((HAVE_INTROSPECT >= state) && (CACHE_READY != state))
+  if ((DK_HAVE_INTROSPECT >= state) && (DK_CACHE_READY != state))
   {
-    state = WILL_BUILD_CACHE;
+    state = DK_WILL_BUILD_CACHE;
     [condition unlock];
     [self DBusBuildMethodCache];
   }
