@@ -26,11 +26,14 @@
 #import "DKInterface.h"
 #import "DKMethod.h"
 #import "DKMethodReturn.h"
+#import "DKIntrospectionParserDelegate.h"
 
+#import <Foundation/NSData.h>
 #import <Foundation/NSLock.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSInvocation.h>
+#import <Foundation/NSXMLParser.h>
 #if __OBJC_GC__
 #import <Foundation/NSGarbageCollector.h>
 #endif
@@ -235,20 +238,16 @@
   return [DKPort _DBusDefaultObjectPathVTable];
 }
 
-- (BOOL)_loadIntrospectionFromFile: (NSString*)path withError: (out NSError**) error
+- (BOOL)_loadIntrospectionFromFile: (NSString*)path
 {
-  NSError *localError = nil;
-  NSData *data = [NSData dataWithContentsOfFile: path options: 0 error: &localError];
-  if (localError)
+  NSData *data = [[NSData alloc] initWithContentsOfFile: path];
+  if (data == nil)
   {
-    if (NULL != error)
-    {
-      *error = localError;
-    }
-  return NO;
+    return NO;
+  }
 
   NSXMLParser *parser = [[NSXMLParser alloc] initWithData: data];
-  DKIntrospectionParserDelegte *delegate =
+  DKIntrospectionParserDelegate *delegate =
     [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self]; 
   NS_DURING
   {
@@ -256,6 +255,7 @@
   }
   NS_HANDLER
   {
+    [data release];
     [parser release];
     [delegate release];
     [localException raise];

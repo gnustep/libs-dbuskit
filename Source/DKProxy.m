@@ -922,7 +922,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
 
   [condition lock];
 
-  if (BUILDING_CACHE == state)
+  if (DK_BUILDING_CACHE == state)
   {
     // Set up parser and delegate:
     parser = [[NSXMLParser alloc] initWithData: introspectionData];
