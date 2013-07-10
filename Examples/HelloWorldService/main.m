@@ -25,12 +25,19 @@
 #import <DBusKit/DBusKit.h>
 #import <Foundation/Foundation.h>
 
+@interface NSObject (PrivateStuffDoNotUse)
+- (BOOL)_loadIntrospectionFromFile: (NSString*)path;
+- (id) _objectPathNodeAtPath: (NSString*)string;
+@end
+
 int main()
 {
   DKPort *p = (DKPort*)[DKPort port];
   id obj = @"p";
   // WARNING: This is not a public API. Don't use it.
   [p _setObject: obj atPath: @"/org/gnustep/test/p"];
+  id pProxy = [p _objectPathNodeAtPath: @"/org/gnustep/test/p"];
+  [pProxy _loadIntrospectionFromFile: @"test.xml"];
   while (1)
   {
     [[NSRunLoop currentRunLoop] run];

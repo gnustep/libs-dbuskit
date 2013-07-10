@@ -97,6 +97,10 @@
 
 - (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
                                            absolute: (BOOL)absolutePath;
+
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                        forChildren: (BOOL)includeChildIntrospection
+                                           absolute: (BOOL)absolutePath;
 @end
 
 

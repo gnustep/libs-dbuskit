@@ -30,10 +30,15 @@
 
 #import <Foundation/NSData.h>
 #import <Foundation/NSLock.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSXMLParser.h>
+#import <Foundation/NSXMLNode.h>
+
+#import <GNUstepBase/NSDebug+GNUstepBase.h>
+
 #if __OBJC_GC__
 #import <Foundation/NSGarbageCollector.h>
 #endif
@@ -249,6 +254,7 @@
   NSXMLParser *parser = [[NSXMLParser alloc] initWithData: data];
   DKIntrospectionParserDelegate *delegate =
     [[DKIntrospectionParserDelegate alloc] initWithParentForNodes: self]; 
+  [parser setDelegate: delegate];
   NS_DURING
   {
     [parser parse];
@@ -263,8 +269,18 @@
   NS_ENDHANDLER
   [parser release];
   [delegate release];
+  state = DK_CACHE_BUILT;
   [self _installAllInterfaces];
   return YES;
+}
+
+- (NSInvocation*)_invocationForIntrospect: (DKMethod*)method
+{
+  NSInvocation *inv = 
+    [NSInvocation invocationWithMethodSignature: [method methodSignature]];
+  [inv setTarget: self];
+  [inv setSelector: @selector(Introspect)]; 
+  return inv;
 }
 
 - (NSInvocation*)_invocationForMethod: (DKMethod*)method
@@ -288,6 +304,12 @@
 - (DBusHandlerResult)handleDBusMessage: (DBusMessage*)message
 {
   NSAssert(NULL != message, @"Message is NULL");
+  BOOL isIntrospect = NO;  
+  if (dbus_message_has_interface(message, DBUS_INTERFACE_INTROSPECTABLE) 
+    || dbus_message_has_member(message, "Introspect"))
+  {
+    isIntrospect = YES;
+  }
   const char *iface = dbus_message_get_interface(message);
   const char *mthod = dbus_message_get_member(message);
   DKInterface *interface = [[self _interfaces] objectForKey: [NSString stringWithUTF8String: iface]];
@@ -303,7 +325,15 @@
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
   }
 
-  NSInvocation *inv = [self _invocationForMethod: method];
+  NSInvocation *inv = nil;
+  if (isIntrospect)
+  {
+    inv = [self _invocationForIntrospect: method]; 
+  }
+  else
+  {
+    inv = [self _invocationForMethod: method];
+  }
   if (nil == inv)
   {
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -337,23 +367,90 @@
     [condition unlock];
   }
   */
-  [condition lock];
-  if (DK_CACHE_READY > state)
+  if (DK_CACHE_BUILT > state)
   {
+    state = DK_CACHE_BUILT; 
     [self _installAllInterfaces];
-    state = DK_CACHE_READY;
   }
-  [condition broadcast];
-  [condition unlock];
 }
-
 
 - (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
                                         forChildren: (BOOL)includeChildIntrospection
 					   absolute: (BOOL)absolutePath
 {
-  //TODO: Implement
-  return nil;
+  NSArray *attributes = nil;
+  NSMutableArray *childNodes = [NSMutableArray array];
+  if ((0 < [[self _name] length]) || absolutePath)
+  {
+    NSString *theName = [self _name];
+    if (absolutePath)
+    {
+      theName = [self _path];
+    }
+     attributes = [NSArray arrayWithObject: [NSXMLNode attributeWithName: @"name"
+                                                             stringValue: theName]];
+  }
+
+  if (YES == includeIntrospection)
+  {
+    if (0 != [[self _interfaces] count])
+    {
+      NSEnumerator *ifEnum = [[self _interfaces] objectEnumerator];
+      DKInterface *theIf = nil;
+      while (nil != (theIf = [ifEnum nextObject]))
+      {
+	NSXMLNode *ifNode = [theIf XMLNode];
+	if (nil != ifNode)
+	{
+	  [childNodes addObject: ifNode];
+	}
+      }
+    }
+
+    if (0 != [[self _children] count])
+    {
+      NSEnumerator *nodeEnum = [[self _children] objectEnumerator];
+      DKObjectPathNode *child = nil;
+      while (nil != (child = [nodeEnum nextObject]))
+      {
+	// For children, we no longer differentiate whether they should introspect
+	// themselves or their own children, also we don't want absolute paths
+	// in child names
+	NSXMLNode *node = [child XMLNodeIncludingCompleteIntrospection: includeChildIntrospection
+	                                                   forChildren: includeChildIntrospection
+	                                                      absolute: NO];
+	if (nil != node)
+	{
+	  [childNodes addObject: node];
+	}
+      }
+    }
+  }
+  return [NSXMLNode elementWithName: @"node"
+                           children: childNodes
+                         attributes: attributes];
+}
+
+- (NSXMLNode*)XMLNodeIncludingCompleteIntrospection: (BOOL)includeIntrospection
+                                           absolute: (BOOL)absolutePath
+{
+  return [self XMLNodeIncludingCompleteIntrospection: YES
+                                         forChildren: includeIntrospection
+                                            absolute: absolutePath];
+
+}
+
+- (NSXMLNode*)XMLNode
+{
+        return [self XMLNodeIncludingCompleteIntrospection: NO
+                                                  absolute: YES];
+}
+
+- (NSString*)Introspect
+{
+  NSString *introspectionData = [NSString stringWithFormat: @"%@\n%@", kDKDBusDocType, [[self XMLNode] XMLString]];
+  NSDebugMLog(@"Generated introspection data:\n%@", introspectionData);
+  return introspectionData;
 }
 
 

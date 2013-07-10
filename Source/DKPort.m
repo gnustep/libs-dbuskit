@@ -688,6 +688,7 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
 	lastNode = [[[DKRootObjectPathNode alloc] initWithPort: self] autorelease];
 	rootNode = lastNode;
 	proxy = lastNode;
+        NSDebugMLog(@"Adding root object path node: %@", proxy);
       }
 
       if ((i + 1) == count)
@@ -695,12 +696,14 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
 	proxy = [DKOutgoingProxy proxyWithName: component
 	                                parent: lastNode
 	                                object: object];
+        NSDebugMLog(@"Adding proxy %@ at path %@", proxy, [proxy _path]);
 	NSMapInsert(proxyMap, object, proxy);
       }
       else if (nil == proxy)
       {
 	proxy = [[DKObjectPathNode alloc] initWithName: component
                                                 parent: lastNode];
+        NSDebugMLog(@"Inserting intermediate object path node at %@.", [proxy _path]);
       }
       thisNode = proxy;
       // Special case for the root, so it doesn't end up being its own child.
@@ -735,7 +738,7 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
                atPath: (NSString*)path
             forObject: (id)object
 {
-
+  NSDebugMLog(@"Replacing proxy %@ with a new proxy for %@ at %@", oldProxy, object, path);
   NSDictionary *oldChildren = [oldProxy _children];
   id<DKExportableObjectPathNode> oldParent = nil;
   id<DKExportableObjectPathNode> newProxy = nil;

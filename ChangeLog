@@ -1,3 +1,12 @@
+2013-07-10 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKOutgoingProxy.m: Add missing include. (Reported by Philippe Roussell)
+	Implement some stuff missing for proper D-Bus facing objects.
+	* Source/DKObjectPathNode.h: Expose another method for DKOutgoingProxy to use.
+	* Source/DKPort.m: Add some debugging for object path name handling.
+	* Examples/HelloWorldService/main.m: Tweak export.
+	* Examples/HelloWorldService/test.xml: Add test interface. 
+
 2013-07-02 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Headers/DKProxy.h
