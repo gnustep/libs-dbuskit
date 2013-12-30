@@ -899,11 +899,15 @@ DKDBusTypeForUnboxingObject(id object)
       {
         DKProxy *rootProxy = [self proxyParent];
         /*
-         * Handle remote objects:
-         * We need to make sure that the paths are from the same proxy, because
-         * that is the widest scope in which they are valid.
+         * Handle remote objects. We need a way to make sure that their 
+         * scope is well defined. This means that they are either
+         * references to the same remote object that is the owner of the
+         * argument (so they are local to the receiver of the message)
+         * or the value is an outgoing proxy (so they are local to the
+         * sender of the message, and the remote end will be able to 
+         * interpret the path correctly) 
          */
-        if ([rootProxy hasSameScopeAs: value])
+        if (([rootProxy hasSameScopeAs: value]) || ([value _isLocal]))
         {
           *buffer = (uintptr_t)(void*)[[value _path] UTF8String];
           return YES;
