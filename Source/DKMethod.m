@@ -674,14 +674,13 @@
      * Proceed to the next value in the message, but raise an exception if
      * we are missing some arguments.
      */
-    if (NO == (BOOL)dbus_message_iter_next(iter))
+    if ((++index < (numArgs + 2)) && (NO == (BOOL)dbus_message_iter_next(iter)))
     {
       [NSException raise: @"DKMethodUnmarshallingException"
                   format: @"D-Bus message too short when unmarshalling arguments for invocation of '%@' on '%@'.",
         NSStringFromSelector([inv selector]),
         [inv target]];
     }
-    index++;
   }
 }
 

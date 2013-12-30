@@ -39,7 +39,7 @@
 {
 
   DBusMessageIter iter;
-  dbus_message_iter_init_append(original, &iter);
+  dbus_message_iter_init(original, &iter);
   NSDebugMLog(@"Deserializing arguments from method call");
   NS_DURING
   {
