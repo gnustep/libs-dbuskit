@@ -23,6 +23,7 @@
    */
 
 #import <Foundation/NSArray.h>
+#import <Foundation/NSData.h>
 #import <Foundation/NSDebug.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
@@ -47,6 +48,8 @@
 #import "DKOutgoingProxy.h"
 #import "DKArgument.h"
 #import "DKBoxingUtils.h"
+
+#import "DBusKit/DKStruct.h"
 
 #define INCLUDE_RUNTIME_H
 #include "config.h"
@@ -1660,31 +1663,54 @@ DKDBusTypeForUnboxingObject(id object)
   {
     object = [NSArray array];
   }
-  NSAssert1([object respondsToSelector: @selector(objectEnumerator)],
-    @"Cannot enumerate contents of %@ when creating D-Bus array.",
-    object);
+  if (DBUS_TYPE_BYTE != [theChild DBusType])
+    {
+      NSAssert1([object respondsToSelector: @selector(objectEnumerator)],
+        @"Cannot enumerate contents of %@ when creating D-Bus array.",
+        object);
+    }
+  else
+   {
+     NSAssert1(([object respondsToSelector: @selector(objectEnumerator)] || 
+       [object isKindOfClass: [NSData class]]),
+       @"Cannot enumerate contents of %@ when creating D-Bus array.",
+       object
+     );
+   }
+
 
   DK_ITER_OPEN_CONTAINER(iter, DBUS_TYPE_ARRAY, [[theChild DBusTypeSignature] UTF8String], &subIter);
-
-  elementEnum = [object objectEnumerator];
   NS_DURING
-  {
-    while (nil != (element = [elementEnum nextObject]))
     {
-      [theChild marshallObject: element
-                  intoIterator: &subIter];
+      if ([object respondsToSelector: @selector(objectEnumerator)])
+	{
+	  elementEnum = [object objectEnumerator];
+	  while (nil != (element = [elementEnum nextObject]))
+	    {
+	      [theChild marshallObject: element
+			  intoIterator: &subIter];
 
+	    }
+	}
+    else if ([object isKindOfClass: [NSData class]])
+      {
+	NSUInteger len = [object length];
+	const void *bytes = [object bytes];
+	NSUInteger pos = 0;
+	for (pos = 0; pos < len; pos++)
+	  {
+	     DK_ITER_APPEND(&subIter, DBUS_TYPE_BYTE, bytes++);
+	  }
+      }
     }
-  }
   NS_HANDLER
-  {
-    // We are already screwed and don't care whether
-    // dbus_message_iter_close_container() returns OOM.
-    dbus_message_iter_close_container(iter, &subIter);
-    [localException raise];
-  }
+    {
+      // We are already screwed and don't care whether
+      // dbus_message_iter_close_container() returns OOM.
+      dbus_message_iter_close_container(iter, &subIter);
+      [localException raise];
+    }
   NS_ENDHANDLER
-
   DK_ITER_CLOSE_CONTAINER(iter, &subIter);
 }
 @end
@@ -1833,7 +1859,7 @@ DKDBusTypeForUnboxingObject(id object)
 @implementation DKStructTypeArgument
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
-  NSMutableArray *theArray = [NSMutableArray new];
+  DKMutableStructArray *theArray = [DKMutableStructArray new];
   NSArray *returnArray = nil;
   NSNull *theNull = [NSNull null];
   NSUInteger index = 0;
@@ -1916,34 +1942,54 @@ DKDBusTypeForUnboxingObject(id object)
  * keys/values. This can only be a proper signature if all elements are of the
  * same type. Otherwise, the variant type will be returned.
  */
-- (NSString*)validSubSignatureOrVariantForEnumerator: (NSEnumerator*)theEnum
+- (NSString*)subSignatureForEnumerator: (NSEnumerator*)theEnum
+                             forStruct: (BOOL)isStruct
 {
   id element = [theEnum nextObject];
   NSString *thisSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
   NSString *nextSig = thisSig;
-
+  NSMutableString *allTypes = [NSMutableString stringWithString: thisSig];
   // For homogenous collection, we can get the proper signature, for non-homogenous
-  // ones, we need to pass down the variant type.
+  // ones, we need to pass down the variant type if it's not a signature for a struct.
   BOOL isHomogenous = YES;
+  if (nil == element)
+    {
+      thisSig = @"v";
+    }
   while ((nil != (element = [theEnum nextObject]))
     && (YES == isHomogenous))
   {
     thisSig = nextSig;
     nextSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
-    isHomogenous = [thisSig isEqualToString: nextSig];
+    [allTypes appendString: nextSig];
+    if (isStruct == NO)
+      {
+        isHomogenous = [thisSig isEqualToString: nextSig];
+      }
   }
 
-  if (isHomogenous)
-  {
-    return thisSig;
-  }
-  else
-  {
-    return @"v";
-  }
+  if (NO == isStruct)
+    {
+      if (isHomogenous)
+      {
+	return thisSig;
+      }
+      else
+      {
+	return @"v";
+      }
+   }
+ else
+   {
+     return allTypes;
+   }
 
 }
 
+- (NSString*)validSubSignatureOrVariantForEnumerator: (NSEnumerator*)theEnum
+{
+  return [self subSignatureForEnumerator: theEnum forStruct: NO];
+}
 - (DKArgument*) DKArgumentWithObject: (id)object
 {
   if (([object respondsToSelector: @selector(keyEnumerator)])
@@ -1972,8 +2018,19 @@ DKDBusTypeForUnboxingObject(id object)
   else if ([object respondsToSelector: @selector(objectEnumerator)])
   {
     NSEnumerator *theEnum = [object objectEnumerator];
-    NSString *subSig = [self validSubSignatureOrVariantForEnumerator: theEnum];
-    return [[[DKArgument alloc] initWithDBusSignature: [[@"a" stringByAppendingString: subSig] UTF8String]
+    NSString *signature = nil;
+    if ([object respondsToSelector: @selector(isDBusStruct)] 
+      && [object isDBusStruct])
+      {
+        NSString *subSig = [self subSignatureForEnumerator: theEnum forStruct: YES];
+        signature = [NSString stringWithFormat: @"(%@)", subSig];
+      }
+    else
+      {
+        NSString *subSig = [self validSubSignatureOrVariantForEnumerator: theEnum];
+        signature = [NSString stringWithFormat: @"a%@", subSig];
+      }
+    return [[[DKArgument alloc] initWithDBusSignature: [signature UTF8String]
                                                  name: nil
                                                parent: self] autorelease];
   }
@@ -1986,6 +2043,13 @@ DKDBusTypeForUnboxingObject(id object)
                                                    name: nil
                                                  parent: self] autorelease];
     }
+  }
+  else if ([object isKindOfClass: [NSData class]])
+  {
+    return [[[DKArgument alloc] initWithDBusSignature: "ay"
+                                                 name: nil
+                                               parent: self] autorelease];
+    
   }
   else
   {

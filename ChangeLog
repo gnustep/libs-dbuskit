@@ -1,3 +1,17 @@
+2014-01-01 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKStruct.h
+	* Headers/DBusKit.h
+	* Source/DKStruct.m:
+	Helper class for structure-like arrays. This is needed 
+	only for variant typed arguments because these don't
+	carry the introspection information that lets us decide
+	whether something is an array or a D-Bus structure
+	* Source/DKArgument.m:
+	Support explicit structure typed arguments and start
+	working on support for converting from NSData to D-Bus
+	byte arrays.
+
 2013-12-30 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKMethod.m 

@@ -19,6 +19,7 @@ DBusKit_HEADER_FILES = \
 		  DKPort.h \
 		  DKPortNameServer.h \
                   DKProxy.h \
+		  DKStruct.h \
                   NSConnection+DBus.h
 #
 # Class files
@@ -45,6 +46,7 @@ DBusKit_OBJC_FILES = \
 	DKPropertyMethod.m \
         DKProxy.m \
 	DKSignal.m \
+	DKStruct.m \
 	NSConnection+DBus.m
 
 
