@@ -1,0 +1,12 @@
+{
+  NSExecutable = "GlobalMenu";
+  NSPrincipalClass = "GlobalMenuTheme";
+  GSThemeAuthors = (
+	"Niels Grewe",
+  );
+  GSThemeDetails = "Theme that enables the global Ubuntu app menu";
+  GSThemeDomain = {
+	NSMenuInterfaceStyle = NSWindows95InterfaceStyle;
+	GSSuppressAppIcon = YES;
+  };
+}
