@@ -1620,17 +1620,73 @@ DKDBusTypeForUnboxingObject(id object)
     @"Type mismatch between D-Bus message and introspection data.");
 }
 
+- (NSData*)dataFromSubIter: (DBusMessageIter*)iter
+{
+  uint8_t bytes[128];
+  NSMutableData *data = [NSMutableData new];
+  NSData *returnData = nil;
+  NSUInteger idx = 0;
+  do
+  {
+    if (0 == dbus_message_iter_get_arg_type(iter))
+    {
+      // If we opened an empty iterator, we just break from the loop
+      break;
+    }
+    else if (DBUS_TYPE_BYTE != dbus_message_iter_get_arg_type(iter))
+    {
+      //Very bad, should never happen, but it would trash the stack
+      // if it did, so we protect against it.
+      [data release];
+      [NSException raise: @"DKInternalInconsistencyException"
+                  format: @"Mistyped array iterator"];
+    }
+    NSUInteger offset = idx++ % 128;
+    dbus_message_iter_get_basic(iter, (void*)(&bytes[0] + offset));
+    // We filled the last byte of the on stack buffer, so we 
+    if (127 == offset)
+      {
+        [data appendBytes: &bytes[0] length: 128];
+      }
+  } while (dbus_message_iter_next(iter));
+  // We dropped out of the loop after we incremented the running idx
+  // so idx % 128 will now be at offset + 1, which is the length we
+  // used off of our on stack buffer
+  NSUInteger len = idx % 128;
+  if (0 != len)
+    {
+      [data appendBytes: &bytes[0] length: len];
+    }
+  returnData = [NSData dataWithData: data];
+  [data release];
+  return data;
+}
+
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter
 {
   DKArgument *theChild = [self elementTypeArgument];
   DBusMessageIter subIter;
-  NSMutableArray *theArray = [NSMutableArray new];
+  NSString *className = [self annotationValueForKey: @"org.gnustep.objc.class"];
+  BOOL returnAsNSData = NO;
+  // Check whether we are decoding a byte array that has been anotated as being
+  // an NSData instance
+  if ((DBUS_TYPE_BYTE == [theChild DBusType]) &&
+    ([NSClassFromString(className) isSubclassOfClass: [NSData class]]))
+   {
+     returnAsNSData = YES;
+   }
+  NSMutableArray *theArray = (returnAsNSData) ? nil : [NSMutableArray new];
   NSArray *returnArray = nil;
   NSNull *theNull = [NSNull null];
 
   [self assertSaneIterator: iter];
 
   dbus_message_iter_recurse(iter, &subIter);
+  if (returnAsNSData)
+    {
+      return [self dataFromSubIter: &subIter];
+    }
+
   do
   {
     id obj = nil;
