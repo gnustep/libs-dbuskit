@@ -247,7 +247,7 @@ If registered as an observer this way, @code{myObject} would only
 receive a notification if a new application took ownership of the name
 @emph{org.gnustep.TextEditor}. 
 
-When delivering annotification to the observer, the notification center
+When delivering a notification to the observer, the notification center
 will create a @code{NSNotification} with a userInfo dictionary that
 follows a specific format to allow the receiver to process the
 notification:

@@ -1,3 +1,9 @@
+2014-01-05 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Bundles/DBusMenu/DKMenuRegistry.m:
+	Use the standard -windowDevice: method instead of
+	the custom one.
+
 2014-01-04 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKArgument.m: Decode byte arrays as NSData
