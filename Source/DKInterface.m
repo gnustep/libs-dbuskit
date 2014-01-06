@@ -307,7 +307,7 @@
 
   if (NULL == selectorString)
   {
-    NSWarnMLog(@"Cannot register selector with empty name for method %@");
+    NSWarnMLog(@"Cannot register selector with empty name for method %@", aMethod);
     return;
   }
 

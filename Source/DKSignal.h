@@ -68,6 +68,24 @@
  */
 - (NSDictionary*)userInfoFromIterator: (DBusMessageIter*)iter;
 
+
+/**
+ * Marshalls the arguments from an NSNotification's userInfo dictionary into
+ * a libdbus iterator. The algorithm for resolving the values is as follows:
+ *
+ * 1. If an argument has an attached org.gnustep.openstep.notification.key
+ *    annotation, get the value for that key.
+ * 2. If the value is nil, try the argN key of the dictionary, where argN
+ *    is the position of the argument in the introspection graph
+ * 3. Marshall the value into the iterator.
+ *
+ * As a consequence, named arguments take precedence over positional ones,
+ * and absence is interpreted as a null value, which may cause an exception
+ * for some data types (e.g. object paths)
+ */
+- (void)marshallUserInfo: (NSDictionary*)userInfo
+            intoIterator: (DBusMessageIter*)iter;
+
 /**
  * Returns YES if the signal is a stub signal created by the notification
  * center.

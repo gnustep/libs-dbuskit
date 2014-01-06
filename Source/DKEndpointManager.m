@@ -142,7 +142,7 @@ if (NO == DKRingEmpty)\
   __sync_fetch_and_add(&producerCounter, 1);\
   [producerLock unlock];\
   NSDebugMLog(@"Inserting into ringbuffer (remaining capacity: %lu).",\
-    DKRingSpace);\
+    (unsigned long)DKRingSpace);\
 } while (0)
 
 
@@ -152,14 +152,14 @@ if (NO == DKRingEmpty)\
 #define DKRingRemove(x) do {\
   if (NO == DKRingEmpty)\
   {\
-    NSDebugMLog(@"Removing element at %lu from ring buffer", DKMaskIndex(consumerCounter));\
+    NSDebugMLog(@"Removing element at %lu from ring buffer", (unsigned long)DKMaskIndex(consumerCounter));\
     x = ringBuffer[DKMaskIndex(consumerCounter)];\
     ringBuffer[DKMaskIndex(consumerCounter)] = (DKRingBufferElement){nil, NULL, nil, NULL};\
     [x.target autorelease];\
     __sync_fetch_and_add(&consumerCounter, 1);\
   }\
   NSDebugMLog(@"(new capacity: %lu).",\
-    DKRingSpace);\
+    (unsigned long)DKRingSpace);\
 } while (0)
 
 @implementation DKEndpointManager

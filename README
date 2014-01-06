@@ -35,8 +35,8 @@ improvements you have made freely available. You should read the
 COPYING file in the root directory of the framework distribution for
 more information. The file `Source/type_encoding_cases.h' is originally
 part of the GNUstep Objective-C runtime and licensed under the MIT
-license. All other files in the `Source', `Headers', and `Tests'
-directories are covered under the LGPL.
+license. All other files in the `Bundles', `Source', `Headers', and
+`Tests' directories are covered under the LGPL.
 
    The associated tools and examples are covered under the GNU Public
 License. This means if you make changes to these programs, you cannot
@@ -48,7 +48,7 @@ GPL.
    The documentation is, unless noted otherwise, licensed under the GNU
 Free Documentation License (with no Invariant Sections or Cover Texts).
 
-   Copyright (C) 2010 Free Software Foundation
+   Copyright (C) 2010-2014 Free Software Foundation
 
    Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

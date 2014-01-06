@@ -1,3 +1,14 @@
+2014-01-06 Niels Grewe <niels.grewe@halbordnung.de>
+	* README: Regenerate
+	* Source/DKEndpointManager.m
+	* Source/DKInterface.m:
+	Format string safety improvements.
+	* Source/DKSignal.h
+	* Source/DKSignal.m:
+	Add method to marshall the contents of a notification's 
+	user info dictionary into D-Bus wire format.
+
+
 2014-01-05 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Bundles/DBusMenu/DKMenuRegistry.m:

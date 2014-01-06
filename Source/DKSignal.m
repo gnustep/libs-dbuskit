@@ -168,6 +168,35 @@
   return userInfo;
 }
 
+- (void)marshallUserInfo: (NSDictionary*)userInfo
+            intoIterator: (DBusMessageIter*)iter
+{
+  NSUInteger numArgs = [args count];
+  NSUInteger index = 0;
+  while (index < (numArgs))
+  {
+    NSString *key = [NSString stringWithFormat: @"arg%lu", index];
+    DKArgument *arg = (DKArgument*)[args objectAtIndex: index];
+    NSString *annotatedKey = [arg annotationValueForKey: @"org.gnustep.openstep.notification.key"];
+
+    id value = nil;
+    if (nil != annotatedKey)
+      {
+        value = [userInfo objectForKey: annotatedKey];
+      }
+  
+    if (nil == value)
+     {
+       // second try, with the argN key
+       value = [userInfo objectForKey: key];
+     }
+    [arg marshallObject: value
+           intoIterator: iter];
+    index++;
+  }
+}
+
+
 - (NSXMLNode*)XMLNode
 {
   NSXMLNode *nameAttribute = [NSXMLNode attributeWithName: @"name"
