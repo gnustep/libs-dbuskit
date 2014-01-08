@@ -398,7 +398,7 @@
    */
 
   // Initial type string containing self and _cmd.
-  NSMutableString *typeString = [[NSMutableString alloc] initWithFormat: @"@0:%d", sizeof(id)];
+  NSMutableString *typeString = [[NSMutableString alloc] initWithFormat: @"@0:%lu", (unsigned long)sizeof(id)];
   NSUInteger offset = sizeof(id) + sizeof(SEL);
   NSString *returnValue = nil;
   NSEnumerator *en = [inArgs objectEnumerator];
@@ -416,7 +416,7 @@
       typeChar = [arg unboxedObjCTypeChar];
     }
 
-    [typeString appendFormat: @"%s%d", typeChar, offset];
+    [typeString appendFormat: @"%s%lu", typeChar, (unsigned long)offset];
 
     if (doBox)
     {
@@ -428,8 +428,8 @@
     }
   }
 
-  returnValue = [NSString stringWithFormat: @"%s%d%@", [self returnTypeBoxed: doBox],
-    offset,
+  returnValue = [NSString stringWithFormat: @"%s%lu%@", [self returnTypeBoxed: doBox],
+    (unsigned long)offset,
     typeString];
   [typeString release];
   NSDebugMLog(@"Generated Obj-C type string: %@", returnValue);

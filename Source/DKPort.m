@@ -657,7 +657,7 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
     }
     dbus_error_free(&err);
     [NSException raise: exceptionName
-                format: message];
+                format: @"%@", message];
   }
 }
 

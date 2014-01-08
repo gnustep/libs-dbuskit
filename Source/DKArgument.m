@@ -1659,7 +1659,7 @@ DKDBusTypeForUnboxingObject(id object)
     }
   returnData = [NSData dataWithData: data];
   [data release];
-  return data;
+  return returnData;
 }
 
 -(id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter

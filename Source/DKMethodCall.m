@@ -172,7 +172,7 @@
     || (msgType == DBUS_MESSAGE_TYPE_ERROR)))
   {
     [NSException raise: @"DKDBusMethodReplyException"
-                format: @"Invalid message type (%ld) in D-Bus reply", msgType];
+                format: @"Invalid message type (%ld) in D-Bus reply", (long)msgType];
   }
 
   // Handle the error case:

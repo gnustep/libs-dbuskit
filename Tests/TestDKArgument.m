@@ -650,5 +650,31 @@ static NSDictionary *basicSigsAndClasses;
   [two release];
 }
 
-
+- (void)testNSDataArgument
+{
+  uint32_t fourbyte = 0xdeadbeef;
+  NSData *data = [[NSData alloc] initWithBytes: (void*)&fourbyte length: 4];
+  DKArgument *dataArg  = [[DKArgument alloc] initWithDBusSignature: "ay"
+                                                              name: nil
+                                                            parent: nil];
+  [dataArg setAnnotationValue: @"NSData"
+                       forKey: @"org.gnustep.objc.class"];
+  DBusMessage *theMessage = NULL;
+  theMessage = dbus_message_new_method_call("org.gnustep.dummy",
+    "/",
+    "org.gnustep.dummy",
+    "Dummy");
+  DBusMessageIter appendIter;
+  dbus_message_iter_init_append(theMessage, &appendIter);
+  [dataArg marshallObject: data intoIterator: &appendIter];
+  DBusMessageIter readIter;
+  dbus_message_iter_init(theMessage, &readIter);
+  NSData *result = [dataArg unmarshalledObjectFromIterator: &readIter];
+  uint32_t outFourbyte = 0;
+  [result getBytes: (void*)&outFourbyte length: 4];
+  UKIntsEqual(fourbyte, outFourbyte);
+  dbus_message_unref(theMessage);
+  [data release];
+  [dataArg release];
+}
 @end

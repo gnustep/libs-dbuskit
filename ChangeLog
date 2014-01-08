@@ -1,3 +1,16 @@
+2014-01-08 Niels Grewe <niels.grewe@halbordnung.de>
+	* Source/DKMethodCall.m
+	* Source/DKMethod.m
+	* Source/DKMessage.m
+	* Source/DKPropertyMethod.m
+	* Source/DKPort.m:
+	String format safety improvements.
+	* Source/DKArgument.m: Fix bug in NSData unmarshalling.
+	* Tests/TestDKArgument.m: Testcase for NSData boxing/unboxing
+	of byte arrays.
+	* Tests/TestDKProxy.m:
+	Tweak system port test case.
+
 2014-01-06 Niels Grewe <niels.grewe@halbordnung.de>
 	* README: Regenerate
 	* Source/DKEndpointManager.m

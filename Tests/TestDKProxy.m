@@ -225,11 +225,11 @@
   NSConnection *conn = nil;
   id aProxy = nil;
   id returnValue = nil;
-  NSWarnMLog(@"This test is an expected failure if the org.freedesktop.Hal service on the system message bus is not available!");
+  NSWarnMLog(@"This test is an expected failure if the system message bus is not available!");
   conn = [NSConnection connectionWithReceivePort: [DKPort systemBusPort]
-                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.Hal"
+                                        sendPort: [[[DKPort alloc] initWithRemote: @"org.freedesktop.DBus"
                                                                             onBus: DKDBusSystemBus] autorelease]];
-  aProxy = [conn proxyAtPath: @"/org/freedesktop/Hal"];
+  aProxy = [conn proxyAtPath: @"/org/freedesktop/DBus"];
 
   UKDoesNotRaiseException(returnValue = [aProxy Introspect]);
 

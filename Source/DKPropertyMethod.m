@@ -136,9 +136,9 @@
 
 - (const char*)objCTypesBoxed: (BOOL)doBox
 {
-  return [[NSString stringWithFormat: @"%s%d@0:%d", [self returnTypeBoxed: doBox],
-    (sizeof(id) + sizeof(SEL)),
-    sizeof(id)] UTF8String];
+  return [[NSString stringWithFormat: @"%s%ld@0:%ld", [self returnTypeBoxed: doBox],
+    (long)(sizeof(id) + sizeof(SEL)),
+    (long)sizeof(id)] UTF8String];
 }
 
 - (BOOL) isValidForMethodSignature: (NSMethodSignature*)aSignature
@@ -360,11 +360,11 @@
     valueType = [valueArgument unboxedObjCTypeChar];
   }
 
-  return [[NSString stringWithFormat: @"%s%d@0:%d%s%d", @encode(void),
-    ((sizeof(id) + sizeof(SEL)) + valueSize),
-    sizeof(id),
+  return [[NSString stringWithFormat: @"%s%ld@0:%ld%s%ld", @encode(void),
+    (long)((sizeof(id) + sizeof(SEL)) + valueSize),
+    (long)sizeof(id),
     valueType,
-    (sizeof(id) + sizeof(SEL))] UTF8String];
+    (long)(sizeof(id) + sizeof(SEL))] UTF8String];
 }
 
 - (BOOL) isValidForMethodSignature: (NSMethodSignature*)aSignature
