@@ -1,4 +1,11 @@
+2014-01-09 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Examples/GlobalMenu/GlobalMenuTheme.m:
+	Fall back to in-window menus if the menu server is not
+	available.	
+
 2014-01-08 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKMethodCall.m
 	* Source/DKMethod.m
 	* Source/DKMessage.m
@@ -12,6 +19,7 @@
 	Tweak system port test case.
 
 2014-01-06 Niels Grewe <niels.grewe@halbordnung.de>
+	
 	* README: Regenerate
 	* Source/DKEndpointManager.m
 	* Source/DKInterface.m:

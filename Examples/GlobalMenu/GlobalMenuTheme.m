@@ -49,8 +49,15 @@ static Class _menuRegistryClass;
 
 - (void)setMenu: (NSMenu*)m forWindow: (NSWindow*)w
 {
-  [menuRegistry setMenu: m forWindow: w];
-  //[super setMenu: m forWindow: w];
+  if (nil != menuRegistry)
+    {
+      [menuRegistry setMenu: m forWindow: w];
+    }
+  else
+    {
+      // Get normal in-window menus when the menu server is unavailable
+      [super setMenu: m forWindow: w];
+    }
 }
 
 @end
