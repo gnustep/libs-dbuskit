@@ -27,6 +27,7 @@
 
 #import "config.h"
 
+#import <Foundation/NSData.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSFileHandle.h>
@@ -621,6 +622,7 @@ DKDBusTypeSignatureForCXType(CXType ty)
     // 1 < 1 : NSArray
     // 1 < 2 : NSDictionary
     // 1 < 3 : NSFileHandle
+    // 1 < 4 : NSData
     char field = 0;
 
     // Prefetch class pointers
@@ -628,7 +630,7 @@ DKDBusTypeSignatureForCXType(CXType ty)
     Class array = [NSArray class];
     Class dict = [NSDictionary class];
     Class fd = [NSFileHandle class];
-
+    Class data = [NSData class];
     // Check whether theClass inherits from one of those:
     while ((theClass != Nil) && (0 == field))
     {
@@ -647,6 +649,10 @@ DKDBusTypeSignatureForCXType(CXType ty)
       else if (fd == theClass)
       {
 	field = 1 < 3;
+      }
+      else if (data == theClass)
+      {
+        field = 1 < 4;
       }
       else
       {
@@ -684,6 +690,9 @@ DKDBusTypeSignatureForCXType(CXType ty)
       case 8:
 	DBusType = DBUS_TYPE_UNIX_FD;
 	break;
+      case 16:
+        // NSData is converted to byte arrays on the bus
+	return @"ay";
       default:
         break;
     }

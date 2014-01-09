@@ -1,5 +1,11 @@
 2014-01-09 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKBoxingUtils.m:
+	Add support for NSData conversion in the libclang
+	introspection generator.
+
+2014-01-09 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Examples/GlobalMenu/GlobalMenuTheme.m:
 	Fall back to in-window menus if the menu server is not
 	available.	
