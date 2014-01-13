@@ -173,7 +173,7 @@
 {
   NSUInteger numArgs = [args count];
   NSUInteger index = 0;
-  while (index < (numArgs))
+  for (index = 0; index < numArgs; index++)
   {
     NSString *key = [NSString stringWithFormat: @"arg%lu", index];
     DKArgument *arg = (DKArgument*)[args objectAtIndex: index];
@@ -192,10 +192,26 @@
      }
     [arg marshallObject: value
            intoIterator: iter];
-    index++;
   }
 }
 
+- (NSInteger)argumentIndexForAnnotatedKey: (NSString*)key
+{
+ 
+  NSEnumerator *argEnum = [args objectEnumerator];
+  DKArgument *arg = nil;
+  NSInteger index = 0;
+  while (nil != (arg = [argEnum nextObject]))
+  {
+    NSString *annotatedKey = [arg annotationValueForKey: @"org.gnustep.openstep.notification.key"];
+    if ([annotatedKey isEqualToString: key])
+      {
+        return index;
+      } 
+    index++;
+  }
+  return NSNotFound;
+}
 
 - (NSXMLNode*)XMLNode
 {

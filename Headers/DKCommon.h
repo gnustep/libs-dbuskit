@@ -1,8 +1,8 @@
-/** Umbrella header for DBusKit.
-   Copyright (C) 2010 Free Software Foundation, Inc.
+/** Common macro declarations for DBusKit
+   Copyright (C) 2014 Free Software Foundation, Inc.
 
    Written by:  Niels Grewe <niels.grewe@halbordnung.de>
-   Created: May 2010
+   Created: January 2014
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -18,11 +18,22 @@
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111 USA.
+
    */
 
-#import <DBusKit/DKCommon.h>
-#import <DBusKit/DKNotificationCenter.h>
-#import <DBusKit/DKPort.h>
-#import <DBusKit/DKProxy.h>
-#import <DBusKit/NSConnection+DBus.h>
-#import <DBusKit/DKStruct.h>
+
+/*
+ * The deprecated attribute for methods is supported by clan
+ * and by GCC 4.6 or later.
+ */
+#ifndef DK_METHOD_DEPRECATED
+#  ifdef __clang__
+#    define DK_METHOD_DEPRECATED __attribute__((deprecated))
+#  elif (__GNUC__ > 4) \
+    || (__GNUC__ == 4 && (( __GNUC_MINOR__ > 6) \\
+                        || (__GNUC_MINOR__ == 6)))
+#    define DK_METHOD_DEPRECATED __attribute__((deprecated))
+#  else     
+#    define DK_METHOD_DEPRECATED 
+#  endif
+#endif

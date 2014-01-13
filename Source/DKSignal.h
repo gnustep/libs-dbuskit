@@ -91,4 +91,10 @@
  * center.
  */
 - (BOOL)isStub;
+
+/**
+ * Returns the index of the argument that has been annotated with the specified
+ * key, or NSNotFound if no argument is annotated to be exposed under the key.
+ */
+- (NSInteger)argumentIndexForAnnotatedKey: (NSString*)key;
 @end

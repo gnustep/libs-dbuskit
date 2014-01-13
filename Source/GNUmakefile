@@ -15,6 +15,7 @@ FRAMEWORK_NAME = DBusKit
 DBusKit_HEADER_FILES_DIR = ../Headers
 DBusKit_HEADER_FILES = \
 		  DBusKit.h \
+		  DKCommon.h \
 		  DKNotificationCenter.h \
 		  DKPort.h \
 		  DKPortNameServer.h \

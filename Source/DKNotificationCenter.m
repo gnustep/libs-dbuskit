@@ -31,6 +31,7 @@
 #import "DKEndpointManager.h"
 
 #import <Foundation/NSDebug.h>
+#import <Foundation/NSCharacterSet.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSException.h>
 #import <Foundation/NSHashTable.h>
@@ -42,7 +43,7 @@
 #import <Foundation/NSRunLoop.h>
 #import <Foundation/NSSet.h>
 #import <Foundation/NSString.h>
-
+#import <Foundation/NSValue.h>
 #import <GNUstepBase/NSDebug+GNUstepBase.h>
 
 #include <stdint.h>
@@ -605,6 +606,13 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
                               destination: (DKProxy*)destination
                         filtersAndIndices: (NSString*)firstFilter, NSUInteger firstIndex, va_list filters;
 
+
+- (DKObservable*)_observableForSignalName: (NSString*)signalName
+                                interface: (NSString*)interfaceName
+                                   sender: (DKProxy*)sender
+                              destination: (DKProxy*)destination
+                                  filters: (NSDictionary*)filters;
+
 - (void)_installHandler;
 
 - (void)_removeHandler;
@@ -729,7 +737,7 @@ static DKEndpointManager *manager;
           interface: [[signal parent] name]
              sender: sender
         destination: destination
-  filtersAndIndices: nil, 0, nil];
+            filters: nil];
 }
 
 - (void)addObserver: (id)observer
@@ -752,7 +760,7 @@ static DKEndpointManager *manager;
           interface: [[signal parent] name]
              sender: sender
         destination: nil
-  filtersAndIndices: nil, 0, nil];
+            filters: nil];
 }
 
 -  (void)addObserver: (id)observer
@@ -768,7 +776,7 @@ static DKEndpointManager *manager;
           interface: interfaceName
              sender: sender
         destination: destination
-  filtersAndIndices: nil, 0, nil];
+            filters: nil];
 }
 
 -  (void)addObserver: (id)observer
@@ -786,7 +794,8 @@ static DKEndpointManager *manager;
           interface: interfaceName
              sender: sender
         destination: destination
-  filtersAndIndices: filter, index, nil];
+  filters: [NSDictionary dictionaryWithObject: filter
+                                       forKey: [NSNumber numberWithUnsignedInteger: index]]];
 }
 
 -  (void)addObserver: (id)observer
@@ -812,6 +821,29 @@ static DKEndpointManager *manager;
    observeObservable: observable
         withSelector: notifySelector];
 }
+
+-  (void)addObserver: (id)observer
+            selector: (SEL)notifySelector
+              signal: (NSString*)signalName
+           interface: (NSString*)interfaceName
+              sender: (DKProxy*)sender
+         destination: (DKProxy*)destination
+             filters: (NSDictionary*)filters
+{
+  DKObservable *observable = nil;
+
+  observable = [self _observableForSignalName: signalName
+                                    interface: interfaceName
+                                       sender: sender
+                                  destination: destination
+                                      filters: filters];
+
+  [self _letObserver: observer
+   observeObservable: observable
+        withSelector: notifySelector];
+}
+
+
 
 // Observation removal methods on different levels of granularity:
 
@@ -932,8 +964,86 @@ static DKEndpointManager *manager;
           forObservable: observable];
 }
 
+
+-  (void)removeObserver: (id)observer
+                 signal: (NSString*)signalName
+              interface: (NSString*)interfaceName
+                 sender: (DKProxy*)sender
+            destination: (DKProxy*)destination
+                filters: (NSDictionary*)filters
+{
+  DKObservable *observable = nil;
+
+ observable = [self _observableForSignalName: signalName
+                                   interface: interfaceName
+                                      sender: sender
+                                 destination: destination
+                                     filters: filters];
+
+  [self _removeObserver: observer
+          forObservable: observable];
+}
+
 // Observation management methods doing the actual work:
 
+
+- (DKObservable*)_observableForSignalName: (NSString*)signalName
+                                interface: (NSString*)interfaceName
+                                   sender: (DKProxy*)sender
+                              destination: (DKProxy*)destination
+				  filters: (NSDictionary*)filters
+{
+  DKObservable *observable = [[[DKObservable alloc] initWithBusType: [[bus _endpoint] DBusBusType]] autorelease];
+
+  [observable filterSignalName: signalName];
+  [observable filterInterface: interfaceName];
+  [observable filterSender: sender];
+  [observable filterDestination: destination];
+  if ([filters count] != 0)
+    {
+      NSEnumerator *keyEnum = [filters keyEnumerator];
+      id key = nil;
+      Class stringClass = [NSString class];
+      Class numberClass = [NSString class];
+      while (nil != (key = [keyEnum nextObject]))
+        {
+          NSInteger index = NSNotFound;
+          if ([key isKindOfClass: numberClass])
+            {
+              index = [key unsignedIntegerValue];
+            }
+          else if ([key isKindOfClass: stringClass])
+            {
+              NSString *k = [key stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceCharacterSet]];
+             if (([k hasPrefix: @"arg"]) && ([k length] > 3))
+               {
+                  k = [k substringFromIndex: 3];
+               }
+             if ([@"0" isEqualToString: k])
+               {
+                 index = 0;
+               }
+             else
+               {
+                 index = [key unsignedIntegerValue];
+                 if (0 == index)
+                   {
+		     // Not an int
+		     index = NSNotFound;
+                   }
+               }
+            }
+          if (NSNotFound == index)
+            {
+	      NSDebugMLog(@"Ignoring filter index key %@", key);
+              continue;
+            }
+          [observable filterValue: [filters objectForKey: key]
+               forArgumentAtIndex: index];
+        }
+    }
+  return observable;
+}
 /**
  * Create an observable matching the information specified. The va_start and
  * va_end calls for <var>filters</var> should be done by calling code.
@@ -947,16 +1057,11 @@ static DKEndpointManager *manager;
   int thisIndex = 0;
   NSString *thisFilter = nil;
   BOOL processNextFilter = NO;
-  DKObservable *observable = [[[DKObservable alloc] initWithBusType: [[bus _endpoint] DBusBusType]] autorelease];
-
-  [observable filterSignalName: signalName];
-  [observable filterInterface: interfaceName];
-  [observable filterSender: sender];
-  [observable filterDestination: destination];
+  NSMutableDictionary *filterDict = [NSMutableDictionary dictionary];
   if (firstFilter != nil)
   {
-    [observable filterValue: firstFilter
-         forArgumentAtIndex: firstIndex];
+    [filterDict setObject: firstFilter 
+                   forKey: [NSNumber numberWithUnsignedInteger: firstIndex]];
   }
 
   do
@@ -969,8 +1074,8 @@ static DKEndpointManager *manager;
 
     if ((thisFilter != nil) && (thisIndex != 0))
     {
-      [observable filterValue: thisFilter
-           forArgumentAtIndex: thisIndex];
+      [filterDict setObject: thisFilter 
+                     forKey: [NSNumber numberWithUnsignedInteger: thisIndex]];
       processNextFilter = YES;
     }
     else
@@ -978,7 +1083,12 @@ static DKEndpointManager *manager;
       processNextFilter = NO;
     }
   } while (processNextFilter);
-  return observable;
+
+  return [self _observableForSignalName: signalName
+                              interface: interfaceName
+                                 sender: sender
+                            destination: destination
+			  	filters: filterDict];
 }
 
 /**

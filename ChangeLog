@@ -1,3 +1,23 @@
+2014-01-13 Niels Grewe <niels.grewe@halbordnung.de>
+	
+	* Source/GNUmakefile
+	* Headers/DBusKit.h
+	* Headers/DKCommon.h:
+	Add a header for shared public definitions, and
+	declare a marco that turns on __attribute__((deprecated))
+	when the compiler (clang or GCC >= 4.6) supports it.
+	* Headers/DKProxy.h: Fix typo.
+	* Source/DKNotificationCenter.m
+	* Headers/DKNotificationCenter.h:
+	Deprecate old vararg style method because it was using
+	a mixture of C-style arguments and varags in a slightly
+	confusing way. Introduce a new method to replace it
+	that accepts the filter specification as an NSDictionary.
+	* Source/DKSignal.[hm]: Allow converting between mapped
+	notification keys and D-Bus signal argument indices.
+	* Source/type_encoding_cases.h: Document license in the
+	file so that people don't have to look at the README.
+
 2014-01-09 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKBoxingUtils.m:

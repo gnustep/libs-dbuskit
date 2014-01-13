@@ -21,6 +21,7 @@
    */
 
 #import <Foundation/NSObject.h>
+#import <DBusKit/DKCommon.h>
 #import <DBusKit/DKPort.h>
 @class DKDBus, DKEndpoint, DKProxy, NSDictionary, NSHashTable, NSRecursiveLock,
   NSMapTable, NSMutableDictionary, NSNotification, NSString;
@@ -187,7 +188,9 @@
  * specify that particular match as the first one and set <var>firstIndex</var>
  * to <code>0</code>.
  *
- * NOTE: This method will be deprecated once a replacement is available.
+ * <strong>NOTE:</strong> This method has been deprecated in DBusKit 0.2
+ * and will be removed in a later version. Please use
+ * -addObserver:signal:interface:sender:destination:filters instead.
  */
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
@@ -195,7 +198,23 @@
            interface: (NSString*)interfaceName
               sender: (DKProxy*)sender
          destination: (DKProxy*)destination
-   filtersAndIndices: (NSString*)firstFilter, NSUInteger firstindex, ...;
+   filtersAndIndices: (NSString*)firstFilter, NSUInteger firstindex, ... DK_METHOD_DEPRECATED;
+
+/**
+ * Similar to
+ * -addObserver:selector:signal:interface:sender:destination:filter:atIndex: but
+ * allows matching more than one signal. The <var>filters</var> argument specifies
+ * a dictionary of filter strings keyed on the argument index (either as a
+ * NSNumber or a NSString). Keys that can't be mapped to a argument slot of the
+ * signal are silently ignored.
+ */
+-  (void)addObserver: (id)observer
+            selector: (SEL)notifySelector
+              signal: (NSString*)signalName
+           interface: (NSString*)interfaceName
+              sender: (DKProxy*)sender
+         destination: (DKProxy*)destination
+           filters: (NSDictionary*)filters;
 
 /**
  * Removes all observation activities involving the <var>observer</var>.
@@ -260,14 +279,29 @@
  * The match is inclusive. Every observation for a more specific rule will also
  * be removed.
  *
- * NOTE: This method will be deprecated once a replacement is available.
+ * <strong>NOTE:</strong> This method has been deprecated in DBusKit 0.2
+ * and will be removed in a later version. Please use
+ * -removeObserver:signal:interface:sender:destination:filters instead.
  */
 -  (void)removeObserver: (id)observer
                  signal: (NSString*)signalName
               interface: (NSString*)interfaceName
                  sender: (DKProxy*)sender
             destination: (DKProxy*)destination
-      filtersAndIndices: (NSString*)firstFilter, NSUInteger firstindex, ...;
+      filtersAndIndices: (NSString*)firstFilter, NSUInteger firstindex, ... DK_METHOD_DEPRECATED;
+
+/**
+ * Removes all observation activities matching the arguments specified.
+ * The match is inclusive. Every observation for a more specific rule will also
+ * be removed.
+ */
+-  (void)removeObserver: (id)observer
+                 signal: (NSString*)signalName
+              interface: (NSString*)interfaceName
+                 sender: (DKProxy*)sender
+            destination: (DKProxy*)destination
+                filters: (NSDictionary*)filters;
+
 
 
 /** NOTE: Not yet implemented. */

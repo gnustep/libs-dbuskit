@@ -64,6 +64,7 @@ typedef NSInteger DKProxyState;
   DKInterface *activeInterface;
 
   @protected
+
   /**
    * The lock protecting modifications to the tables.
    */
@@ -71,7 +72,7 @@ typedef NSInteger DKProxyState;
 
   /**
    * The condition object ensures that state changes in the proxy can be
-   * conducted in a snychronized manner.
+   * conducted in a synchronized manner.
    */
   NSCondition *condition;
 
