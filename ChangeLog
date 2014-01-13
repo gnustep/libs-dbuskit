@@ -1,4 +1,8 @@
 2014-01-13 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKMethodReturn.m: Fix a glaring memory leak.
+
+2014-01-13 Niels Grewe <niels.grewe@halbordnung.de>
 	
 	* Source/GNUmakefile
 	* Headers/DBusKit.h

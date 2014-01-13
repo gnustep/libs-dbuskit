@@ -70,7 +70,7 @@
     return nil;
   }
   theReply = dbus_message_new_method_return(aMsg);
-  if (nil == (self = [super initWithDBusMessage: dbus_message_new_method_return(aMsg)
+  if (nil == (self = [super initWithDBusMessage: theReply
                                     forEndpoint: ep
                            preallocateResources: YES]))
   {
