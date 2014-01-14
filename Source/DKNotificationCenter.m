@@ -25,7 +25,9 @@
 #import "DKArgument.h"
 #import "DKInterface.h"
 #import "DKSignal.h"
+#import "DKSignalEmission.h"
 #import "DKProxy+Private.h"
+#import "DKPort+Private.h"
 
 #import "DKEndpoint.h"
 #import "DKEndpointManager.h"
@@ -616,6 +618,11 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (void)_installHandler;
 
 - (void)_removeHandler;
+
+- (void)_postSignal: (DKSignal*)signal
+             object: (id)object
+           userInfo: (NSDictionary*)info;
+
 @end
 
 static DKEndpointManager *manager;
@@ -855,7 +862,7 @@ static DKEndpointManager *manager;
              interface: nil
                 sender: nil
            destination: nil
-     filtersAndIndices: nil, 0, nil];
+               filters: nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -876,7 +883,7 @@ static DKEndpointManager *manager;
              interface: [[signal parent] name]
                 sender: sender
            destination: destination
-     filtersAndIndices: nil, 0, nil];
+               filters: nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -896,7 +903,7 @@ static DKEndpointManager *manager;
              interface: [[signal parent] name]
                 sender: sender
            destination: nil
-     filtersAndIndices: nil, 0, nil];
+               filters: nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -910,7 +917,7 @@ static DKEndpointManager *manager;
              interface: interfaceName
                 sender: sender
            destination: destination
-     filtersAndIndices: nil, 0, nil];
+               filters: nil];
 }
 
 - (void)removeObserver: (id)observer
@@ -921,12 +928,17 @@ static DKEndpointManager *manager;
 	        filter: (NSString*)filter
     	       atIndex: (NSUInteger)index
 {
+  if (nil == filter)
+    {
+      return;
+    }
   [self removeObserver: observer
                 signal: signalName
              interface: interfaceName
                 sender: sender
            destination: destination
-     filtersAndIndices: filter, index, nil];
+               filters: [NSDictionary dictionaryWithObject: filter 
+                                                    forKey: [NSNumber numberWithUnsignedInteger: index]]];
 }
 
 - (void)removeObserver: (id)observer
@@ -939,7 +951,7 @@ static DKEndpointManager *manager;
              interface: interfaceName
                 sender: sender
            destination: nil
-     filtersAndIndices: nil, 0, nil];
+               filters: nil];
 }
 
 -  (void)removeObserver: (id)observer
@@ -1376,23 +1388,46 @@ static DKEndpointManager *manager;
 // Notification posting methods:
 - (void)postNotification: (NSNotification*)notification
 {
-
+  if (nil == notification)
+    {
+      return;
+    }
+  [self postNotificationName: [notification name]
+                      object: [notification object]
+                    userInfo: [notification userInfo]];
 }
+
 - (void)postNotificationName: (NSString*)name
                       object: (id)sender
 {
+  [self postNotificationName: name
+                      object: sender
+                    userInfo: nil];
 }
 
 - (void)postSignalName: (NSString*)signalName
              interface: (NSString*)interfaceName
                 object: (id)sender
 {
+  [self postSignalName: signalName
+             interface: interfaceName
+                object: sender
+              userInfo: nil];
 }
 
 - (void)postNotificationName: (NSString*)name
                       object: (id)sender
                     userInfo: (NSDictionary*)info
 {
+  if (name == nil)
+    {
+      return;
+    }
+  DKSignal *sig = [self _signalForNotificationName: name
+                                      generateStub: NO]; 
+  [self _postSignal: sig
+             object: sender
+           userInfo: info];
 }
 
 - (void)postSignalName: (NSString*)signalName
@@ -1400,16 +1435,56 @@ static DKEndpointManager *manager;
                 object: (id)sender
               userInfo: (NSDictionary*)info
 {
-
+  DKSignal *s = [self _signalWithName: signalName
+                          inInterface: interfaceName
+                         generateStub: NO];
+  if ((nil == s) || ([s isStub]))
+    {
+      // Non-existant or stub signals can't be posted 
+      // since we don't know how to serialise them
+      return;
+    }
+  [self _postSignal: s
+             object: sender
+           userInfo: info];
 }
 
+- (void)_postSignal: (DKSignal*)signal
+             object: (id)sender
+           userInfo: (NSDictionary*)info
+{
+  if (((nil == signal) || ([signal isStub]))
+    || (nil == sender))
+    {
+      return;
+    }
 
+  // The local port manages the object graph
+  DKPort *localPort = [DKPort portForBusType: [[bus _endpoint] DBusBusType]];
+  
+  id<DKExportableObjectPathNode> p = 
+    [localPort _proxyForObject: sender];
+  if (nil == p)
+    {
+      GSOnceMLog(@"Sending signals from new objects not yet supported");
+      /*
+       * In the future, we'll do this:
+         p = [bus _port] _autoregisterObject: sender
+                                  withParent: root]; 
+       */
+      return;
+    }
+  [DKSignalEmission emitSignal: signal
+                           for: p
+                      userInfo: info];
+}
 /**
  * Tries to find a preexisting signal specification and creates a stub signal if
  * none exists.
  */
 - (DKSignal*)_signalWithName: (NSString*)name
                  inInterface: (NSString*)interfaceName
+                generateStub: (BOOL)useStub
 {
   DKInterface *theInterface = nil;
   DKSignal *signal = nil;
@@ -1433,6 +1508,12 @@ static DKEndpointManager *manager;
     //Don't generate new stubs for signals we already have.
     return signal;
   }
+
+  if (NO == useStub)
+    {
+      [lock unlock];
+      return nil;
+    }
   signal = [[[DKSignal alloc] initWithName: name
                                     parent: theInterface] autorelease];
   [signal setAnnotationValue: @"YES"
@@ -1443,11 +1524,21 @@ static DKEndpointManager *manager;
   return signal;
 }
 
+
+- (DKSignal*)_signalWithName: (NSString*)name
+                 inInterface: (NSString*)interfaceName
+{
+  return [self _signalWithName: name
+                   inInterface: interfaceName
+                  generateStub: YES];
+}
+
 /**
  * Retrieves the signal for the notification. If the signal did not yet exist,
  * it might be created as a stub signal.
  */
 - (DKSignal*)_signalForNotificationName: (NSString*)name
+                           generateStub: (BOOL)generateStub
 {
   DKSignal *signal = nil;
   [lock lock];
@@ -1476,12 +1567,19 @@ static DKEndpointManager *manager;
     signalName = [stripped substringFromIndex: (sepRange.location + 1)];
     [lock unlock];
     return [self _signalWithName: signalName
-                     inInterface: ifName];
+                     inInterface: ifName
+                    generateStub: generateStub];
   }
   [lock unlock];
   return nil;
 }
 
+
+- (DKSignal*)_signalForNotificationName: (NSString*)name
+{
+  return [self _signalForNotificationName: name
+                             generateStub: YES];
+}
 /**
  * Retrieves the notification name for the signal. This is either the name
  * specified in an annotation or the default name.

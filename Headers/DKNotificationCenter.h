@@ -187,10 +187,11 @@
  * terminated by <code>nil</code>. If you want to match the first argument,
  * specify that particular match as the first one and set <var>firstIndex</var>
  * to <code>0</code>.
- *
+ * <p>
  * <strong>NOTE:</strong> This method has been deprecated in DBusKit 0.2
  * and will be removed in a later version. Please use
- * -addObserver:signal:interface:sender:destination:filters instead.
+ * -addObserver:signal:interface:sender:destination:filters: instead.
+ * </p>
  */
 -  (void)addObserver: (id)observer
             selector: (SEL)notifySelector
@@ -278,10 +279,11 @@
  * Removes all observation activities matching the arguments specified.
  * The match is inclusive. Every observation for a more specific rule will also
  * be removed.
- *
+ * <p>
  * <strong>NOTE:</strong> This method has been deprecated in DBusKit 0.2
  * and will be removed in a later version. Please use
- * -removeObserver:signal:interface:sender:destination:filters instead.
+ * -removeObserver:signal:interface:sender:destination:filters: instead.
+ * </p>
  */
 -  (void)removeObserver: (id)observer
                  signal: (NSString*)signalName
@@ -304,24 +306,47 @@
 
 
 
-/** NOTE: Not yet implemented. */
+/**
+ * Posts a notification to D-Bus. The notification must 
+ * fulfill the following conditions:
+ * <list>
+ *   <item>The object must already exported. (This is a temporary
+ *   limitation, subsequent versions of DBusKit will automatically
+ *   export an object if it tries to post a notification to the
+ *   bus.)</item>
+ *   <item>The notification name must either conform to the
+ *   DKSignal_&lt;interface name&gt;_&lt;member name&gt;
+ *   format or a mapping must be registered with the 
+ *   notification center for this notification name.
+ *   </item>
+ *   <item>The userInfo dictionary must contain all the 
+ *   the required argument keys, either with the key mapped
+ *   by the org.gnustep.openstep.notification.key annotation
+ *   of the D-Bus interface, or with the format <em>argN</em>,
+ *   where <em>N</em> is the index of the argument. If basic
+ *   typed arguments (strings, numeric types) are missing, these
+ *   are implicitly set to 0 (or the empty string). Otherwise
+ *   an exception is raised.
+ *   </item>
+ * </list>
+ */
 - (void)postNotification: (NSNotification*)notification;
 
-/** NOTE: Not yet implemented. */
+/** Similar to -postNotification: */
 - (void)postNotificationName: (NSString*)name
                       object: (id)sender;
 
-/** NOTE: Not yet implemented. */
+/** Similar to -postNotification: */
 - (void)postSignalName: (NSString*)signalName
              interface: (NSString*)interfaceName
                 object: (id)sender;
 
-/** NOTE: Not yet implemented. */
+/** Similar to -postNotification: */
 - (void)postNotificationName: (NSString*)name
                       object: (id)sender
                     userInfo: (NSDictionary*)info;
 
-/** NOTE: Not yet implemented. */
+/** Similar to -postNotification: */
 - (void)postSignalName: (NSString*)signalName
              interface: (NSString*)interfaceName
                 object: (id)sender

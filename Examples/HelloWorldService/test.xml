@@ -4,5 +4,6 @@
 		<method name="description">
 			<arg type="s" name="data" direction="out"/>
 		</method>
+                <signal name="notification"/>
 	</interface>
 </node>

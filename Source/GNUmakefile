@@ -47,6 +47,7 @@ DBusKit_OBJC_FILES = \
 	DKPropertyMethod.m \
         DKProxy.m \
 	DKSignal.m \
+	DKSignalEmission.m \
 	DKStruct.m \
 	NSConnection+DBus.m
 

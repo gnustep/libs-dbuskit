@@ -93,6 +93,11 @@
 - (BOOL)isStub;
 
 /**
+ * The name of the interface this signal is a member of.
+ */
+- (NSString*)interface;
+
+/**
  * Returns the index of the argument that has been annotated with the specified
  * key, or NSNotFound if no argument is annotated to be exposed under the key.
  */

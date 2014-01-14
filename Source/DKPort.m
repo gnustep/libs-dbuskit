@@ -41,6 +41,7 @@
 #import <Foundation/NSPortCoder.h>
 #import <Foundation/NSPortMessage.h>
 #import <Foundation/NSRunLoop.h>
+#import <Foundation/NSValue.h>
 
 #include <dbus/dbus.h>
 
@@ -107,6 +108,15 @@ enum {
 @end
 
 static DBusObjectPathVTable _DKDefaultObjectPathVTable;
+/**
+ * We share local port objects so that we get a consistent
+ * view of the object hierarchy, but this means we have to
+ * protect their creation with a lock.
+ */
+static NSLock *sharedPortLock;
+static DKPort *sharedSessionPort;
+static DKPort *sharedSystemPort;
+
 
 @implementation DKPort
 
@@ -117,6 +127,7 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
     // We do not need the unregistration callback
     _DKDefaultObjectPathVTable.unregister_function = NULL;
     _DKDefaultObjectPathVTable.message_function = _DKObjectPathHandleMessage;
+    sharedPortLock = [NSLock new];
   }
 }
 
@@ -167,13 +178,16 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
      * Setup observation rule: arg0 carries the name, arg2 the new owner, which
      * is empty if the name disappeared.
      */
+    NSDictionary *filters = [NSDictionary dictionaryWithObjectsAndKeys:
+     remote, [NSNumber numberWithUnsignedInteger: 0],
+     @"", [NSNumber numberWithUnsignedInteger: 2], nil];
     [center addObserver: self
                selector: @selector(_remoteDisappeared:)
                  signal: @"NameOwnerChanged"
               interface: @"org.freedesktop.DBus"
                  sender: [DKDBus busWithBusType: busType]
             destination: nil
-      filtersAndIndices: remote, 0, @"", 2, nil];
+                filters: filters];
   }
   /*
    * For all ports, we want to watch for the Disconnected signal on the
@@ -191,8 +205,60 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
 - (id) initWithRemote: (NSString*)aRemote
            atEndpoint: (DKEndpoint*)anEndpoint
 {
+  BOOL createSharedPort = NO;
+  if (0 == [aRemote length])
+    {
+      if ((nil == anEndpoint)
+        || (DKDBusSessionBus == [anEndpoint DBusBusType]))
+        {
+          if (sharedSessionPort == nil)
+            {
+               [sharedPortLock lock];
+               if (sharedSessionPort == nil)
+                 {
+                   createSharedPort = YES;
+                 }
+               else
+                 {
+                    [sharedPortLock unlock];
+                 }
+            }
+          if (NO == createSharedPort)
+            {
+              NSDebugMLog(@"Reusing shared session port");
+              [self release];
+              return [sharedSessionPort retain];
+            }
+        }
+      else if (DKDBusSystemBus == [anEndpoint DBusBusType])
+        {
+          if (sharedSystemPort == nil)
+            {
+               [sharedPortLock lock];
+               if (sharedSystemPort == nil)
+                 {
+                   createSharedPort = YES;
+                 }
+               else
+                 {
+                   [sharedPortLock unlock];
+                 }
+            }
+          if (NO == createSharedPort)
+            {
+              NSDebugMLog(@"Reusing shared system port");
+              [self release];
+              return [sharedSystemPort retain];
+            }
+        }
+    }
+
   if (nil == (self = [super init]))
   {
+    if (createSharedPort)
+      {
+        [sharedPortLock unlock];
+      }
     return nil;
   }
 
@@ -215,6 +281,21 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
   }
 
   [self _registerNotifications];
+  if (createSharedPort)
+    {
+      DKDBusBusType ty = [endpoint DBusBusType];
+      if (DKDBusSessionBus == ty)
+	{
+          NSDebugMLog(@"Creating shared session port");
+	  ASSIGN(sharedSessionPort, self);
+	}
+      else if (DKDBusSystemBus == ty)
+	{
+          NSDebugMLog(@"Creating shared system port");
+	  ASSIGN(sharedSystemPort, self);
+	}
+      [sharedPortLock unlock];
+    }
 
   return self;
 }
@@ -597,7 +678,9 @@ static DBusObjectPathVTable _DKDefaultObjectPathVTable;
   NS_DURING
   {
     objectPathMap = [NSMutableDictionary new];
-    proxyMap = [[NSMapTable mapTableWithWeakToStrongObjects] retain];
+    proxyMap = NSCreateMapTable(NSNonRetainedObjectMapKeyCallBacks,
+    NSObjectMapValueCallBacks,
+    10);
   }
   NS_HANDLER
   {

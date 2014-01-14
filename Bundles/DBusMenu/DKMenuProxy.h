@@ -26,7 +26,7 @@
 #import <AppKit/NSMenu.h>
 #import "DKDBusMenu.h"
 
-@class NSRecursiveLock, NSMapTable;
+@class DKNotificationCenter, NSRecursiveLock, NSMapTable;
 
 @interface DKMenuProxy : NSObject <DKDBusMenu>
 {
@@ -35,8 +35,12 @@
   NSMapTable *nativeToDBus;
   NSMapTable *dBusToNative;
   NSRecursiveLock *lock;
+  DKNotificationCenter *center;
+  BOOL exported;
 }
 - (id)initWithMenu: (NSMenu*)menu;
 - (void)menuUpdated: (NSMenu*)menu;
 - (NSUInteger)DBusIDForMenuObject: (NSMenuItem*)item;
+- (BOOL)isExported;
+- (void)setExported: (BOOL)yesno;
 @end

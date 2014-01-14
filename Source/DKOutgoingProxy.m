@@ -315,6 +315,7 @@
   DKInterface *interface = [[self _interfaces] objectForKey: [NSString stringWithUTF8String: iface]];
   if (interface == nil)
   {
+    NSDebugMLog(@"%@ doesn't know how to handle interface '%s' (method: %s)", object, iface, mthod);
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
   }
 
@@ -322,6 +323,7 @@
 
   if (method == nil)
   {
+    NSDebugMLog(@"%@ doesn't know how to handle method '%s' in %s", object, mthod, iface);
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
   }
 

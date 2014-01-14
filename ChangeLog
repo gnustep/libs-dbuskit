@@ -1,3 +1,26 @@
+2014-01-14 Niels Grewe <niels.grewe@halbordnung.de>
+	* Headers/DKNotificationCenter.h
+	* Source/DKNotificationCenter.m
+	* Source/DKSignal.h
+	* Source/DKSignal.m
+	* Source/DKSignalEmission.h
+	* Source/DKSignalEmission.m
+	* Source/GNUmakefile:
+	Finish support sending notifications to D-Bus.
+	* Source/DKPort.m:
+	If a port is local, cache it and always return
+	the shared instance. This not only improves performane,
+	but also fixes a bug where multiple subtrees could be
+	exposed to the bus without knowing about each other.
+	* Source/DKOutgoingProxy.m: Improve debugging
+	* Bundles/DBusMenu/DKMenuProxy.h
+	* Bundles/DBusMenu/DKMenuProxy.m
+	* Bundles/DBusMenu/DKMenuRegistry.m:
+	Propagate changes to the menu layout.
+	* Examples/HelloWorldService/main.m
+	* Examples/HelloWorldService/test.xml:
+	Demonstrate how to send signals to the bus.
+
 2014-01-13 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKMethodReturn.m: Fix a glaring memory leak.

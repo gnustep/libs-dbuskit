@@ -41,7 +41,7 @@
 #import <AppKit/NSMenuItem.h>
 
 #import <DBusKit/DKStruct.h>
-
+#import <DBusKit/DKNotificationCenter.h>
 
 /*
  * The keys for menu properties. We export these in the header.
@@ -342,7 +342,6 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
   NSArray *items = [menu itemArray];
   NSEnumerator *iEnum = [items objectEnumerator];
   NSMenuItem *item = nil;
-  NSMutableArray *submenus = [NSMutableArray array];
   while (nil != (item = [iEnum nextObject]))
     { 
       NSUInteger ident = (*identifier)++;
@@ -351,18 +350,8 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
           NSMapInsert(dBusToNative, (void*)ident, (void*)item);
           if ([item hasSubmenu])
             {
-              // We'll do this breath-first
-              [submenus addObject: [item submenu]];
+              [self _mapMenu: [item submenu] usingIdentifierReference: identifier];
             }
-        }
-    }
-  if (0 != [submenus count])
-    {
-      iEnum = [submenus objectEnumerator];
-      NSMenu *sub = nil;
-      while (nil != (sub = [iEnum nextObject]))
-        {
-          [self _mapMenu: sub usingIdentifierReference: identifier];
         }
     }
 }
@@ -387,6 +376,11 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
   return dBusToNative;
 }
 
+- (BOOL)isExported
+{
+  return exported;
+}
+
 - (NSUInteger)DBusIDForMenuObject: (NSMenuItem*)item
 {
   NSUInteger identifier = 0;
@@ -404,6 +398,37 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
   [lock unlock];
   return item;
 }
+- (void)notifyMenuServer
+{
+ if (NO == exported)
+   {
+     return;
+   }
+ // We could do this much more efficiently if we had a smarter
+ // idea of how the menu changed.
+ NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:
+   [NSNumber numberWithUnsignedInteger: revision], @"arg0", 
+   [NSNumber numberWithUnsignedInteger: 0], @"arg1", nil];
+ if (center == nil)
+   {
+     center = [[DKNotificationCenter sessionBusCenter] retain];
+   }
+ [center postSignalName: @"LayoutUpdated"
+              interface: @"com.canonical.dbusmenu"
+                 object: self
+               userInfo: info];
+}
+
+- (void)setExported: (BOOL)yesno
+{
+  if ((exported == NO) && (yesno == YES))
+    {
+      [self notifyMenuServer];
+    }
+  exported = yesno;
+}
+
+
 
 - (id)initWithMenu: (NSMenu*)menu
 {
@@ -437,8 +462,8 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
       [localException raise];
     }
   NS_ENDHANDLER
-  // TODO: Send notification via D-Bus
   __sync_fetch_and_add(&revision,1);
+  [self notifyMenuServer]; 
   NSDebugMLLog(@"DKMenu", @"Represented menu updated");
   [lock unlock];
 }
@@ -529,6 +554,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
     NSDictionary *propertyDict =  DKMenuPropertyDictionaryForDBusProperties(menuObject,propertyNames);
     [array addObject: [DKStructArray arrayWithObjects: item, propertyDict, nil]]; 
   }
+  NSDebugMLLog(@"DKMenu", @"Responding to property query %@ for %@: %@", propertyNames, menuItemIDs, array);
   return array;
 }
 
@@ -572,6 +598,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
   [representedMenu release];
   NSFreeMapTable(nativeToDBus);
   NSFreeMapTable(dBusToNative);
+  [center release];
   [lock release];
   [super dealloc];
 }

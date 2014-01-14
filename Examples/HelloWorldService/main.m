@@ -30,6 +30,40 @@
 - (id) _objectPathNodeAtPath: (NSString*)string;
 @end
 
+@interface Poster : NSObject
+{
+  id obj;
+  DKNotificationCenter *center;
+}
+@end
+
+@implementation Poster
+- (id)initWithProxiedObject: (id)anObject
+{
+  if (nil == (self = [super init]))
+    {
+      return nil;
+    }
+  ASSIGN(obj, anObject);
+  center = [[DKNotificationCenter sessionBusCenter] retain];
+  return self;
+}
+
+- (void)post: (NSTimer*)timer
+{
+  [center postSignalName: @"notification"
+               interface: @"org.gnustep.test"
+                  object: obj];
+}
+
+- (void)dealloc
+{
+  DESTROY(obj);
+  DESTROY(center);
+}
+@end
+
+
 int main()
 {
   DKPort *p = (DKPort*)[DKPort port];
@@ -38,10 +72,18 @@ int main()
   [p _setObject: obj atPath: @"/org/gnustep/test/p"];
   id pProxy = [p _objectPathNodeAtPath: @"/org/gnustep/test/p"];
   [pProxy _loadIntrospectionFromFile: @"test.xml"];
+  Poster *poster = [[Poster alloc] initWithProxiedObject: obj];
+  NSTimer *t = [NSTimer scheduledTimerWithTimeInterval: 5.0
+                                                target: poster
+                                              selector: @selector(post:)
+                                              userInfo: nil
+                                               repeats: YES];
   while (1)
   {
     [[NSRunLoop currentRunLoop] run];
   }
+  [t invalidate];
+  [poster release];
   return 0;
 }
 

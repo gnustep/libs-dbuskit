@@ -62,6 +62,16 @@
   return self;
 }
 
+- (NSString*) interface
+{
+  if ([parent respondsToSelector: @selector(name)])
+  {
+    return [parent name];
+  }
+  return nil;
+}
+
+
 - (void)addArgument: (DKArgument*)argument
           direction: (NSString*)direction
 {

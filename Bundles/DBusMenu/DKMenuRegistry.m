@@ -93,7 +93,8 @@
   DKPort *p = (DKPort*)[DKPort port];
   // WARNING: This is not a public API. Don't use it.
   [p _setObject: menuProxy atPath: @"/org/gnustep/application/mainMenu"];
-  busProxy = [p _objectPathNodeAtPath: @"/org/gnustep/application/mainMenu"];
+  busProxy = [p _objectPathNodeAtPath: @"/org/gnustep/application/mainMenu"]; 
+  [menuProxy setExported: YES];
   NSBundle *bundle = [NSBundle bundleForClass: [self class]];
   NSString *path = [bundle pathForResource: @"com.canonical.dbusmenu"
                                     ofType: @"xml"];
