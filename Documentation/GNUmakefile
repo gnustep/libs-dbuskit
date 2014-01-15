@@ -41,7 +41,11 @@ DBusKit_AGSDOC_FILES = \
 	DBusKit.gsdoc \
 	../Headers/DKNotificationCenter.h \
 	../Headers/DKPort.h \
-	../Headers/DKProxy.h 
+	../Headers/DKProxy.h \
+	../Headers/DKStruct.h \
+	../Headers/DKNumber.h \
+	../Headers/DKVariant.h \
+	../Headers/DKPortNameServer.h 
 
 include $(GNUSTEP_MAKEFILES)/documentation.make
 -include GNUmakefile.postamble

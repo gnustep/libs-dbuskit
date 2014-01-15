@@ -24,5 +24,6 @@
 #import <DBusKit/DKNotificationCenter.h>
 #import <DBusKit/DKPort.h>
 #import <DBusKit/DKProxy.h>
-#import <DBusKit/NSConnection+DBus.h>
 #import <DBusKit/DKStruct.h>
+#import <DBusKit/DKVariant.h>
+#import <DBusKit/NSConnection+DBus.h>

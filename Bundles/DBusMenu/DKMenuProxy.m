@@ -41,8 +41,12 @@
 #import <AppKit/NSMenuItem.h>
 
 #import <DBusKit/DKStruct.h>
+#import <DBusKit/DKNumber.h>
+#import <DBusKit/DKVariant.h>
 #import <DBusKit/DKNotificationCenter.h>
 
+#define VARIANT(X) [DKVariant variantWithObject: X]
+#define DK_INT32(X) [DKInt32Number numberWithInt32: X]
 /*
  * The keys for menu properties. We export these in the header.
  */
@@ -239,6 +243,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
         }
       NS_ENDHANDLER
     }
+  returnValue = VARIANT(returnValue);
   return returnValue;
 }
 
@@ -250,7 +255,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
                properties: (NSArray*)properties
                  forProxy: (DKMenuProxy*)proxy
 {
-  NSNumber *identifier = [NSNumber numberWithUnsignedInteger: [proxy DBusIDForMenuObject: self]];
+  NSNumber *identifier = DK_INT32([proxy DBusIDForMenuObject: self]);
   NSDictionary *props = DKMenuPropertyDictionaryForDBusProperties(self, properties);
   NSArray *children = nil;
   NSDebugMLLog(@"DKMenu", @"Generating layout for %@. D-Bus facing identifier is %@, properties %@ (requested depth: %ld)", self, identifier, properties, depth);
@@ -284,6 +289,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
         }
       children = c;
     }
+    NSDebugMLLog(@"DKMenu", @"Identifier %@ Obj-C type: %s", identifier, [identifier objCType]); 
   return [DKStructArray arrayWithObjects: identifier, props, children, nil];
 }
 
@@ -321,7 +327,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
     DKMenuVisibleDefaultValue = [[NSNumber numberWithBool: YES] retain];
     DKMenuIconDataDefaultValue = [NSData new];
     DKMenuShortcutDefaultValue = [NSArray new];
-    DKMenuToggleStateDefaultValue = [[NSNumber numberWithInt: -1] retain];
+    DKMenuToggleStateDefaultValue = [DK_INT32(-1) retain];
     DKMenuAllDefaults = [[NSDictionary alloc] initWithObjectsAndKeys:
       DKMenuTypeDefaultValue, kDKMenuTypeKey,
       DKMenuLabelDefaultValue, kDKMenuLabelKey, 
@@ -337,17 +343,17 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
 }
 
 
-- (void)_mapMenu: (NSMenu*)menu usingIdentifierReference: (NSUInteger*)identifier
+- (void)_mapMenu: (NSMenu*)menu usingIdentifierReference: (int32_t*)identifier
 {
   NSArray *items = [menu itemArray];
   NSEnumerator *iEnum = [items objectEnumerator];
   NSMenuItem *item = nil;
   while (nil != (item = [iEnum nextObject]))
     { 
-      NSUInteger ident = (*identifier)++;
-      if (NULL == NSMapInsertIfAbsent(nativeToDBus, (void*)item, (void*)ident))
+      int32_t ident = (*identifier)++;
+      if (NULL == NSMapInsertIfAbsent(nativeToDBus, (void*)item, (void*)(intptr_t)ident))
         {
-          NSMapInsert(dBusToNative, (void*)ident, (void*)item);
+          NSMapInsert(dBusToNative, (void*)(intptr_t)ident, (void*)item);
           if ([item hasSubmenu])
             {
               [self _mapMenu: [item submenu] usingIdentifierReference: identifier];
@@ -360,10 +366,10 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
 {
   NSResetMapTable(nativeToDBus);
   NSResetMapTable(dBusToNative);
-  NSUInteger identifier = 1; // 0 would be the root
+  int32_t identifier = 1; // 0 would be the root
   [self _mapMenu: representedMenu usingIdentifierReference: &identifier]; 
             
-  NSDebugMLLog(@"DKMenu", @"Created mappings for %lu menu items", (identifier - 1));
+  NSDebugMLLog(@"DKMenu", @"Created mappings for %d menu items", (identifier - 1));
 }
 
 - (NSMapTable*)_nativeToDBusMap
@@ -381,20 +387,20 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
   return exported;
 }
 
-- (NSUInteger)DBusIDForMenuObject: (NSMenuItem*)item
+- (int32_t)DBusIDForMenuObject: (NSMenuItem*)item
 {
-  NSUInteger identifier = 0;
+  int32_t identifier = 0;
   [lock lock];
-  identifier = (NSUInteger)NSMapGet(nativeToDBus, (void*)item);
+  identifier = (int32_t)(intptr_t)NSMapGet(nativeToDBus, (void*)item);
   [lock unlock];
   return identifier;
 }
 
-- (NSMenuItem*)_nativeMenuObjectForDBusID: (NSUInteger)identifier
+- (NSMenuItem*)_nativeMenuObjectForDBusID: (int32_t)identifier
 {
   NSMenuItem* item = nil;
   [lock lock];
-  item = (id)NSMapGet(dBusToNative, (void*)identifier);
+  item = (id)NSMapGet(dBusToNative, (void*)(intptr_t)identifier);
   [lock unlock];
   return item;
 }
@@ -408,7 +414,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
  // idea of how the menu changed.
  NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:
    [NSNumber numberWithUnsignedInteger: revision], @"arg0", 
-   [NSNumber numberWithUnsignedInteger: 0], @"arg1", nil];
+   DK_INT32(0), @"arg1", nil];
  if (center == nil)
    {
      center = [[DKNotificationCenter sessionBusCenter] retain];
@@ -486,7 +492,7 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
   // TODO: Exception handler
   if (parentID == 0)
     {
-      NSNumber *identifier = [NSNumber numberWithUnsignedInteger: 0];
+      NSNumber *identifier = DK_INT32(0);
       NSDictionary *properties = DKMenuPropertyDictionaryForDBusProperties(representedMenu, propertyNames);
       NSArray *children = nil;
       if (0 == depth)

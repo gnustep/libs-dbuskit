@@ -40,7 +40,7 @@
 }
 - (id)initWithMenu: (NSMenu*)menu;
 - (void)menuUpdated: (NSMenu*)menu;
-- (NSUInteger)DBusIDForMenuObject: (NSMenuItem*)item;
+- (int32_t)DBusIDForMenuObject: (NSMenuItem*)item;
 - (BOOL)isExported;
 - (void)setExported: (BOOL)yesno;
 @end

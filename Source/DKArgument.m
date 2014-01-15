@@ -50,6 +50,7 @@
 #import "DKBoxingUtils.h"
 
 #import "DBusKit/DKStruct.h"
+#import "DBusKit/DKVariant.h"
 
 #define INCLUDE_RUNTIME_H
 #include "config.h"
@@ -135,6 +136,8 @@ NSString *kDKArgumentDirectionOut = @"out";
  * <var>object</var>.
  */
 - (DKArgument*) DKArgumentWithObject: (id)object;
+- (DKArgument*) DKArgumentWithObject: (id)object
+                            topLevel: (BOOL)top;
 @end
 
 /**
@@ -1990,8 +1993,21 @@ DKDBusTypeForUnboxingObject(id object)
 }
 @end
 
-
+static Class NSBoolNumberClass;
+static Class NSCFBooleanClass;
 @implementation DKVariantTypeArgument
+
++ (void)initialize
+{
+  if (self == [DKVariantTypeArgument class])
+    {
+       // This is a private class in Foundation
+       NSBoolNumberClass = NSClassFromString(@"NSBoolNumber");
+       // This might come from CoreFoundation, toll-free bridged
+       // to NSNumber
+       NSCFBooleanClass = NSClassFromString(@"__NSCFBoolean");
+    }
+}
 
 /**
  * Helper method to determine the sub-signature of array elements or dictionary
@@ -2002,7 +2018,8 @@ DKDBusTypeForUnboxingObject(id object)
                              forStruct: (BOOL)isStruct
 {
   id element = [theEnum nextObject];
-  NSString *thisSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
+  NSString *thisSig = [[self DKArgumentWithObject: element
+                                         topLevel: NO] DBusTypeSignature];
   NSString *nextSig = thisSig;
   NSMutableString *allTypes = [NSMutableString stringWithString: thisSig];
   // For homogenous collection, we can get the proper signature, for non-homogenous
@@ -2016,7 +2033,8 @@ DKDBusTypeForUnboxingObject(id object)
     && (YES == isHomogenous))
   {
     thisSig = nextSig;
-    nextSig = [[self DKArgumentWithObject: element] DBusTypeSignature];
+    nextSig = [[self DKArgumentWithObject: element
+                                 topLevel: NO] DBusTypeSignature];
     [allTypes appendString: nextSig];
     if (isStruct == NO)
       {
@@ -2047,7 +2065,18 @@ DKDBusTypeForUnboxingObject(id object)
   return [self subSignatureForEnumerator: theEnum forStruct: NO];
 }
 - (DKArgument*) DKArgumentWithObject: (id)object
+                            topLevel: (BOOL)top
 {
+
+  if ((NO == top) && ([object respondsToSelector: @selector(isDBusVariant)]))
+    {
+      if ([(id<DKVariant>)object isDBusVariant])
+        {
+          return [[[DKArgument alloc] initWithDBusSignature: "v"
+                                                       name: nil
+                                                     parent: self] autorelease];
+        }
+    }
   if (([object respondsToSelector: @selector(keyEnumerator)])
     && ([object respondsToSelector: @selector(objectEnumerator)]))
   {
@@ -2107,6 +2136,17 @@ DKDBusTypeForUnboxingObject(id object)
                                                parent: self] autorelease];
     
   }
+  else if (((NSBoolNumberClass != Nil) 
+           && [object isKindOfClass: NSBoolNumberClass])
+       || ((NSCFBooleanClass != Nil)
+           && [object isKindOfClass: NSCFBooleanClass]))
+  {
+    // Special case for boolean typed numbers, which would be promoted to byte
+    // otherwise
+    return [[[DKArgument alloc] initWithDBusSignature: "b"
+                                                 name: nil
+                                               parent: self] autorelease];
+  }
   else
   {
     // Simple types are quite straightforward, if we can find an appropriate
@@ -2130,6 +2170,11 @@ DKDBusTypeForUnboxingObject(id object)
   // Too bad, we have apparantely no chance to generate an argument tree for
   // this object.
   return nil;
+}
+
+- (DKArgument*)DKArgumentWithObject: (id)object
+{
+  return [self DKArgumentWithObject: object topLevel: YES];
 }
 
 - (id) unmarshalledObjectFromIterator: (DBusMessageIter*)iter

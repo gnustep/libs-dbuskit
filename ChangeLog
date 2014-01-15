@@ -1,3 +1,28 @@
+2014-01-15 Niels Grewe <niels.grewe@halbordnung.de>
+	* Headers/DKNumber.h
+	* Source/DKNumber.m
+	* Source/DKNumberTemplate.h:
+	Implement NSNumber subclasses that behave predictably
+	on D-Bus, because with variant-typed arguments, the
+	other side might have assumptions about their size
+	that it didn't tell us about, so we can't rely on them
+	to translate properly.
+	* Headers/DKVariant.h
+	* Source/DKVariant.m:
+	Proxy class to explicitly mark objects as to be
+	passed inside a variant.
+	* Source/DKArgument.m: Modify argument passing logic
+	to properly recognise explicitly typed numbers, booleans
+	and variants.
+	* Headers/DBusKit.h
+	* Documentation/GNUmakefile
+	* Source/GNUmakefile:
+	Connect new classes to the build.
+	* Bundles/DBusMenu/DKMenuProxy.h
+	* Bundles/DBusMenu/DKMenuProxy.m:
+	Fix D-Bus menu implementation to pass arguments in the
+	proper size.
+
 2014-01-14 Niels Grewe <niels.grewe@halbordnung.de>
 	* Headers/DKNotificationCenter.h
 	* Source/DKNotificationCenter.m

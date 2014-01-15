@@ -17,10 +17,12 @@ DBusKit_HEADER_FILES = \
 		  DBusKit.h \
 		  DKCommon.h \
 		  DKNotificationCenter.h \
+		  DKNumber.h \
 		  DKPort.h \
 		  DKPortNameServer.h \
                   DKProxy.h \
 		  DKStruct.h \
+		  DKVariant.h \
                   NSConnection+DBus.h
 #
 # Class files
@@ -39,6 +41,7 @@ DBusKit_OBJC_FILES = \
 	DKMethodReturn.m \
 	DKNonAutoInvalidatingPort.m \
 	DKNotificationCenter.m \
+	DKNumber.m \
 	DKObjectPathNode.m \
 	DKOutgoingProxy.m \
 	DKPort.m \
@@ -49,6 +52,7 @@ DBusKit_OBJC_FILES = \
 	DKSignal.m \
 	DKSignalEmission.m \
 	DKStruct.m \
+	DKVariant.m \
 	NSConnection+DBus.m
 
 
