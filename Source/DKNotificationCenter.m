@@ -591,6 +591,12 @@ DKHandleSignal(DBusConnection *connection, DBusMessage *msg, void *userData);
 - (id)initWithBusType: (DKDBusBusType)type;
 
 - (DKSignal*)_signalForNotificationName: (NSString*)name;
+- (DKSignal*)_signalForNotificationName: (NSString*)name
+                           generateStub: (BOOL)generateStub;
+
+- (DKSignal*)_signalWithName: (NSString*)name
+                 inInterface: (NSString*)interfaceName
+                generateStub: (BOOL)useStub;
 
 - (void)_letObserver: (id)observer
    observeObservable: (DKObservable*)observable

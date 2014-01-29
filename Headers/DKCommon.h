@@ -23,14 +23,14 @@
 
 
 /*
- * The deprecated attribute for methods is supported by clan
+ * The deprecated attribute for methods is supported by clang
  * and by GCC 4.6 or later.
  */
 #ifndef DK_METHOD_DEPRECATED
 #  ifdef __clang__
 #    define DK_METHOD_DEPRECATED __attribute__((deprecated))
 #  elif (__GNUC__ > 4) \
-    || (__GNUC__ == 4 && (( __GNUC_MINOR__ > 6) \\
+    || (__GNUC__ == 4 && (( __GNUC_MINOR__ > 6) \
                         || (__GNUC_MINOR__ == 6)))
 #    define DK_METHOD_DEPRECATED __attribute__((deprecated))
 #  else     

@@ -160,9 +160,9 @@ DKUnboxedObjCTypeForDBusType(int type)
     case DBUS_TYPE_SIGNATURE:
     case DBUS_TYPE_DICT_ENTRY:
     default:
-      return '\0';
+      return NULL;
   }
-  return '\0';
+  return NULL;
 }
 
 size_t

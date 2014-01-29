@@ -1,5 +1,14 @@
 2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKBoxingUtils.m
+	* Source/DKNotificationCenter.m
+	* Headers/DKCommon.h
+	* GNUmakefile:
+
+	Fixes for various build problems. (Reported by Marcus Müller)
+
+2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Source/DKMethod.m: Fix off-by-one error when unmarshalling
 	multiple return values.
 

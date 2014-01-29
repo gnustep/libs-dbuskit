@@ -38,9 +38,15 @@ GNUSTEP_USE_PARALLEL_AGGREGATE=no
 SUBPROJECTS = Source \
               Tools
 
-ifneq ($(strip `which makeinfo`),)
-ifneq ($(strip `which texi2pdf`),)
+MAKEINFO = $(shell which makeinfo)
+TEXI2PDF = $(shell which texi2pdf)
+TEXI2HTML = $(shell which texi2html)
+
+ifneq ($(strip $(MAKEINFO)),)
+ifneq ($(strip $(TEXI2PDF)),)
+ifneq ($(strip $(TEXI2HTML)),)
 SUBPROJECTS += Documentation
+endif
 endif
 endif
 #
