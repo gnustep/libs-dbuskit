@@ -1,5 +1,10 @@
 2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
 
+	* Source/DKMethod.m: Fix off-by-one error when unmarshalling
+	multiple return values.
+
+2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
+
 	* Documentation/UsingDBus.texi: Document how
 	we pass along multiple return values from
 	D-Bus methods.

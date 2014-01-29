@@ -563,11 +563,13 @@
        * Proceed to the next value in the message, but raise an exception if
        * we are missing some.
        */
-      if (NO == (BOOL)dbus_message_iter_next(iter))
+      if ((NO == (BOOL)dbus_message_iter_next(iter))
+        && (numArgs > (index + 1)))
       {
+        DKArgument *nextArg = [outArgs objectAtIndex: index + 1];
         [NSException raise: @"DKMethodUnmarshallingException"
-                    format: @"D-Bus message too short when unmarshalling return value for '%@'.",
-	  name];
+                    format: @"D-Bus message too short when unmarshalling return value for '%@'. Expected value for argument %@ of type %c.",
+	  name, [nextArg name], [nextArg DBusType]];
       }
       index++;
     }
