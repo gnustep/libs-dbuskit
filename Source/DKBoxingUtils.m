@@ -557,7 +557,8 @@ DKMethodNameFromSelectorString(const char* selString)
   {
     [selName getCharacters: heapChars range: NSMakeRange(0,length)];
 
-    for (int i = 0; i < (length - 1); i++)
+    NSUInteger i;
+    for (i = 0; i < (length - 1); i++)
     {
       if(':' == heapChars[i])
       {

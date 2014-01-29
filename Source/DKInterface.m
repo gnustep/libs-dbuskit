@@ -107,8 +107,9 @@
   NSArray *messages = [[NSUserDefaults standardUserDefaults] arrayForKey:
     @"GSPermittedMessages"];
 
-  // Iterate over the methods an generate DKMethods for them:
-  for (int i = 0; i < methodCount; i++)
+  NSUInteger i;
+  // Iterate over the methods and generate DKMethods for them:
+  for (i = 0; i < methodCount; i++)
   {
     SEL selector = 0;
     NSString *selName = nil;

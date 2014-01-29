@@ -755,7 +755,8 @@ static DKPort *sharedSystemPort;
   NSUInteger count = [nodes count];
   id<DKExportableObjectPathNode> lastNode = nil;
   id<DKExportableObjectPathNode> thisNode = nil;
-  for (NSUInteger i = 0; i < count; i++)
+  NSUInteger i;
+  for (i = 0; i < count; i++)
   {
     id<DKExportableObjectPathNode> proxy = nil;
     NSString *component = [nodes objectAtIndex: i];

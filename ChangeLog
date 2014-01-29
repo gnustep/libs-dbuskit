@@ -1,3 +1,11 @@
+2014-01-19 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Source/DKInterface.m
+	* Source/DKBoxingUtils.m
+	* Source/DKPort.m:
+	A few consistency fixes for loop iterator varaibles
+	(Patch by Marcus Müller)
+
 2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKBoxingUtils.m
