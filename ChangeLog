@@ -1,3 +1,9 @@
+2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Documentation/UsingDBus.texi: Document how
+	we pass along multiple return values from
+	D-Bus methods.
+
 2014-01-15 Niels Grewe <niels.grewe@halbordnung.de>
 	* Headers/DKNumber.h
 	* Source/DKNumber.m

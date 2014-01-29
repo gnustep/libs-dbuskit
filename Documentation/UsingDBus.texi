@@ -128,6 +128,7 @@ introspection data of the remote object could be obtained like this:
 NSString *introspectionData = [remoteObject Introspect];
 @end example
 
+@subsection Overloaded methods
 @cindex interface, D-Bus
 @cindex method, D-Bus
 @cindex D-Bus interface
@@ -158,6 +159,22 @@ statements would result in a call to the correct method:
 @example
 [remoteObject setPrimaryDBusInterface: @@"org.bar.Instruments"];
 id anInstrument = [remoteObject getBass];
+@end example
+
+@subsection D-Bus ‘out’ Arguments
+Some D-Bus methods include multiple ‘out’ arguments (return values):
+@example
+<method name="GetServerInformation">
+  <arg name="name" type="s" direction="out"/>
+  <arg name="vendor" type="s" direction="out"/>
+  <arg name="version" type="s" direction="out"/>
+</method>
+@end example
+For methods of this type, DBuskit will combine all values returned by the
+remote D-Bus object into a single @code{NSArray} return value. So the 
+Objective-C method signature of the method mentioned above would be
+@example
+- (NSArray*) GetServerInformation; 
 @end example
 
 @section Accessing and changing D-Bus properties
