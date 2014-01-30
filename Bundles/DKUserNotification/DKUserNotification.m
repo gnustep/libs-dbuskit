@@ -112,7 +112,7 @@ static NSString * const kButtonActionKey = @"show";
 		    vendor  = [info objectAtIndex:1];
 		    version = [info objectAtIndex:2];
 #endif
-			NSDebugLog(@"connected to %@ (%@) by %@", name, version, vendor);
+			NSDebugLLog(@"NSUserNotification", @"connected to %@ (%@) by %@", name, version, vendor);
 
 			caps = RETAIN([proxy GetCapabilities]);
 			if (!caps)
@@ -120,7 +120,7 @@ static NSString * const kButtonActionKey = @"show";
 				NSLog(@"No response to GetCapabilities method");
 				NS_VALUERETURN(nil, self);
 			}
-			NSDebugLog(@"capabilities: %@", caps);
+			NSDebugLLog(@"NSUserNotification", @"capabilities: %@", caps);
 
 			DKNotificationCenter *dnc = [DKNotificationCenter sessionBusCenter];
 #if 0
@@ -219,7 +219,7 @@ static NSString * const kButtonActionKey = @"show";
 {
 	id nId = [[n userInfo] objectForKey: @"arg0"];
 	NSUserNotification *un = [self deliveredNotificationWithUniqueId: nId];
-	NSDebugMLog(@"%@", un);
+	NSDebugMLLog(@"NSUserNotification", @"%@", un);
 }
 
 - (void)receiveActionInvokedNotification:(NSNotification *)n
@@ -228,7 +228,7 @@ static NSString * const kButtonActionKey = @"show";
 	NSUserNotification *un = [self deliveredNotificationWithUniqueId: nId];
 	NSString *action = [[n userInfo] objectForKey: @"arg1"];
 
-	NSDebugMLog(@"%@ -- action: %@", un, action);
+	NSDebugMLLog(@"NSUserNotification", @"%@ -- action: %@", un, action);
 	if ([action isEqual:kButtonActionKey])
 		un.activationType = NSUserNotificationActivationTypeActionButtonClicked;
 	else
