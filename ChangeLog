@@ -1,4 +1,15 @@
-2014-01-19 Niels Grewe <niels.grewe@halbordnung.de>
+2014-01-30 Niels Grewe <niels.grewe@halbordnung.de>
+
+	* Headers/DKNumber.h: Fix typo
+
+2014-01-30  Marcus Mueller <znek@mulle-kybernetik.com>
+
+	* Bundles/DKUserNotification:
+	Implementation of the DBus-based Desktop Notifications
+	Specification on top of Implementation of 
+	NSUserNotificationCenter.
+
+2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Source/DKInterface.m
 	* Source/DKBoxingUtils.m

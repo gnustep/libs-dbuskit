@@ -25,7 +25,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -40,7 +40,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -56,7 +56,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -71,7 +71,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -87,7 +87,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -102,7 +102,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -117,7 +117,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -132,7 +132,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -147,7 +147,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
@@ -162,7 +162,7 @@
 /**
  * This class ensures that serialisation of the object 
  * number within a variant-typed D-Bus argument is type-safe. 
- * This means that the object is not be promoted to a larger 
+ * This means that the object will not be promoted to a larger 
  * type by NSNumber, which could otherwise break expectations
  * of the bus peers.
  */
