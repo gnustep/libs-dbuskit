@@ -24,13 +24,13 @@
 // Whenever this restriction is lifted, we can get rid of it here as well.
 #if __has_feature(objc_default_synthesize_properties)
 
-#import	<GNUstepBase/GSVersionMacros.h>
+#import <GNUstepBase/GSVersionMacros.h>
 
 #if OS_API_VERSION(MAC_OS_X_VERSION_10_8,GS_API_LATEST)
 
 #import <Foundation/NSUserNotification.h>
 
-#if	defined(__cplusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -39,14 +39,14 @@ extern "C" {
 
 @interface DKUserNotificationCenter : NSUserNotificationCenter
 {
-	NSConnection *connection;
-	id <NSObject, Notifications> proxy;
-	NSArray *caps;
+  NSConnection *connection;
+  id <NSObject, Notifications> proxy;
+  NSArray *caps;
 }
 
 @end
 
-#if	defined(__cplusplus)
+#if defined(__cplusplus)
 }
 #endif
 

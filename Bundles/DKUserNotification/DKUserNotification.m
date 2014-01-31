@@ -24,8 +24,8 @@
 // Whenever this restriction is lifted, we can get rid of it here as well.
 #if __has_feature(objc_default_synthesize_properties)
 
-#define	EXPOSE_NSUserNotification_IVARS	1
-#define	EXPOSE_NSUserNotificationCenter_IVARS	1
+#define EXPOSE_NSUserNotification_IVARS 1
+#define EXPOSE_NSUserNotificationCenter_IVARS 1
 
 #import "DKUserNotification.h"
 #import <GNUstepBase/GNUstep.h>
@@ -35,7 +35,9 @@
 #import <Foundation/NSArray.h>
 #import <Foundation/NSBundle.h>
 #import "Foundation/NSException.h"
+#import <Foundation/NSProcessInfo.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSURL.h>
 #import <Foundation/NSValue.h>
 #import <DBusKit/DBusKit.h>
 
@@ -79,165 +81,199 @@ static NSString * const kButtonActionKey = @"show";
 
 - (id) init
 {
-	self = [super init];
-	if (self)
-	{
-		NS_DURING
-		{
-			DKPort *rPort = (DKPort *)[DKPort port];
-			DKPort *sPort = [[DKPort alloc] initWithRemote: kDBusBusKey];
-			connection = RETAIN([NSConnection connectionWithReceivePort: rPort
-											  sendPort: sPort]);
-			RELEASE(sPort);
-			if (!connection)
-			{
-				NSLog(@"Unable to create a connection to %@", kDBusBusKey);
-				NS_VALUERETURN(nil, self);
-			}
+  self = [super init];
+  if (self)
+  {
+    NS_DURING
+    {
+      DKPort *rPort = (DKPort *)[DKPort port];
+      DKPort *sPort = [[DKPort alloc] initWithRemote: kDBusBusKey];
+      connection = RETAIN([NSConnection connectionWithReceivePort: rPort
+                        sendPort: sPort]);
+      RELEASE(sPort);
+      if (!connection)
+      {
+        NSLog(@"Unable to create a connection to %@", kDBusBusKey);
+        NS_VALUERETURN(nil, self);
+      }
 
-			proxy = (id <NSObject, Notifications>)RETAIN([connection proxyAtPath: kDBusPathKey]);
-			if (!proxy)
-			{
-				NSLog(@"Unable to create a proxy for %@", kDBusPathKey);
-				NS_VALUERETURN(nil, self);
-			}
+      proxy = (id <NSObject, Notifications>)RETAIN([connection proxyAtPath: kDBusPathKey]);
+      if (!proxy)
+      {
+        NSLog(@"Unable to create a proxy for %@", kDBusPathKey);
+        NS_VALUERETURN(nil, self);
+      }
 
-			NSString *name;
-			NSString *vendor;
-			NSString *version;
+      NSString *name;
+      NSString *vendor;
+      NSString *version;
 #if 0
-			[proxy GetServerInformation: &name : &vendor : &version];
+      [proxy GetServerInformation: &name : &vendor : &version];
 #else
-			NSArray *info = [proxy GetServerInformation];
-		    name    = [info objectAtIndex:0];
-		    vendor  = [info objectAtIndex:1];
-		    version = [info objectAtIndex:2];
+      NSArray *info = [proxy GetServerInformation];
+        name    = [info objectAtIndex:0];
+        vendor  = [info objectAtIndex:1];
+        version = [info objectAtIndex:2];
 #endif
-			NSDebugLLog(@"NSUserNotification", @"connected to %@ (%@) by %@", name, version, vendor);
+      NSDebugLLog(@"NSUserNotification", @"connected to %@ (%@) by %@", name, version, vendor);
 
-			caps = RETAIN([proxy GetCapabilities]);
-			if (!caps)
-			{
-				NSLog(@"No response to GetCapabilities method");
-				NS_VALUERETURN(nil, self);
-			}
-			NSDebugLLog(@"NSUserNotification", @"capabilities: %@", caps);
+      caps = RETAIN([proxy GetCapabilities]);
+      if (!caps)
+      {
+        NSLog(@"No response to GetCapabilities method");
+        NS_VALUERETURN(nil, self);
+      }
+      NSDebugLLog(@"NSUserNotification", @"capabilities: %@", caps);
 
-			DKNotificationCenter *dnc = [DKNotificationCenter sessionBusCenter];
+      DKNotificationCenter *dnc = [DKNotificationCenter sessionBusCenter];
 #if 0
-			[dnc addObserver: self
-				 selector: @selector(receiveNotificationClosedNotification:)
-				 signal: @"NotificationClosed"
-				 interface: kDBusBusKey
-				 sender: (DKProxy *)proxy
-				 destination: nil];
+      [dnc addObserver: self
+         selector: @selector(receiveNotificationClosedNotification:)
+         signal: @"NotificationClosed"
+         interface: kDBusBusKey
+         sender: (DKProxy *)proxy
+         destination: nil];
 #endif
-			[dnc addObserver: self
-				 selector: @selector(receiveActionInvokedNotification:)
-				 signal: @"ActionInvoked"
-				 interface: kDBusBusKey
-				 sender: (DKProxy *)proxy
-				 destination: nil];
-		}
-		NS_HANDLER
-		{
-			NSLog(@"%@ during DBus setup: %@",
-				  [localException name], [localException description]);
-			DESTROY(self);
-		}
-		NS_ENDHANDLER
-	}
-	return self;
+      [dnc addObserver: self
+         selector: @selector(receiveActionInvokedNotification:)
+         signal: @"ActionInvoked"
+         interface: kDBusBusKey
+         sender: (DKProxy *)proxy
+         destination: nil];
+    }
+    NS_HANDLER
+    {
+      NSLog(@"%@ during DBus setup: %@",
+          [localException name], [localException description]);
+      DESTROY(self);
+    }
+    NS_ENDHANDLER
+  }
+  return self;
 }
 
 - (void) dealloc
 {
-	[[DKNotificationCenter sessionBusCenter] removeObserver: self];
-	RELEASE(caps);
-	RELEASE(proxy);
-	RELEASE(connection);
-	[super dealloc];
+  [[DKNotificationCenter sessionBusCenter] removeObserver: self];
+  RELEASE(caps);
+  RELEASE(proxy);
+  RELEASE(connection);
+  [super dealloc];
 }
 
 - (void) _deliverNotification: (NSUserNotification *)un
 {
-	// TODO: use [NSBundle mainBundle] or provide a hook for NSApplication?
-	NSString *appName   = @"";
-	// TODO: map imageName to something sensible or implement one of the
-	// available extensions (see spec for details)
-	NSString *imageName = @"";
+  NSString *appName   = nil;
+  NSString *imageName = nil;
+  NSURL    *imageURL  = nil;
+  NSURL    *soundFileURL = nil;
 
-	NSMutableArray *actions = [NSMutableArray array];
-	if ([un hasActionButton])
-	  {
-		NSString *actionButtonTitle = un.actionButtonTitle;
-		if (!actionButtonTitle)
-			actionButtonTitle = _(@"Show");
+  NSBundle *bundle = [NSBundle mainBundle];
+  if (bundle)
+    {
+      NSDictionary *info = [bundle localizedInfoDictionary];
+      if (info)
+        {
+          appName   = [info objectForKey: @"NSBundleName"];
+          imageName = [info objectForKey: @"NSIcon"];
+          if (imageName)
+            imageURL = [bundle URLForResource: imageName withExtension: nil];
+        }
+      if (un.soundName && [caps containsObject:@"sound"])
+        {
+          soundFileURL = [bundle URLForResource: un.soundName
+                                  withExtension: nil];
+        }
+    }
 
-		// NOTE: don't use "default", as it's used by convention and seems
-		// to remove the actionButton entirely
-		// (tested with Notification Daemon (0.3.7))
-		[actions addObject: kButtonActionKey];
-		[actions addObject: [self cleanupTextIfNecessary: actionButtonTitle]];
-	  }
+  // fallback
+  if (!appName)
+    appName = [[NSProcessInfo processInfo] processName];
 
-	NSString *summary  = [self cleanupTextIfNecessary: un.title];
-	NSString *body     = [self cleanupTextIfNecessary: un.informativeText];
-	NSNumber *uniqueId = [proxy Notify: appName
-									  : 0
-									  : imageName
-									  : summary
-									  : body
-									  : actions
-									  : un.userInfo
-									  : -1];
-	ASSIGN(un->_uniqueId, uniqueId);
+  NSMutableArray *actions = [NSMutableArray array];
+  if ([un hasActionButton])
+    {
+      NSString *actionButtonTitle = un.actionButtonTitle;
+      if (!actionButtonTitle)
+        actionButtonTitle = _(@"Show");
+
+      // NOTE: don't use "default", as it's used by convention and seems
+      // to remove the actionButton entirely
+      // (tested with Notification Daemon (0.3.7))
+      [actions addObject: kButtonActionKey];
+      [actions addObject: [self cleanupTextIfNecessary: actionButtonTitle]];
+    }
+
+  NSDebugMLLog(@"NSUserNotification",
+               @"appName: %@ imageName: %@ imageURL: %@ soundFileURL: %@",
+               appName, imageName, imageURL, soundFileURL);
+
+  NSMutableDictionary *hints = [NSMutableDictionary dictionary];
+  if (un.userInfo)
+    [hints addEntriesFromDictionary: un.userInfo];
+
+  if (imageURL)
+    [hints setObject: [imageURL absoluteString] forKey: @"image-path"];
+  if (soundFileURL)
+    [hints setObject: [soundFileURL path] forKey: @"sound-file"];
+
+  NSString *summary  = [self cleanupTextIfNecessary: un.title];
+  NSString *body     = [self cleanupTextIfNecessary: un.informativeText];
+  NSNumber *uniqueId = [proxy Notify: appName
+                                    : 0
+                                    : imageName ? imageName : @""
+                                    : summary
+                                    : body
+                                    : actions
+                                    : [hints count] ? hints : nil
+                                    : -1];
+  ASSIGN(un->_uniqueId, uniqueId);
   un.presented = YES;
 }
 
 - (void)_removeDeliveredNotification:(NSUserNotification *)un
 {
-	if (un.presented)
-		[proxy CloseNotification: [un->_uniqueId unsignedIntValue]];
+  if (un.presented)
+    [proxy CloseNotification: [un->_uniqueId unsignedIntValue]];
 }
 
 - (NSString *)cleanupTextIfNecessary:(NSString *)rawText
 {
-	if (!rawText || ![caps containsObject:@"body-markup"])
-		return nil;
+  if (!rawText || ![caps containsObject:@"body-markup"])
+    return nil;
 
-	NSMutableString *t = (NSMutableString *)[rawText mutableCopy];
-	[t replaceOccurrencesOfString: @"&"  withString: @"&amp;"  options: 0 range: NSMakeRange(0, [t length])];  // must be first!
-	[t replaceOccurrencesOfString: @"<"  withString: @"&lt;"   options: 0 range: NSMakeRange(0, [t length])];
-	[t replaceOccurrencesOfString: @">"  withString: @"&gt;"   options: 0 range: NSMakeRange(0, [t length])];
-	[t replaceOccurrencesOfString: @"\"" withString: @"&quot;" options: 0 range: NSMakeRange(0, [t length])];
-	[t replaceOccurrencesOfString: @"'"  withString: @"&apos;" options: 0 range: NSMakeRange(0, [t length])];
-	return t;
+  NSMutableString *t = (NSMutableString *)[rawText mutableCopy];
+  [t replaceOccurrencesOfString: @"&"  withString: @"&amp;"  options: 0 range: NSMakeRange(0, [t length])];  // must be first!
+  [t replaceOccurrencesOfString: @"<"  withString: @"&lt;"   options: 0 range: NSMakeRange(0, [t length])];
+  [t replaceOccurrencesOfString: @">"  withString: @"&gt;"   options: 0 range: NSMakeRange(0, [t length])];
+  [t replaceOccurrencesOfString: @"\"" withString: @"&quot;" options: 0 range: NSMakeRange(0, [t length])];
+  [t replaceOccurrencesOfString: @"'"  withString: @"&apos;" options: 0 range: NSMakeRange(0, [t length])];
+  return t;
 }
 
 // SIGNALS
 
 - (void)receiveNotificationClosedNotification:(NSNotification *)n
 {
-	id nId = [[n userInfo] objectForKey: @"arg0"];
-	NSUserNotification *un = [self deliveredNotificationWithUniqueId: nId];
-	NSDebugMLLog(@"NSUserNotification", @"%@", un);
+  id nId = [[n userInfo] objectForKey: @"arg0"];
+  NSUserNotification *un = [self deliveredNotificationWithUniqueId: nId];
+  NSDebugMLLog(@"NSUserNotification", @"%@", un);
 }
 
 - (void)receiveActionInvokedNotification:(NSNotification *)n
 {
-	id nId = [[n userInfo] objectForKey: @"arg0"];
-	NSUserNotification *un = [self deliveredNotificationWithUniqueId: nId];
-	NSString *action = [[n userInfo] objectForKey: @"arg1"];
+  id nId = [[n userInfo] objectForKey: @"arg0"];
+  NSUserNotification *un = [self deliveredNotificationWithUniqueId: nId];
+  NSString *action = [[n userInfo] objectForKey: @"arg1"];
 
-	NSDebugMLLog(@"NSUserNotification", @"%@ -- action: %@", un, action);
-	if ([action isEqual:kButtonActionKey])
-		un.activationType = NSUserNotificationActivationTypeActionButtonClicked;
-	else
-		un.activationType = NSUserNotificationActivationTypeContentsClicked;
+  NSDebugMLLog(@"NSUserNotification", @"%@ -- action: %@", un, action);
+  if ([action isEqual:kButtonActionKey])
+    un.activationType = NSUserNotificationActivationTypeActionButtonClicked;
+  else
+    un.activationType = NSUserNotificationActivationTypeContentsClicked;
 
-	if (self.delegate && [self.delegate respondsToSelector:@selector(userNotificationCenter:didActivateNotification:)])
-		[self.delegate userNotificationCenter: self didActivateNotification: un];
+  if (self.delegate && [self.delegate respondsToSelector:@selector(userNotificationCenter:didActivateNotification:)])
+    [self.delegate userNotificationCenter: self didActivateNotification: un];
 }
 
 @end
