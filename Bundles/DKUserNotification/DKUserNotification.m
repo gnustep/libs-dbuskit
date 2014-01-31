@@ -63,6 +63,7 @@ static NSString * const kButtonActionKey = @"show";
 
 @interface NSUserNotification ()
 @property (readwrite) NSDate *actualDeliveryDate;
+@property (readwrite, getter=isPresented) BOOL presented;
 @property (readwrite) NSUserNotificationActivationType activationType;
 @end
 
@@ -191,6 +192,7 @@ static NSString * const kButtonActionKey = @"show";
 									  : un.userInfo
 									  : -1];
 	ASSIGN(un->_uniqueId, uniqueId);
+  un.presented = YES;
 }
 
 - (void)_removeDeliveredNotification:(NSUserNotification *)un
