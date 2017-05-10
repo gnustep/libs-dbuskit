@@ -394,8 +394,8 @@
     return nil;
   }
   // We always need the introspectable interface:
-  [self setInterfaces: [NSDictionary dictionaryWithObject: [[_DKInterfaceIntrospectable copy] autorelease]
-                                                   forKey: [_DKInterfaceIntrospectable name]]];
+  [self setInterfaces: [NSMutableDictionary dictionaryWithObject: [[_DKInterfaceIntrospectable copy] autorelease]
+                                                          forKey: [_DKInterfaceIntrospectable name]]];
   return self;
 }
 - (NSString*)_path
