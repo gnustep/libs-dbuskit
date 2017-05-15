@@ -309,7 +309,8 @@ static DKPort *sharedSystemPort;
 - (id) initWithRemote: (NSString*)aRemote
                 onBus: (DKDBusBusType)type
 {
-  DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: type];
+  DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager]
+    endpointForWellKnownBus: DBusBusTypeFromWellKnownBus(type)];
   return [self initWithRemote: aRemote
                    atEndpoint: ep];
 }
@@ -1032,4 +1033,3 @@ _DKObjectPathHandleMessage(DBusConnection* connection,
 {
   return [(id<DKExportableObjectPathNode>)receiver handleDBusMessage: message];
 }
-

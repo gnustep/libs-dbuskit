@@ -10,12 +10,18 @@ if test -n ""; then
   if test -z "$OBJC"; then
     OBJC="$CC"
   fi
-fi 
+fi
 
 AC_PROG_CC(clang gcc cc c1 egcs)
 AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_OBJC(clang gcc objcc objc cc CC)
+AX_GCC_FUNC_ATTRIBUTE(visibility)
+if test "$ax_cv_have_func_attribute_visibility" = "yes"; then
+  HAVE_FUNC_ATTRIBUTE_VISIBILITY=1
+else
+  HAVE_FUNC_ATTRIBUTE_VISIBILITY=0
+fi
 AC_LANG(Objective C)
 PKG_PROG_PKG_CONFIG([])
 AC_LANG_PUSH(C)
@@ -63,7 +69,7 @@ if test "$CC" = "gcc"; then
       AC_MSG_RESULT([no]);
       AC_MSG_ERROR([Could not find library to link for atomic operations.]);
     fi
-  fi     
+  fi
 fi
 AC_LANG_POP(C)
 
@@ -83,7 +89,7 @@ fi
 saved_CFLAGS="$CFLAGS"
 saved_CPPFLAGS="$CPPFLAGS"
 CFLAGS="$CFLAGS $DBUS_CFLAGS"
-CPPFLAGS="$CPPFLAGS -Werror $DBUS_CFLAGS" 
+CPPFLAGS="$CPPFLAGS -Werror $DBUS_CFLAGS"
 
 AC_CHECK_HEADERS(dbus/dbus.h,have_dbus_h=yes,have_dbus_h=no)
 if test "$have_dbus_h" = "no"; then
@@ -121,7 +127,7 @@ if test "$enable_libclang" != "no"; then
       HAVE_LIBCLANG=1;
       MORE_LIBS="$MORE_LIBS -lclang"
     fi
-  fi 
+  fi
   if test "$HAVE_LIBCLANG" = "0"; then
     AC_MSG_WARN([Could not find a usable libclang. Please install libclang to enable advanced DBusKit features.])
   fi
@@ -162,8 +168,8 @@ else
   fi
 fi
 
-AC_CHECK_HEADERS([objc/encoding.h], [have_objc_encoding_h=yes], [have_objc_encoding_h=no], 
-  [#ifdef HAVE_OBJC_RUNTIME_H 
+AC_CHECK_HEADERS([objc/encoding.h], [have_objc_encoding_h=yes], [have_objc_encoding_h=no],
+  [#ifdef HAVE_OBJC_RUNTIME_H
    #include <objc/runtime.h>
    #else
    #  ifdef HAVE_OBJECTIVEC2_RUNTIME_H
@@ -206,6 +212,7 @@ AC_SUBST(OBJC_RUNTIME_H)
 AC_SUBST(OBJC)
 AC_SUBST(USE_SEL_GETTYPEENCODING)
 AC_SUBST(DISABLE_TYPED_SELECTORS)
+AC_SUBST(HAVE_FUNC_ATTRIBUTE_VISIBILITY)
 
 CFLAGS="$saved_CFLAGS"
 CPPFLAGS="$saved_CPPFLAGS"

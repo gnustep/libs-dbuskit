@@ -25,18 +25,16 @@
 @class NSLock, NSMapTable, NSMutableDictionary, DKEndpoint;
 
 
-enum
+/**
+ * Identifies the type of the well-known bus.
+ */
+typedef NS_ENUM(NSUInteger, DKDBusBusType)
 {
   DKDBusSessionBus,
   DKDBusSystemBus,
   DKDBusBusTypeOther,
   DKDBusBusTypeMax,
 };
-
-/**
- * Identifies the type of the well-known bus.
- */
-typedef NSUInteger DKDBusBusType;
 
 /**
  * DKPort is used by the Distributed Objects system to communicate with

@@ -50,8 +50,8 @@ static DKPortNameServer *sessionBusNameServer;
   {
     DKEndpointManager *manager = [DKEndpointManager sharedEndpointManager];
     [manager enterInitialize];
-    systemBusNameServer = [[DKPortNameServer alloc] initWithBusType: DBUS_BUS_SYSTEM];
-    sessionBusNameServer = [[DKPortNameServer alloc] initWithBusType: DBUS_BUS_SESSION];
+    systemBusNameServer = [[DKPortNameServer alloc] initWithBusType: DKDBusSystemBus];
+    sessionBusNameServer = [[DKPortNameServer alloc] initWithBusType: DKDBusSessionBus];
     [manager leaveInitialize];
   }
 }

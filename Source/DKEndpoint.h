@@ -21,8 +21,16 @@
    */
 
 #import <Foundation/NSObject.h>
+#import <Foundation/NSException.h>
 #import "DBusKit/DKPort.h"
 #include <dbus/dbus.h>
+#import "config.h"
+
+#if HAVE_FUNC_ATTRIBUTE_VISIBILITY
+#  define ATTR_HIDDEN __attribute__ ((visibility ("hidden")))
+#else
+#  define ATTR_HIDDEN
+#endif
 
 @class DKRunLoopContext, NSRunLoop, NSString, NSDictionary;
 @protocol NSCoding;
@@ -80,3 +88,23 @@
 - (NSString*)runLoopMode;
 
 @end
+
+/**
+ * Helper method to ensure that we are using a well known bus correctly.
+ */
+ATTR_HIDDEN inline DBusBusType
+DBusBusTypeFromWellKnownBus(DKDBusBusType type)
+{
+  switch (type)
+  {
+    case DKDBusSystemBus:
+      return DBUS_BUS_SYSTEM;
+    case DKDBusSessionBus:
+      return DBUS_BUS_SESSION;
+    default:
+      break;
+  }
+  [NSException raise: @"DKDbusBusException"
+              format: @"Not a well known bus"];
+  return 0;
+}

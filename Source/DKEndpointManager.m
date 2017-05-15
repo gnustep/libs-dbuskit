@@ -475,8 +475,10 @@ if (NO == DKRingEmpty)\
 - (void)_performRecovery: (NSTimer*)timer
 {
   NSDictionary *userInfo = [timer userInfo];
-  DKDBusBusType busType = [(NSNumber*)[userInfo objectForKey: @"busType"] integerValue];
-  DKEndpoint *newEndpoint = [self endpointForWellKnownBus: busType];
+  DKDBusBusType busType =
+    [(NSNumber*)[userInfo objectForKey: @"busType"] integerValue];
+  DKEndpoint *newEndpoint =
+    [self endpointForWellKnownBus: DBusBusTypeFromWellKnownBus(busType)];
   if (nil != newEndpoint)
   {
     [(DKDBus*)[userInfo objectForKey: @"proxy"] _reconnectedWithEndpoint: newEndpoint];
@@ -489,7 +491,7 @@ if (NO == DKRingEmpty)\
 {
   DBusConnection *connection = NULL;
   NSDictionary *infoDict = [NSDictionary dictionaryWithObjectsAndKeys:
-    [NSNumber numberWithInt: [endpoint DBusBusType]], @"busType",
+    [NSNumber numberWithInteger: [endpoint DBusBusType]], @"busType",
     proxy, @"proxy", nil];
   NSTimer *timer = nil;
   [connectionStateLock lock];

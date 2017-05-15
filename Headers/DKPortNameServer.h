@@ -26,15 +26,13 @@
 
 @class DKPort, NSHashTable, NSMutableDictionary, NSRecursiveLock, NSString;
 
-enum
+typedef NS_OPTIONS(NSUInteger, DKPortNameFlags)
 {
   DKPortNameAllowReplacement = 1 << 0,
   DKPortNameDoNotQueue = 1 << 1,
   DKPortNameReplaceExisting = 1 << 2,
   DKPortNameFlagMax = 7
 };
-
-typedef NSUInteger DKPortNameFlags;
 
 @interface DKPortNameServer: NSObject
 {
@@ -75,7 +73,7 @@ typedef NSUInteger DKPortNameFlags;
 
 - (BOOL)registerPort: (DKPort*)port
                 name: (NSString*)name
-	       flags: (DKPortNameFlags)flags;
+               flags: (DKPortNameFlags)flags;
 
 - (void)removePortForName: (NSString*)name;
 @end

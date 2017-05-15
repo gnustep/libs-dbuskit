@@ -86,8 +86,10 @@ static void
 DKRelease(void *ptr);
 
 
-
-
+/* Extern declaration to force emission of a symbol for inline helper function
+ */
+ATTR_HIDDEN extern DBusBusType
+DBusBusTypeFromWellKnownBus(DKDBusBusType type);
 
 @interface DKEndpoint (DBusEndpointPrivate)
 - (void)cleanup;
