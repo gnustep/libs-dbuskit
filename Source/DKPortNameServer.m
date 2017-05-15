@@ -30,6 +30,7 @@
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSHashTable.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSException.h>
 
 #include <stdint.h>
 #include <dbus/dbus.h>
@@ -120,18 +121,20 @@ static DKPortNameServer *sessionBusNameServer;
   return thisPort;
 }
 
-- (BOOL)registerPort: (DKPort*)port
-                name: (NSString*)name
+- (DKPortNameRegistrationStatus)registerPort: (DKPort*)port
+                                        name: (NSString*)name
 {
   return [self registerPort: port
                        name: name
                       flags: 0];
 }
-- (BOOL)registerPort: (DKPort*)port
-                name: (NSString*)name
-               flags: (DKPortNameFlags)flags
+- (DKPortNameRegistrationStatus)registerPort: (DKPort*)port
+                                        name: (NSString*)name
+                                       flags: (DKPortNameFlags)flags
 {
-  return NO;
+  [NSException raise: NSGenericException
+              format: @"Not implemented"];
+  return DKPortNameExists;
 }
 
 - (void)removePortForName: (NSString*)name

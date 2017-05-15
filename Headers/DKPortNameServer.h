@@ -34,6 +34,31 @@ typedef NS_OPTIONS(NSUInteger, DKPortNameFlags)
   DKPortNameFlagMax = 7
 };
 
+/**
+ * The status returned by D-Bus in response to a request to register a name.
+ */
+typedef NS_ENUM(uint32_t, DKPortNameRegistrationStatus)
+{
+  /**
+   * The port is now the primary owner of the name.
+   */
+  DKPortNamePrimaryOwner = 1,
+  /**
+   * The name has been queued and will be assigned to the port once previous
+   * registrands of the name go away.
+   */
+  DKPortNameQueued = 2,
+  /**
+   * The name is already in use by a different port, but queuing was not
+   * requested.
+   */
+  DKPortNameExists = 3,
+  /**
+   * The port had already been registered by the port. No changes occurred.
+   */
+  DKPortNameAlreadyOwner = 4
+};
+
 @interface DKPortNameServer: NSObject
 {
   @private
@@ -68,12 +93,12 @@ typedef NS_OPTIONS(NSUInteger, DKPortNameFlags)
 
 - (DKPort*)portForName: (NSString*)name;
 
-- (BOOL)registerPort: (DKPort*)port
-                name: (NSString*)name;
+- (DKPortNameRegistrationStatus)registerPort: (DKPort*)port
+                                        name: (NSString*)name;
 
-- (BOOL)registerPort: (DKPort*)port
-                name: (NSString*)name
-               flags: (DKPortNameFlags)flags;
+- (DKPortNameRegistrationStatus)registerPort: (DKPort*)port
+                                        name: (NSString*)name
+                                       flags: (DKPortNameFlags)flags;
 
 - (void)removePortForName: (NSString*)name;
 @end
