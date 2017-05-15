@@ -79,7 +79,7 @@ static DKEndpointManager *sharedManager;
 /* Definitions for the ring buffer, designwise inspired by EtoileThread */
 
 // Needs to be 2^n
-#define DKRingSize 32
+#define DKRingSize ((NSUInteger)32)
 
 #define DKRingMask (DKRingSize - 1)
 
@@ -141,8 +141,8 @@ if (NO == DKRingEmpty)\
   ringBuffer[DKMaskIndex(producerCounter)] = x;\
   __sync_fetch_and_add(&producerCounter, 1);\
   [producerLock unlock];\
-  NSDebugMLog(@"Inserting into ringbuffer (remaining capacity: %lu).",\
-    (unsigned long)DKRingSpace);\
+  NSDebugMLog(@"Inserting into ringbuffer (remaining capacity: %"PRIuPTR").",\
+    DKRingSpace);\
 } while (0)
 
 
@@ -152,13 +152,13 @@ if (NO == DKRingEmpty)\
 #define DKRingRemove(x) do {\
   if (NO == DKRingEmpty)\
   {\
-    NSDebugMLog(@"Removing element at %lu from ring buffer", (unsigned long)DKMaskIndex(consumerCounter));\
+    NSDebugMLog(@"Removing element at %"PRIuPTR" from ring buffer", (unsigned long)DKMaskIndex(consumerCounter));\
     x = ringBuffer[DKMaskIndex(consumerCounter)];\
     ringBuffer[DKMaskIndex(consumerCounter)] = (DKRingBufferElement){nil, NULL, nil, NULL};\
     [x.target autorelease];\
     __sync_fetch_and_add(&consumerCounter, 1);\
   }\
-  NSDebugMLog(@"(new capacity: %lu).",\
+  NSDebugMLog(@"(new capacity: %"PRIuPTR").",\
     (unsigned long)DKRingSpace);\
 } while (0)
 

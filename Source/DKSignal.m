@@ -142,7 +142,7 @@
   NSUInteger index = 0;
   while (index < (numArgs))
   {
-    NSString *key = [NSString stringWithFormat: @"arg%lu", index];
+    NSString *key = [NSString stringWithFormat: @"arg%"PRIuPTR"", index];
     DKArgument *arg = (DKArgument*)[args objectAtIndex: index];
     NSString *annotatedKey = [arg annotationValueForKey: @"org.gnustep.openstep.notification.key"];
 
@@ -185,7 +185,7 @@
   NSUInteger index = 0;
   for (index = 0; index < numArgs; index++)
   {
-    NSString *key = [NSString stringWithFormat: @"arg%lu", index];
+    NSString *key = [NSString stringWithFormat: @"arg%"PRIuPTR"", index];
     DKArgument *arg = (DKArgument*)[args objectAtIndex: index];
     NSString *annotatedKey = [arg annotationValueForKey: @"org.gnustep.openstep.notification.key"];
 
@@ -194,7 +194,7 @@
       {
         value = [userInfo objectForKey: annotatedKey];
       }
-  
+
     if (nil == value)
      {
        // second try, with the argN key
@@ -207,7 +207,7 @@
 
 - (NSInteger)argumentIndexForAnnotatedKey: (NSString*)key
 {
- 
+
   NSEnumerator *argEnum = [args objectEnumerator];
   DKArgument *arg = nil;
   NSInteger index = 0;
@@ -217,7 +217,7 @@
     if ([annotatedKey isEqualToString: key])
       {
         return index;
-      } 
+      }
     index++;
   }
   return NSNotFound;

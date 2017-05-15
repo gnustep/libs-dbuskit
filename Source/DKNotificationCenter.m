@@ -316,7 +316,7 @@
       match = @"";
     }
     [self setRule: match
-           forKey: [NSString stringWithFormat: @"arg%lu", index]];
+           forKey: [NSString stringWithFormat: @"arg%"PRIuPTR"", index]];
   }
 }
 
@@ -943,7 +943,7 @@ static DKEndpointManager *manager;
              interface: interfaceName
                 sender: sender
            destination: destination
-               filters: [NSDictionary dictionaryWithObject: filter 
+               filters: [NSDictionary dictionaryWithObject: filter
                                                     forKey: [NSNumber numberWithUnsignedInteger: index]]];
 }
 
@@ -1078,7 +1078,7 @@ static DKEndpointManager *manager;
   NSMutableDictionary *filterDict = [NSMutableDictionary dictionary];
   if (firstFilter != nil)
   {
-    [filterDict setObject: firstFilter 
+    [filterDict setObject: firstFilter
                    forKey: [NSNumber numberWithUnsignedInteger: firstIndex]];
   }
 
@@ -1092,7 +1092,7 @@ static DKEndpointManager *manager;
 
     if ((thisFilter != nil) && (thisIndex != 0))
     {
-      [filterDict setObject: thisFilter 
+      [filterDict setObject: thisFilter
                      forKey: [NSNumber numberWithUnsignedInteger: thisIndex]];
       processNextFilter = YES;
     }
@@ -1430,7 +1430,7 @@ static DKEndpointManager *manager;
       return;
     }
   DKSignal *sig = [self _signalForNotificationName: name
-                                      generateStub: NO]; 
+                                      generateStub: NO];
   [self _postSignal: sig
              object: sender
            userInfo: info];
@@ -1446,7 +1446,7 @@ static DKEndpointManager *manager;
                          generateStub: NO];
   if ((nil == s) || ([s isStub]))
     {
-      // Non-existant or stub signals can't be posted 
+      // Non-existant or stub signals can't be posted
       // since we don't know how to serialise them
       return;
     }
@@ -1467,8 +1467,8 @@ static DKEndpointManager *manager;
 
   // The local port manages the object graph
   DKPort *localPort = [DKPort portForBusType: [[bus _endpoint] DBusBusType]];
-  
-  id<DKExportableObjectPathNode> p = 
+
+  id<DKExportableObjectPathNode> p =
     [localPort _proxyForObject: sender];
   if (nil == p)
     {
@@ -1476,7 +1476,7 @@ static DKEndpointManager *manager;
       /*
        * In the future, we'll do this:
          p = [bus _port] _autoregisterObject: sender
-                                  withParent: root]; 
+                                  withParent: root];
        */
       return;
     }

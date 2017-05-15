@@ -119,7 +119,7 @@ didStartElement: (NSString*)aNode
     return;
   }
   xmlDepth++;
-  NSDebugLog(@"Starting <%@> node '%@' at depth %lu.",
+  NSDebugLog(@"Starting <%@> node '%@' at depth %"PRIuPTR".",
     aNode,
     theName,
     xmlDepth);
@@ -221,7 +221,7 @@ didStartElement: (NSString*)aNode
   }
   else
   {
-    NSDebugMLog(@"Ignoring <%@> node '%@' at depth %lu.",
+    NSDebugMLog(@"Ignoring <%@> node '%@' at depth %"PRIuPTR".",
       aNode,
       theName,
       xmlDepth);

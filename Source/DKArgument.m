@@ -905,13 +905,13 @@ DKDBusTypeForUnboxingObject(id object)
       {
         DKProxy *rootProxy = [self proxyParent];
         /*
-         * Handle remote objects. We need a way to make sure that their 
+         * Handle remote objects. We need a way to make sure that their
          * scope is well defined. This means that they are either
          * references to the same remote object that is the owner of the
          * argument (so they are local to the receiver of the message)
          * or the value is an outgoing proxy (so they are local to the
-         * sender of the message, and the remote end will be able to 
-         * interpret the path correctly) 
+         * sender of the message, and the remote end will be able to
+         * interpret the path correctly)
          */
         if (([rootProxy hasSameScopeAs: value]) || ([value _isLocal]))
         {
@@ -1563,7 +1563,7 @@ DKDBusTypeForUnboxingObject(id object)
   // Arrays can only have a single type:
   if (childCount != 1)
   {
-    NSWarnMLog(@"Invalid number of children (%lu) for D-Bus array argument",
+    NSWarnMLog(@"Invalid number of children (%"PRIuPTR") for D-Bus array argument",
       childCount);
     [self release];
     return nil;
@@ -1646,7 +1646,7 @@ DKDBusTypeForUnboxingObject(id object)
     }
     NSUInteger offset = idx++ % 128;
     dbus_message_iter_get_basic(iter, (void*)(&bytes[0] + offset));
-    // We filled the last byte of the on stack buffer, so we 
+    // We filled the last byte of the on stack buffer, so we
     if (127 == offset)
       {
         [data appendBytes: &bytes[0] length: 128];
@@ -1730,7 +1730,7 @@ DKDBusTypeForUnboxingObject(id object)
     }
   else
    {
-     NSAssert1(([object respondsToSelector: @selector(objectEnumerator)] || 
+     NSAssert1(([object respondsToSelector: @selector(objectEnumerator)] ||
        [object isKindOfClass: [NSData class]]),
        @"Cannot enumerate contents of %@ when creating D-Bus array.",
        object
@@ -1958,7 +1958,8 @@ DKDBusTypeForUnboxingObject(id object)
       @"Object '%@' cannot be marshalled as D-Bus struct.",
       object);
     NSAssert3(([object count] == childCount),
-      @"Could not marshall object '%@' as D-Bus struct: Expected %lu members, got %lu.",
+      @"Could not marshall object '%@' as D-Bus struct: Expected %"PRIuPTR""
+      @" members, got %"PRIuPTR".",
       object,
       [object count],
       childCount);
@@ -2104,7 +2105,7 @@ static Class NSCFBooleanClass;
   {
     NSEnumerator *theEnum = [object objectEnumerator];
     NSString *signature = nil;
-    if ([object respondsToSelector: @selector(isDBusStruct)] 
+    if ([object respondsToSelector: @selector(isDBusStruct)]
       && [object isDBusStruct])
       {
         NSString *subSig = [self subSignatureForEnumerator: theEnum forStruct: YES];
@@ -2134,9 +2135,9 @@ static Class NSCFBooleanClass;
     return [[[DKArgument alloc] initWithDBusSignature: "ay"
                                                  name: nil
                                                parent: self] autorelease];
-    
+
   }
-  else if (((NSBoolNumberClass != Nil) 
+  else if (((NSBoolNumberClass != Nil)
            && [object isKindOfClass: NSBoolNumberClass])
        || ((NSCFBooleanClass != Nil)
            && [object isKindOfClass: NSCFBooleanClass]))
@@ -2261,7 +2262,7 @@ static Class NSCFBooleanClass;
   // Dictionaries have exactly two types:
   if (childCount != 2)
   {
-    NSWarnMLog(@"Invalid number of children (%lu) for D-Bus dict entry argument. Ignoring argument.",
+    NSWarnMLog(@"Invalid number of children (%"PRIuPTR") for D-Bus dict entry argument. Ignoring argument.",
       childCount);
     [self release];
     return nil;
