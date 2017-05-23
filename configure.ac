@@ -138,14 +138,11 @@ AC_SUBST(HAVE_LIBCLANG)
 AC_ARG_ENABLE(global-menu-bundle,
       [  --disable-global-menu-bundle	Disable building the global menu bundle.],,)
 if test "$enable_global_menu_bundle" != "no"; then
-  AC_CHECK_HEADERS("AppKit/NSMenu.h")
   HAVE_GUI=0;
-  if test "$ac_cv_header_AppKit_NSMenu_h" = "yes"; then
-    AC_CHECK_LIB(gnustep-gui, NSApplicationMain)
-    if test "$ac_cv_lib_gnustep_gui_NSApplicationMain" = "yes"; then
-      HAVE_GUI=1;
-      BUILD_GLOBAL_MENU_BUNDLE=1;
-    fi
+  AC_CHECK_LIB(gnustep-gui, NSApplicationMain)
+  if test "$ac_cv_lib_gnustep_gui_NSApplicationMain" = "yes"; then
+    HAVE_GUI=1;
+    BUILD_GLOBAL_MENU_BUNDLE=1;
   fi
   if test "$HAVE_GUI" = "0"; then
     if test "$enable_global_menu_bundle" = "yes"; then

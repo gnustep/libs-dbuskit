@@ -39,7 +39,7 @@ SUBPROJECTS = Source \
               Tools
 
 ifeq ($(strip $(BUILD_GLOBAL_MENU_BUNDLE)),1)
-# SUBPROJECTS += Bundles/DBusMenu
+SUBPROJECTS += Bundles/DBusMenu
 endif
 
 ifeq ($(strip $(BUILD_NOTIFICATION_BUNDLE)),1)
