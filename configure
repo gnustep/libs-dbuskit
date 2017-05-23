@@ -11610,22 +11610,8 @@ if test "${enable_global_menu_bundle+set}" = set; then :
 fi
 
 if test "$enable_global_menu_bundle" != "no"; then
-  for ac_header in "AppKit/NSMenu.h"
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_objc_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
-
-fi
-
-done
-
   HAVE_GUI=0;
-  if test "$ac_cv_header_AppKit_NSMenu_h" = "yes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for NSApplicationMain in -lgnustep-gui" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for NSApplicationMain in -lgnustep-gui" >&5
 $as_echo_n "checking for NSApplicationMain in -lgnustep-gui... " >&6; }
 if ${ac_cv_lib_gnustep_gui_NSApplicationMain+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -11670,10 +11656,9 @@ _ACEOF
 
 fi
 
-    if test "$ac_cv_lib_gnustep_gui_NSApplicationMain" = "yes"; then
-      HAVE_GUI=1;
-      BUILD_GLOBAL_MENU_BUNDLE=1;
-    fi
+  if test "$ac_cv_lib_gnustep_gui_NSApplicationMain" = "yes"; then
+    HAVE_GUI=1;
+    BUILD_GLOBAL_MENU_BUNDLE=1;
   fi
   if test "$HAVE_GUI" = "0"; then
     if test "$enable_global_menu_bundle" = "yes"; then

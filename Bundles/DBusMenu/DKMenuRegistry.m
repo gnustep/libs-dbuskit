@@ -111,9 +111,9 @@
     {
       [menuProxy menuUpdated: menu];
     }
-  int32_t number = (int32_t)[window windowNumber];
+  int internalNumber = [window windowNumber];
   GSDisplayServer *srv = GSServerForWindow(window);
-  number = (int32_t)[srv windowDevice: number];
+  uint32_t number = (uint32_t)(uintptr_t)[srv windowDevice: internalNumber];
   NSNumber *boxed = [NSNumber numberWithInt: number];
   if ((nil != menu) && (NO == [windowNumbers containsIndex: number]))
     {
