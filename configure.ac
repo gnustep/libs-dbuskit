@@ -135,6 +135,63 @@ fi
 
 AC_SUBST(HAVE_LIBCLANG)
 
+AC_ARG_ENABLE(global-menu-bundle,
+      [  --disable-global-menu-bundle	Disable building the global menu bundle.],,)
+if test "$enable_global_menu_bundle" != "no"; then
+  AC_CHECK_HEADERS("AppKit/NSMenu.h")
+  HAVE_GUI=0;
+  if test "$ac_cv_header_AppKit_NSMenu_h" = "yes"; then
+    AC_CHECK_LIB(gnustep-gui, NSApplicationMain)
+    if test "$ac_cv_lib_gnustep_gui_NSApplicationMain" = "yes"; then
+      HAVE_GUI=1;
+      BUILD_GLOBAL_MENU_BUNDLE=1;
+    fi
+  fi
+  if test "$HAVE_GUI" = "0"; then
+    if test "$enable_global_menu_bundle" = "yes"; then
+      AC_MSG_ERROR([Could not find gnustep-gui, required for building the global menu bundle]);
+    else
+      AC_MSG_WARN([Could not find a useable gnustep-gui. Please install gnustep-gui to build global menu bundle]);
+      BUILD_GLOBAL_MENU_BUNDLE=0;
+    fi
+  fi
+else
+  BUILD_GLOBAL_MENU_BUNDLE=0;
+fi
+AC_SUBST(BUILD_GLOBAL_MENU_BUNDLE)
+
+
+AC_ARG_WITH(base-makefile,
+  [  --with-base-makefile=PATH  path base.make],
+  BASE_MAKEFILE="$withval", BASE_MAKEFILE="")
+AC_SUBST(BASE_MAKEFILE)
+
+AC_ARG_ENABLE(notification-bundle,
+      [  --disable-notification-bundle	Disable building the user notification bundle.],,)
+if test "$enable_notification_bundle" != "no"; then
+  AC_MSG_CHECKING(for automatic property synthesis)
+  AC_TRY_COMPILE([], 
+    [ #if __has_feature(objc_default_synthesize_properties)
+        return 0;
+      #else
+      #  error "No default property synthesis"
+      #endif
+    ], HAVE_DEFAULT_SYNTHESIZE_PROPERTIES=yes, HAVE_DEFAULT_SYNTHESIZE_PROPERTIES=no);
+  AC_MSG_RESULT($HAVE_DEFAULT_SYNTHESIZE_PROPERTIES)
+  if test $HAVE_DEFAULT_SYNTHESIZE_PROPERTIES = 'yes'; then
+    BUILD_NOTIFICATION_BUNDLE=1;
+  else
+    if test "$enable_notification_bundle" = "yes"; then
+      AC_MSG_ERROR([Your compiler does not support automatic property synthesis. Please use a recent version of clang]);
+    else
+      AC_MSG_WARN([Your compiler does not support automatic property synthesis. Not building notification bundle]);
+      BUILD_NOTIFICATION_BUNDLE=0;
+    fi
+  fi
+else
+  BUILD_NOTIFICATION_BUNDLE=0;
+fi
+AC_SUBST(BUILD_NOTIFICATION_BUNDLE)
 
 # Setup variables for Objective-C tests:
 

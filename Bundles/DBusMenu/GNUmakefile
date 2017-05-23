@@ -3,7 +3,7 @@ BUNDLE_NAME = DBusMenu
 DBusMenu_OBJC_FILES = DKMenuProxy.m \
 		      DKMenuRegistry.m 
 
-DBusMenu_HEADRE_FILES = DKMenuProxy.h \
+DBusMenu_HEADER_FILES = DKMenuProxy.h \
 			DKMenuRegistry.h \
 			DKDBusMenu.h
 DBusMenu_LDFLAGS += -lDBusKit

@@ -38,6 +38,15 @@ GNUSTEP_USE_PARALLEL_AGGREGATE=no
 SUBPROJECTS = Source \
               Tools
 
+ifeq ($(strip $(BUILD_GLOBAL_MENU_BUNDLE)),1)
+# SUBPROJECTS += Bundles/DBusMenu
+endif
+
+ifeq ($(strip $(BUILD_NOTIFICATION_BUNDLE)),1)
+SUBPROJECTS += Bundles/DKUserNotification
+endif
+
+
 MAKEINFO = $(shell which makeinfo)
 TEXI2PDF = $(shell which texi2pdf)
 TEXI2HTML = $(shell which texi2html)

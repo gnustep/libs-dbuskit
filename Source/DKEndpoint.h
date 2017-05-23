@@ -92,7 +92,7 @@
 /**
  * Helper method to ensure that we are using a well known bus correctly.
  */
-ATTR_HIDDEN inline DBusBusType
+static inline DBusBusType
 DBusBusTypeFromWellKnownBus(DKDBusBusType type)
 {
   switch (type)
