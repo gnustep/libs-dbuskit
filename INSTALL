@@ -5,20 +5,30 @@
 =====================
 
 As an Objective-C framework, DBusKit depends on recent versions of the
-GNUstep Makefile Package and the GNUstep Base Library. Versions 2.4.0
-and 1.20.0 (respectively) are known to work. D-Bus support is provided
-by libdbus. DBusKit has been verified to work with version 1.2.1 of
-libdbus, but might work with earlier versions. Some advanced features
+GNUstep Makefile Package and the GNUstep Base Library.  Versions 2.4.0
+and 1.20.0 (respectively) are known to work.  D-Bus support is provided
+by libdbus.  DBusKit has been verified to work with version 1.2.1 of
+libdbus, but might work with earlier versions.  Some advanced features
 (e.g.  generating D-Bus interfaces from Objective-C headers) require
-libclang.  To build the testsuite, the UnitKit framework is required.
-It is available from the Étoilé repository
-(http://svn.gna.org/svn/etoile/trunk/Etoile/Frameworks/UnitKit/).
+libclang.  Usage of libclang can be disabled by passing the
+"-disable-libclang switch" to the configure script.  To build the
+testsuite, the UnitKit framework is required.  It is available from the
+Étoilé repository (https://github.com/etoile/UnitKit/).
+
+   Please note that UnitKit requires the GNUstep Objective-C runtime
+(https://github.com/gnustep/libobjc2) and the clang compiler.  Clang is
+also required to build the included user notification bundle.  The
+global menu bundle can only be built if gnustep-gui is available.
 
    * gnustep-make (>=2.4.0)
 
    * gnustep-base (>=1.22.0)
 
    * libdbus (>=1.2.1)
+
+   * gnustep-gui (required only for global menu bundle)
+
+   * clang (required only for user notification bundle)
 
    * libclang (optional)
 
@@ -27,13 +37,13 @@ It is available from the Étoilé repository
 1.2 Build and Install
 =====================
 
-To build and install DBusKit type `make install'. This will
+To build and install DBusKit type 'make install'.  This will
 automatically configure the framework prior to building and installing.
 DBusKit will usually tell your compiler to treat warnings as errors, if
-you don't want that behaviour, add the `nonstrict=yes' flag to your
-`make'-invocation.
+you don't want that behaviour, add the 'nonstrict=yes' flag to your
+'make'-invocation.
 
-   Copyright (C) 2010 Free Software Foundation
+   Copyright (C) 2017 Free Software Foundation
 
    Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

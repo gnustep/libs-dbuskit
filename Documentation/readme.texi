@@ -9,6 +9,16 @@ applications to transparently access services exposed via D-Bus.
 Please refer to the @samp{INSTALL} file for information about
 dependencies and instructions about installing the library.
 
+@section End-User Services
+
+Apart from the developer oriented parts, DBusKit ships with two
+dynamically loadable bundles that provide interesting services for
+desktop systems. The @samp{DKUserNotification} bundle is loaded
+automatically by the gnustep-base library to integrate with the
+D-Bus based desktop notification system. The @samp{DBusMenu} bundle
+is used by the Gtk theme and allows GNUstep applications to leverage
+the global menu bar provided by Ubuntu.
+
 @section Mac OS X Support
 
 DBusKit makes use of the typed selectors feature of the Objective-C
@@ -37,15 +47,16 @@ The associated tools and examples are covered under the GNU Public
 License. This means if you make changes to these programs, you cannot
 charge a fee, other than distribution fees, for others to use the
 program. You should read the COPYING file for more information. All
-files in the @file{Examples} and @file{Tools} directories are covered
-under the GPL.
+files in @file{Tools} directories are covered under the GPL. The materials
+in the @file{Examples} are licensed according to their respective
+COPYING files.
 
 The documentation is, unless noted otherwise, licensed under the GNU Free
 Documentation License (with no Invariant Sections or Cover Texts).
 
 
 @ifinfo
-Copyright @copyright{} 2010--2014 Free Software Foundation
+Copyright @copyright{} 2010--2017 Free Software Foundation
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

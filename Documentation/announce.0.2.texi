@@ -1,7 +1,62 @@
 @chapter GNUstep DBusKit Framework 0.2
 
+I'm happy to announce a new release of DBusKit, the GNUstep D-Bus bindings
+framework. The framework allows Objective-C applications to access the
+D-Bus inter-process communication system.
+
+@section Where to get it
+You may obtain the code for this release from the GNUstep GitHub
+organisation at:
+
+@url{https://github.com/gnustep/libs-dbuskit/releases/0.2}
+
+@c Alternatively, a compressed archive for this release is available at the
+@c following address:
+@c
+@c @url{http://downloads.gna.org/gnustep/dbuskit-0.1.tar.bz2}
+@c
+@c The integrity of the archive can be verified using the following
+@c OpenPGP signature:
+@c
+@c @url{http://downloads.gna.org/gnustep/dbuskit-0.1.tar.bz2.asc}
+
+@section How to build it
+For instructions on how to build DBusKit, please refer to the
+@samp{INSTALL} file in the framework source.
+
+@section What is it good for?
+The DBusKit framework offers tight integration of D-Bus services into
+Objective-C applications. It handles all low-level details of
+communication with D-Bus daemons and the services connected to them and
+exposes an interface similar to Distributed Objects to make it easy for
+Objective-C programmers to access D-Bus services.
+
+@section What's new?
+
+@itemize @bullet
+@item The notification center class has been extended to support sending
+signals to other D-Bus services.
+@item A bundle implementing user notifications via D-Bus for
+gnustep-base.
+@item An implementation of Canonical's global menu protocol for use
+with GNUstep's Gtk theme.
+@end itemize
+
+@section Deprecation notice
+
+This is the last release of DBusKit that officially supports the GCC
+Objective-C compiler and the accompanying runtime library. Future
+releases will require clang and the GNUstep Objective-C runtime.
+
+@section Where do I send bug reports?
+
+Bug reports are highly appreciated. You can log bug reports on the
+@uref{http://savannah.gnu.org/bugs/?group=gnustep,GNUstep project page}
+or send them to @email{bug-gnustep@@gnu.org}.
+
+
 @ifinfo
-Copyright @copyright{} 2011 Free Software Foundation
+Copyright @copyright{} 2017 Free Software Foundation
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
