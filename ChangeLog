@@ -1,3 +1,8 @@
+2017-10-09  Yavor Doganov  <yavor@gnu.org>
+
+	* Source/DKArgument.m,
+	* Source/DKEndpoint.m: Trivial spelling fixes.
+
 2014-01-30 Niels Grewe <niels.grewe@halbordnung.de>
 
 	* Headers/DKNumber.h: Fix typo
@@ -6,7 +11,7 @@
 
 	* Bundles/DKUserNotification:
 	Implementation of the DBus-based Desktop Notifications
-	Specification on top of Implementation of 
+	Specification on top of Implementation of
 	NSUserNotificationCenter.
 
 2014-01-29 Niels Grewe <niels.grewe@halbordnung.de>

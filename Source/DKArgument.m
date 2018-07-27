@@ -417,7 +417,7 @@ DKDBusTypeForUnboxingObject(id object)
   if ((dbus_type_is_container(DBusType))
     && (![self isKindOfClass: [DKContainerTypeArgument class]]))
   {
-    NSDebugMLog(@"Incorrectly initalized a non-container argument with a container type, reinitializing as container type.");
+    NSDebugMLog(@"Incorrectly initialized a non-container argument with a container type, reinitializing as container type.");
     [self release];
     return [[DKContainerTypeArgument alloc] initWithIterator: iterator
                                                         name: _name
@@ -1793,7 +1793,7 @@ DKDBusTypeForUnboxingObject(id object)
 
   if (![[self elementTypeArgument] isKindOfClass: [DKDictEntryTypeArgument class]])
   {
-    NSWarnMLog(@"Invalid dictionary type argument (does not contan a dict entry).");
+    NSWarnMLog(@"Invalid dictionary type argument (does not contain a dict entry).");
     [self release];
     return nil;
   }

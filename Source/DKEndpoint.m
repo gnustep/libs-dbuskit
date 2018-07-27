@@ -809,7 +809,7 @@ DKTimeoutAdd(DBusTimeout *timeout, void *data)
 {
   CTX(data);
   NSCAssert(timeout, @"Missing timeout data during D-Bus event handling.");
-  NSDebugFLog(@"Timout added");
+  NSDebugFLog(@"Timeout added");
   if (NO == (BOOL)dbus_timeout_get_enabled(timeout))
   {
     return TRUE;
