@@ -64,7 +64,7 @@
   DKArgument *returnArg = nil;
 
   // Sanity check: We cannot build methods without names or without types.
-  if ((0 == theSel) || ((NULL == types) || ('\0' == types)))
+  if ((0 == theSel) || ((NULL == types) || ('\0' == *types)))
   {
     return nil;
   }

@@ -2019,46 +2019,51 @@ static Class NSCFBooleanClass;
                              forStruct: (BOOL)isStruct
 {
   id element = [theEnum nextObject];
-  NSString *thisSig = [[self DKArgumentWithObject: element
-                                         topLevel: NO] DBusTypeSignature];
-  NSString *nextSig = thisSig;
-  NSMutableString *allTypes = [NSMutableString stringWithString: thisSig];
-  // For homogenous collection, we can get the proper signature, for non-homogenous
-  // ones, we need to pass down the variant type if it's not a signature for a struct.
-  BOOL isHomogenous = YES;
+
   if (nil == element)
     {
-      thisSig = @"v";
+      return @"v";
     }
-  while ((nil != (element = [theEnum nextObject]))
-    && (YES == isHomogenous))
-  {
-    thisSig = nextSig;
-    nextSig = [[self DKArgumentWithObject: element
-                                 topLevel: NO] DBusTypeSignature];
-    [allTypes appendString: nextSig];
-    if (isStruct == NO)
-      {
-        isHomogenous = [thisSig isEqualToString: nextSig];
-      }
-  }
-
-  if (NO == isStruct)
+  else
     {
-      if (isHomogenous)
-      {
-	return thisSig;
-      }
-      else
-      {
-	return @"v";
-      }
-   }
- else
-   {
-     return allTypes;
-   }
+      NSString *thisSig = [[self DKArgumentWithObject: element
+                                             topLevel: NO] DBusTypeSignature];
+      NSString *nextSig = thisSig;
+      NSMutableString *allTypes = [NSMutableString stringWithString: thisSig];
+      // For homogenous collection, we can get the proper signature, for non-homogenous
+      // ones, we need to pass down the variant type if it's not a signature for a struct.
+      BOOL isHomogenous = YES;
 
+
+      while ((nil != (element = [theEnum nextObject]))
+             && (YES == isHomogenous))
+        {
+          thisSig = nextSig;
+          nextSig = [[self DKArgumentWithObject: element
+                                       topLevel: NO] DBusTypeSignature];
+          [allTypes appendString: nextSig];
+          if (isStruct == NO)
+            {
+              isHomogenous = [thisSig isEqualToString: nextSig];
+            }
+        }
+      
+      if (NO == isStruct)
+        {
+          if (isHomogenous)
+            {
+              return thisSig;
+            }
+          else
+            {
+              return @"v";
+            }
+        }
+      else
+        {
+          return allTypes;
+        }
+    }
 }
 
 - (NSString*)validSubSignatureOrVariantForEnumerator: (NSEnumerator*)theEnum

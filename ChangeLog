@@ -1,3 +1,9 @@
+2021-01-01  Fred Kiefer <fredkiefer@gmx.de>
+
+	* Source/DKArgument.m,
+	* Source/DKMethod.m: Minor fixes.
+	* Documentation/DBusKit.texi: Use only on @title element.
+
 2017-10-09  Yavor Doganov  <yavor@gnu.org>
 
 	* Source/DKArgument.m,

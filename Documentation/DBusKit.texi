@@ -29,9 +29,8 @@ section entitled ``GNU Free Documentation License''.
 @setchapternewpage odd
 @titlepage
 
-@title GNUstep
-@title DBusKit and D-Bus
-@title Programming Manual
+@title GNUstep DBusKit and D-Bus
+@subtitle Programming Manual
 
 @author Niels Grewe
 
