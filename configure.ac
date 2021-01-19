@@ -135,6 +135,17 @@ fi
 
 AC_SUBST(HAVE_LIBCLANG)
 
+# Setup variables for Objective-C tests:
+
+saved_CFLAGS="$CFLAGS"
+saved_CPPFLAGS="$CPPFLAGS"
+saved_LDFLAGS="$LDFLAGS"
+GS_OBJCFLAGS=`gnustep-config --objc-flags`
+CFLAGS="$CFLAGS $GS_OBJCFLAGS"
+CPPFLAGS="$CPPFLAGS $GS_OBJCFLAGS"
+GS_LDFLAGS=`gnustep-config --objc-libs`
+LDFLAGS="$LDFLAGS $GS_LDFLAGS"
+
 AC_ARG_ENABLE(global-menu-bundle,
       [  --disable-global-menu-bundle	Disable building the global menu bundle.],,)
 if test "$enable_global_menu_bundle" != "no"; then
@@ -189,20 +200,6 @@ else
   BUILD_NOTIFICATION_BUNDLE=0;
 fi
 AC_SUBST(BUILD_NOTIFICATION_BUNDLE)
-
-# Setup variables for Objective-C tests:
-
-saved_CFLAGS="$CFLAGS"
-saved_CPPFLAGS="$CPPFLAGS"
-saved_LDFLAGS="$LDFLAGS"
-GS_OBJCFLAGS=`gnustep-config --objc-flags`
-CFLAGS="$CFLAGS $GS_OBJCFLAGS"
-CPPFLAGS="$CPPFLAGS $GS_OBJCFLAGS"
-GS_LDFLAGS=`gnustep-config --objc-libs`
-LDFLAGS="$LDFLAGS $GS_LDFLAGS"
-
-
-
 
 #--------------------------------------------------------------------
 # Check whether we get runtime.h from libobjc2 or from the ObjectiveC2
