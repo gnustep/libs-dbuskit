@@ -429,7 +429,7 @@
   }
 
   returnValue = [NSString stringWithFormat: @"%s%"PRIuPTR"%@", [self returnTypeBoxed: doBox],
-    (unsigned long)offset,
+    (unsigned int)offset,
     typeString];
   [typeString release];
   NSDebugMLog(@"Generated Obj-C type string: %@", returnValue);
@@ -841,7 +841,7 @@
 
       if (nil == argName)
       {
-        argName = [NSString stringWithFormat: @"argument%ld", inIndex];
+        argName = [NSString stringWithFormat: @"argument%ld", (unsigned long)inIndex];
       }
       [declaration appendFormat:@"%@: (%@)%@ ",
         [components objectAtIndex: inIndex],

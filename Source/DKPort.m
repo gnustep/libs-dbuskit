@@ -473,7 +473,7 @@ static DKPort *sharedSystemPort;
     case METHODTYPE_REPLY:
     case PROXY_RELEASE:
     case RETAIN_REPLY:
-      NSDebugMLog(@"Got reply type %ld", msgid);
+      NSDebugMLog(@"Got reply type %ld", (long)msgid);
       break;
     case PROXY_AT_PATH_REQUEST:
       /*
