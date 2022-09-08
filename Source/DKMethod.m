@@ -429,7 +429,7 @@
   }
 
   returnValue = [NSString stringWithFormat: @"%s%"PRIuPTR"%@", [self returnTypeBoxed: doBox],
-    (unsigned int)offset,
+    (NSUInteger)offset,
     typeString];
   [typeString release];
   NSDebugMLog(@"Generated Obj-C type string: %@", returnValue);

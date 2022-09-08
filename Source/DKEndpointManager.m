@@ -152,14 +152,14 @@ if (NO == DKRingEmpty)\
 #define DKRingRemove(x) do {\
   if (NO == DKRingEmpty)\
   {\
-    NSDebugMLog(@"Removing element at %"PRIuPTR" from ring buffer", (unsigned int)DKMaskIndex(consumerCounter));\
+    NSDebugMLog(@"Removing element at %"PRIuPTR" from ring buffer", (NSUInteger)DKMaskIndex(consumerCounter));\
     x = ringBuffer[DKMaskIndex(consumerCounter)];\
     ringBuffer[DKMaskIndex(consumerCounter)] = (DKRingBufferElement){nil, NULL, nil, NULL};\
     [x.target autorelease];\
     __sync_fetch_and_add(&consumerCounter, 1);\
   }\
   NSDebugMLog(@"(new capacity: %"PRIuPTR").",\
-    (unsigned int)DKRingSpace);\
+    (NSUInteger)DKRingSpace);\
 } while (0)
 
 @implementation DKEndpointManager
