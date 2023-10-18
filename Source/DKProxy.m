@@ -905,6 +905,7 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
   NS_DURING
   {
     introspectionData = [[self Introspect] dataUsingEncoding: NSUTF8StringEncoding];
+    NSDebugMLog(@"introspection data [%@]", [self Introspect]);
   }
   NS_HANDLER
   {
@@ -1055,6 +1056,11 @@ NSString *kDKDBusDocType = @"<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS O
                          attributes: attributes];
 }
 
+- (NSString*) description
+{
+  return [NSString stringWithFormat:@"%@ port=%@ path=%@", [self class], port, path];
+}
+
 - (void) dealloc
 {
   [port release];
@@ -1111,7 +1117,7 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
       DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SYSTEM];
       systemBus = [[DKDBus alloc] initWithEndpoint: ep
                                         andService: @"org.freedesktop.DBus"
-                                           andPath: @"/"];
+                                           andPath: @"/org/freedesktop/DBus"];
     }
     [busLock unlock];
   }

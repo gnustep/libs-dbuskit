@@ -552,6 +552,11 @@ static DKPort *sharedSystemPort;
   [super invalidate];
 }
 
+- (NSString*) description
+{
+  return [NSString stringWithFormat:@"%@ remote=%@", [self class], remote];
+}
+
 - (void)dealloc
 {
   [self _unregisterAllObjects];
