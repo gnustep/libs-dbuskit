@@ -209,7 +209,8 @@
   }
 
   int argCount  = clang_Cursor_getNumArguments(cursor);
-  for (int i = 0; i < argCount; i++)
+  int i = 0;
+  for (; i < argCount; i++)
   {
     CXCursor arg = clang_Cursor_getArgument(cursor, i);
     CXString aName = clang_getCursorSpelling(cursor);
