@@ -31,6 +31,7 @@
 #import <Foundation/NSLock.h>
 #import <Foundation/NSMapTable.h>
 #import <Foundation/NSRunLoop.h>
+#import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSTimer.h>
 #import <Foundation/NSValue.h>
@@ -471,6 +472,7 @@ DKRelease(void *ptr);
  */
 - (void)monitorForEvents
 {
+  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
   NSUInteger events = dbus_watch_get_flags(watch);
   // Dispatch new events to the runLoop:
   if (events & DBUS_WATCH_READABLE)
@@ -487,6 +489,7 @@ DKRelease(void *ptr);
                       watcher: self
                       forMode: [ctx runLoopMode]];
     }
+  [pool release];
 }
 
 /**
@@ -494,6 +497,7 @@ DKRelease(void *ptr);
  */
 - (void)unmonitorForEvents
 {
+  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
   NSUInteger events = dbus_watch_get_flags(watch);
   // Remove events to the runLoop:
   if (events & DBUS_WATCH_READABLE)
@@ -510,7 +514,7 @@ DKRelease(void *ptr);
                          forMode: [ctx runLoopMode]
                              all: NO];
     }
-
+  [pool release];
 }
 
 - (id)initWithWatch: (DBusWatch*)_watch

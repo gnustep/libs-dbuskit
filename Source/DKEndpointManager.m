@@ -245,7 +245,7 @@ if (NO == DKRingEmpty)\
    workerThread = [[NSThread alloc] initWithTarget: self
                                           selector: @selector(start:)
                                             object: nil];
-   [workerThread setName: @"DBusKit worker thread"];
+   [workerThread setName: @"DBusKit thread"];
    /*
     * We set this up with a refcout of 1 because we want to start in
     * non-threaded mode. Otherwise people will get bitten by synchronisation
