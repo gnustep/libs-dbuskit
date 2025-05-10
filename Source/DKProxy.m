@@ -1111,7 +1111,7 @@ NSString* DKBusReconnectedNotification = @"DKBusReconnectedNotification";
       DKEndpoint *ep = [[DKEndpointManager sharedEndpointManager] endpointForWellKnownBus: DBUS_BUS_SYSTEM];
       systemBus = [[DKDBus alloc] initWithEndpoint: ep
                                         andService: @"org.freedesktop.DBus"
-                                           andPath: @"/"];
+                                           andPath: @"/org/freedesktop/DBus"];
     }
     [busLock unlock];
   }
