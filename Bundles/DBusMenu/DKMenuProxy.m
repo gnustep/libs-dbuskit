@@ -436,31 +436,43 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
 
 
 
-- (id)initWithMenu: (NSMenu*)menu
+- (id)initWithMenu:(NSMenu *)menu
 {
-  if (nil == (self = [super init]))
+  if (menu == nil || [menu numberOfItems] == 0)
   {
+    NSLog(@"[DKMenuProxy] Skipping initWithMenu: due to empty or nil menu");
     return nil;
   }
-  representedMenu = [menu retain];
-  nativeToDBus = NSCreateMapTable(NSNonRetainedObjectMapKeyCallBacks,
-    NSIntegerMapValueCallBacks, 24);
-  dBusToNative = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-    NSNonRetainedObjectMapValueCallBacks, 24); 
-  lock = [NSRecursiveLock new];
-  [self _createMapping];
+
+  if ((self = [super init]) != nil)
+  {
+    representedMenu = [menu retain];
+    nativeToDBus = NSCreateMapTable(NSNonRetainedObjectMapKeyCallBacks,
+                                    NSIntegerMapValueCallBacks, 24);
+    dBusToNative = NSCreateMapTable(NSIntegerMapKeyCallBacks,
+                                    NSNonRetainedObjectMapValueCallBacks, 24);
+    lock = [NSRecursiveLock new];
+    [self _createMapping];
+  }
   return self;
 }
-- (void)menuUpdated: (NSMenu*)menu
+- (void)menuUpdated:(NSMenu *)menu
 {
+  if (menu == nil || [menu numberOfItems] == 0)
+  {
+    NSLog(@"[DKMenuProxy] Skipping menuUpdated: due to empty or nil menu");
+    return;
+  }
+
   [lock lock];
-  if ([menu isEqual: representedMenu] == NO)
-    {
-      ASSIGN(representedMenu,menu);
-    }
+  if (![menu isEqual:representedMenu])
+  {
+    ASSIGN(representedMenu, menu);
+  }
+
   NS_DURING
     {
-       [self _createMapping];
+      [self _createMapping];
     }
   NS_HANDLER
     {
@@ -468,8 +480,9 @@ NSDictionary* DKMenuPropertyDictionaryForDBusProperties(id menuObject, NSArray* 
       [localException raise];
     }
   NS_ENDHANDLER
-  __sync_fetch_and_add(&revision,1);
-  [self notifyMenuServer]; 
+
+  __sync_fetch_and_add(&revision, 1);
+  [self notifyMenuServer];
   NSDebugMLLog(@"DKMenu", @"Represented menu updated");
   [lock unlock];
 }

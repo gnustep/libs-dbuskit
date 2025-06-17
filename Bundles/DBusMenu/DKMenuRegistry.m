@@ -87,47 +87,84 @@
   return [self new];
 }
 
-- (void)setupProxyForMenu: (NSMenu*)menu
+- (void)_safeRegisterWindow:(NSDictionary *)args
 {
-  menuProxy = [[DKMenuProxy alloc] initWithMenu: menu];
-  DKPort *p = (DKPort*)[DKPort port];
-  // WARNING: This is not a public API. Don't use it.
-  [p _setObject: menuProxy atPath: @"/org/gnustep/application/mainMenu"];
-  busProxy = [p _objectPathNodeAtPath: @"/org/gnustep/application/mainMenu"]; 
-  [menuProxy setExported: YES];
-  NSBundle *bundle = [NSBundle bundleForClass: [self class]];
-  NSString *path = [bundle pathForResource: @"com.canonical.dbusmenu"
-                                    ofType: @"xml"];
-  [busProxy _loadIntrospectionFromFile: path];
-}
+  if (busProxy == nil)
+  {
+    NSLog(@"[DKMenuRegistry] Skipping RegisterWindow — no busProxy available.");
+    return;
+  }
 
-- (void)setMenu: (NSMenu*)menu forWindow: (NSWindow*)window
-{
-  if (nil == menuProxy)
-    {
-       [self setupProxyForMenu: menu];
-    }
-  else
-    {
-      [menuProxy menuUpdated: menu];
-    }
+  NSWindow *window = [args objectForKey:@"window"];
   int internalNumber = [window windowNumber];
   GSDisplayServer *srv = GSServerForWindow(window);
   uint32_t number = (uint32_t)(uintptr_t)[srv windowDevice: internalNumber];
   NSNumber *boxed = [NSNumber numberWithInt: number];
-  if ((nil != menu) && (NO == [windowNumbers containsIndex: number]))
-    {
-       NSDebugMLLog(@"DKMenu", @"Publishing menu for window %d", number);
-       [registrar RegisterWindow: boxed
-                                : busProxy];
-       [windowNumbers addIndex: number];
-    }
-  else if ((nil == menu) && (YES == [windowNumbers containsIndex: number]))
-    {
-      NSDebugMLLog(@"DKMenu", @"Retracting publication of menu for window %d", number);
-      [registrar UnregisterWindow: boxed];
-      [windowNumbers removeIndex: number];
-    }
 
+  if ((NO == [windowNumbers containsIndex: number]))
+  {
+    NSDebugMLLog(@"DKMenu", @"(Deferred) Publishing menu for window %d", number);
+    [registrar RegisterWindow: boxed : busProxy];
+    [windowNumbers addIndex: number];
+  }
 }
+
+- (void)setupProxyForMenu: (NSMenu*)menu
+{
+  if (menuProxy != nil)
+  {
+    NSLog(@"[DKMenuRegistry] Proxy already exists, skipping export.");
+    return;
+  }
+
+  if (menu == nil || [menu numberOfItems] == 0)
+  {
+    NSLog(@"[DKMenuRegistry] Not exporting proxy for empty menu.");
+    return;
+  }
+
+  menuProxy = [[DKMenuProxy alloc] initWithMenu: menu];
+  DKPort *p = (DKPort*)[DKPort port];
+
+  @try
+  {
+    [p _setObject: menuProxy atPath: @"/org/gnustep/application/mainMenu"];
+  }
+  @catch (NSException *e)
+  {
+    NSLog(@"[DKMenuRegistry] Failed to export menu proxy: %@", e.reason);
+    menuProxy = nil;
+    return;
+  }
+
+  busProxy = [p _objectPathNodeAtPath: @"/org/gnustep/application/mainMenu"];
+  [menuProxy setExported: YES];
+
+  NSBundle *bundle = [NSBundle bundleForClass: [self class]];
+  NSString *path = [bundle pathForResource: @"com.canonical.dbusmenu" ofType: @"xml"];
+  [busProxy _loadIntrospectionFromFile: path];
+}
+
+- (void)setMenu:(NSMenu *)menu forWindow:(NSWindow *)window
+{
+  if (menuProxy == nil)
+  {
+    [self setupProxyForMenu: menu];
+
+    if (menuProxy == nil)
+    {
+      NSLog(@"[DKMenuRegistry] Menu proxy was not created — aborting setMenu");
+      return;
+    }
+  }
+
+  NSDictionary *args = @{ @"window": window };
+
+  [[NSRunLoop currentRunLoop] performSelector:@selector(_safeRegisterWindow:)
+                                       target:self
+                                     argument:args
+                                        order:0
+                                        modes:@[NSDefaultRunLoopMode]];
+}
+
 @end
