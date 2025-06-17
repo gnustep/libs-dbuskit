@@ -158,13 +158,13 @@
     }
   }
 
-  NSDictionary *args = @{ @"window": window };
+  NSDictionary *args = [NSDictionary dictionaryWithObject: window forKey: @"window"];
 
   [[NSRunLoop currentRunLoop] performSelector:@selector(_safeRegisterWindow:)
                                        target:self
                                      argument:args
                                         order:0
-                                        modes:@[NSDefaultRunLoopMode]];
+                                        modes:[NSArray arrayWithObject: NSDefaultRunLoopMode]];
 }
 
 @end
