@@ -6,16 +6,12 @@
 @documentencoding UTF-8
 @c %**end of header 
  
-@ifinfo 
-@format 
-INFO-DIR-SECTION GNUstep 
-START-INFO-DIR-ENTRY 
-* DBusKit: (DBusKit).        DBusKit library and D-Bus Programming Manual
-END-INFO-DIR-ENTRY 
-@end format 
-@end ifinfo 
+@dircategory Software libraries
+@direntry
+* DBusKit: (DBusKit).           DBusKit library and D-Bus Programming Manual
+@end direntry
 
-@ifinfo
+@copying
 Copyright @copyright{} 2010--2014 Free Software Foundation
 
 Permission is granted to copy, distribute and/or modify this
@@ -48,16 +44,18 @@ section entitled ``GNU Free Documentation License''.
 
 @contents
 
-@ifinfo
 @node Top
 @top GNUstep D-Bus Programming Manual
 @menu
-* Introduction::		  An introduction to the Distributed Objects and D-Bus IPC mechanisms
-* Using D-Bus From Objective-C::  Describes how to access D-Bus services from an Objective-C application
-* Exposing Objects on D-Bus::     Describes how to expose Objective-C objects to other D-Bus aware applications.
-* GNU Free Documentation License::The license terms of this document
+* Introduction::                   An introduction to the Distributed
+                                    Objects and D-Bus IPC mechanisms.
+* Using D-Bus From Objective-C::   Describes how to access D-Bus services
+                                    from an Objective-C application.
+* Exposing Objects on D-Bus::      Describes how to expose Objective-C
+                                    objects to other D-Bus aware
+                                    applications.
+* GNU Free Documentation License:: The license terms of this document.
 @end menu
-@end ifinfo
 @c Chapter 1: Introduction
 @include Introduction.texi
 
