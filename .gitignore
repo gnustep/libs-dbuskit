@@ -20,3 +20,5 @@ config.status
 libtool
 Source/config.h
 autom4te.cache
+configure~
+configure.ac~

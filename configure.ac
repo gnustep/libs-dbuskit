@@ -3,7 +3,7 @@
 AC_INIT
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 #Override the OBJC variable if it is empty and CC is also set.
 if test -n ""; then
@@ -13,10 +13,9 @@ if test -n ""; then
 fi
 
 AC_PROG_CC(clang gcc cc c1 egcs)
-AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_OBJC(clang gcc objcc objc cc CC)
-AX_GCC_FUNC_ATTRIBUTE(visibility)
+AX_GCC_FUNC_ATTRIBUTE([visibility])
 if test "$ax_cv_have_func_attribute_visibility" = "yes"; then
   HAVE_FUNC_ATTRIBUTE_VISIBILITY=1
 else
@@ -116,11 +115,24 @@ AC_SUBST(ATOMIC_CFLAGS)
 
 HAVE_LIBCLANG=0
 
+
+
 AC_ARG_ENABLE(libclang,
       [  --disable-libclang	Disable use of libclang.],,)
 
 if test "$enable_libclang" != "no"; then
-  AC_CHECK_HEADERS("clang-c/Index.h")
+  LIBCLANG_CFLAGS=""
+  LIBCLANG_LDFLAGS=""
+  AC_CHECK_PROGS([LLVM_CONFIG],[llvm-config])
+  if test "$ac_cv_prog_LLVM_CONFIG" != ""; then
+    LLVM_INCLUDEDIR=`$LLVM_CONFIG --includedir`
+    LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
+    LIBCLANG_CFLAGS="-I$LLVM_INCLUDEDIR"
+    CPPFLAGS="$CPPFLAGS $LIBCLANG_CFLAGS"
+    LIBCLANG_LDFLAGS="-L$LLVM_LIBDIR"
+    LDFLAGS="$LDFLAGS $LIBCLANG_LDFLAGS"
+  fi
+  AC_CHECK_HEADERS([clang-c/Index.h])
   if test "$ac_cv_header_clang_c_Index_h" = "yes"; then
     AC_CHECK_LIB(clang, clang_Cursor_getArgument)
     if test "$ac_cv_lib_clang_clang_Cursor_getArgument" = "yes"; then
@@ -134,6 +146,8 @@ if test "$enable_libclang" != "no"; then
 fi
 
 AC_SUBST(HAVE_LIBCLANG)
+AC_SUBST(LIBCLANG_CFLAGS)
+AC_SUBST(LIBCLANG_LDFLAGS)
 
 # Setup variables for Objective-C tests:
 
@@ -178,13 +192,12 @@ AC_ARG_ENABLE(notification-bundle,
       [  --disable-notification-bundle	Disable building the user notification bundle.],,)
 if test "$enable_notification_bundle" != "no"; then
   AC_MSG_CHECKING(for automatic property synthesis)
-  AC_TRY_COMPILE([], 
-    [ #if __has_feature(objc_default_synthesize_properties)
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[ #if __has_feature(objc_default_synthesize_properties)
         return 0;
       #else
       #  error "No default property synthesis"
       #endif
-    ], HAVE_DEFAULT_SYNTHESIZE_PROPERTIES=yes, HAVE_DEFAULT_SYNTHESIZE_PROPERTIES=no);
+    ]])],[HAVE_DEFAULT_SYNTHESIZE_PROPERTIES=yes],[HAVE_DEFAULT_SYNTHESIZE_PROPERTIES=no]);
   AC_MSG_RESULT($HAVE_DEFAULT_SYNTHESIZE_PROPERTIES)
   if test $HAVE_DEFAULT_SYNTHESIZE_PROPERTIES = 'yes'; then
     BUILD_NOTIFICATION_BUNDLE=1;
